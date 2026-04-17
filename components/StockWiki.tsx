@@ -512,14 +512,6 @@ function TermModal({ term, onClose, categoryColors, favorites, toggleFav, onNavi
             <span className="text-[10px] mono uppercase tracking-[0.3em]">{term.category}</span>
           </div>
           <div className="flex items-center gap-3">
-            <Link
-              href={`/terms/${term.id}`}
-              className="text-[10px] mono uppercase tracking-wider px-2 py-1 border transition-all hover:bg-black/10"
-              style={{ borderColor: 'currentColor', color: 'inherit' }}
-              title="전용 페이지로 이동"
-            >
-              전용 페이지 ↗
-            </Link>
             <button onClick={() => toggleFav(term.id)} style={{ color: 'inherit' }}>
               <Star size={16} fill={isFav ? 'currentColor' : 'none'} />
             </button>
