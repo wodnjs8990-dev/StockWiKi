@@ -667,6 +667,23 @@ function CalculatorView({ selectedCalc, setSelectedCalc }) {
   const allCalcs = CALC_CATEGORIES.flatMap(cat => cat.calcs.map(c => ({ ...c, category: cat.name, color: cat.color })));
   const currentCalc = allCalcs.find(c => c.id === selectedCalc);
 
+  // 선택된 계산기 패널로 자동 스크롤 (id 기반 — 루프 내 ref 중복 문제 해결)
+  useEffect(() => {
+    if (!selectedCalc) return;
+    // 두 프레임 대기: 패널 펼침 애니메이션 완료 후 정확한 위치 계산
+    const raf1 = requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const el = document.getElementById(`calc-panel-${selectedCalc}`);
+        if (!el) return;
+        const headerOffset = 90;
+        const rect = el.getBoundingClientRect();
+        const targetY = window.scrollY + rect.top - headerOffset;
+        window.scrollTo({ top: targetY, behavior: 'smooth' });
+      });
+    });
+    return () => cancelAnimationFrame(raf1);
+  }, [selectedCalc]);
+
   // 즐겨찾기 상태 (LocalStorage 동기화)
   const [favCalcs, setFavCalcs] = useState<Set<string>>(new Set());
   const [urlCopied, setUrlCopied] = useState(false);
@@ -871,7 +888,11 @@ function CalculatorView({ selectedCalc, setSelectedCalc }) {
 
               {/* 선택된 계산기 인라인 펼침 */}
               {hasActiveInCategory && (
-                <div className="border-t p-5 md:p-10" style={{ borderColor: border, background: '#161616' }}>
+                <div
+                  id={`calc-panel-${selectedCalc}`}
+                  className="border-t p-5 md:p-10 scroll-mt-24"
+                  style={{ borderColor: border, background: '#161616' }}
+                >
                   {renderCalcComponent(selectedCalc)}
                 </div>
               )}
