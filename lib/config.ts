@@ -11,6 +11,7 @@ export type SiteConfig = {
     glossary: boolean;
     calculator: boolean;
     commandK: boolean;
+    events: boolean;
   };
 };
 
@@ -21,6 +22,7 @@ const DEFAULT_CONFIG: SiteConfig = {
     glossary: true,
     calculator: true,
     commandK: true,
+    events: true,
   },
 };
 

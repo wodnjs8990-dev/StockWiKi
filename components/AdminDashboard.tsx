@@ -12,6 +12,7 @@ type SiteConfig = {
     glossary: boolean;
     calculator: boolean;
     commandK: boolean;
+    events: boolean;
   };
 };
 
@@ -233,11 +234,12 @@ export default function AdminDashboard({
               { key: 'glossary' as const, label: '금융 사전', desc: '용어 사전 전체 탭' },
               { key: 'calculator' as const, label: '계산기', desc: '29개 금융 계산기 탭' },
               { key: 'commandK' as const, label: '빠른 검색', desc: 'Cmd+K 빠른 검색 팝업' },
-            ].map((f, i) => (
+              { key: 'events' as const, label: '이벤트', desc: 'FOMC·미국 어닝·선물만기 달력' },
+            ].map((f, i, arr) => (
               <div
                 key={f.key}
                 className="flex items-center justify-between px-5 py-4 border-b"
-                style={{ borderColor: i === 2 ? 'transparent' : '#1f1f1f' }}
+                style={{ borderColor: i === arr.length - 1 ? 'transparent' : '#1f1f1f' }}
               >
                 <div>
                   <div className="text-sm mb-0.5" style={{ color: '#e8e4d6' }}>{f.label}</div>
