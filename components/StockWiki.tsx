@@ -393,29 +393,32 @@ function GlossaryView({ terms, searchQuery, setSearchQuery, searchRef, categorie
       </div>
 
       {/* 카테고리 */}
-      <div className="flex flex-wrap mb-8 md:mb-10 border-y overflow-x-auto scroll-hide" style={{ borderColor: border }}>
-        {categories.map((cat) => {
-          const active = selectedCategory === cat;
-          const isFav = cat === '★ 즐겨찾기';
-          const color = categoryColors[cat];
-          return (
-            <button
-              key={cat}
-              onClick={() => setSelectedCategory(cat)}
-              className="px-4 md:px-5 py-2.5 md:py-3 text-xs md:text-sm transition-all border-r flex items-center gap-2 whitespace-nowrap"
-              style={{
-                borderColor: border,
-                background: active ? (isFav ? '#C89650' : (color?.bg || '#e8e4d6')) : 'transparent',
-                color: active ? (isFav ? '#0a0a0a' : (color?.text || '#1a1a1a')) : '#a8a49a',
-              }}
-            >
-              {!isFav && cat !== '전체' && (
-                <span className="w-2 h-2 rounded-full" style={{ background: active ? (color?.text || '#1a1a1a') : (color?.bg || '#8a8a8a') }}></span>
-              )}
-              <span>{cat}</span>
-            </button>
-          );
-        })}
+      <div className="mb-8 md:mb-10 border-y" style={{ borderColor: border }}>
+        <div className="grid grid-cols-3 md:grid-cols-5 lg:grid-cols-8" style={{ gridAutoRows: '1fr' }}>
+          {categories.map((cat, idx) => {
+            const active = selectedCategory === cat;
+            const isFav = cat === '★ 즐겨찾기';
+            const color = categoryColors[cat];
+            return (
+              <button
+                key={cat}
+                onClick={() => setSelectedCategory(cat)}
+                className="px-2 md:px-3 py-2.5 md:py-3 text-xs md:text-sm transition-all flex items-center justify-center gap-1.5 md:gap-2 border-r border-b"
+                style={{
+                  borderColor: border,
+                  background: active ? (isFav ? '#C89650' : (color?.bg || '#e8e4d6')) : 'transparent',
+                  color: active ? (isFav ? '#0a0a0a' : (color?.text || '#1a1a1a')) : '#a8a49a',
+                }}
+                title={cat}
+              >
+                {!isFav && cat !== '전체' && (
+                  <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: active ? (color?.text || '#1a1a1a') : (color?.bg || '#8a8a8a') }}></span>
+                )}
+                <span className="truncate">{cat}</span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* 용어 그리드 */}
