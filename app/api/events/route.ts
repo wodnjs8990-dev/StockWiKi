@@ -44,21 +44,23 @@ function toKST(date: string, time?: string | null): { date: string; time: string
 
 // 종목별로 쪼개서 조회하지 않고, 기간을 4주씩 2번 나눠서 병렬 요청
 async function fetchEarnings(from: string, to: string, token: string): Promise<any[]> {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 8000); // 8초 타임아웃
+  const url = `https://finnhub.io/api/v1/calendar/earnings?from=${from}&to=${to}&token=${token}`;
+
+  // AbortController와 next.revalidate를 함께 쓰면 캐시 충돌 → Promise.race로 타임아웃
+  const fetchPromise = fetch(url, { next: { revalidate: 3600 } })
+    .then(res => {
+      if (!res.ok) throw new Error(`Finnhub ${res.status}`);
+      return res.json();
+    })
+    .then(data => data.earningsCalendar ?? []);
+
+  const timeoutPromise = new Promise<any[]>((_, reject) =>
+    setTimeout(() => reject(new Error('timeout')), 9000)
+  );
 
   try {
-    const url = `https://finnhub.io/api/v1/calendar/earnings?from=${from}&to=${to}&token=${token}`;
-    const res = await fetch(url, {
-      signal: controller.signal,
-      next: { revalidate: 3600 },
-    });
-    clearTimeout(timeout);
-    if (!res.ok) throw new Error(`Finnhub ${res.status}`);
-    const data = await res.json();
-    return data.earningsCalendar ?? [];
+    return await Promise.race([fetchPromise, timeoutPromise]);
   } catch {
-    clearTimeout(timeout);
     return [];
   }
 }
