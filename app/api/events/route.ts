@@ -42,39 +42,63 @@ function toKST(date: string, time?: string | null): { date: string; time: string
   }
 }
 
-export async function GET() {
-  // 오늘부터 8주치 조회
-  const from = new Date();
-  const to = new Date();
-  to.setDate(to.getDate() + 56);
-  const fmt = (d: Date) => d.toISOString().slice(0, 10);
+// 종목별로 쪼개서 조회하지 않고, 기간을 4주씩 2번 나눠서 병렬 요청
+async function fetchEarnings(from: string, to: string, token: string): Promise<any[]> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 8000); // 8초 타임아웃
 
   try {
-    const url = `https://finnhub.io/api/v1/calendar/earnings?from=${fmt(from)}&to=${fmt(to)}&token=${FINNHUB_KEY}`;
-    const res = await fetch(url, { next: { revalidate: 3600 } }); // 1시간 캐시
-
-    if (!res.ok) throw new Error(`Finnhub error: ${res.status}`);
-
+    const url = `https://finnhub.io/api/v1/calendar/earnings?from=${from}&to=${to}&token=${token}`;
+    const res = await fetch(url, {
+      signal: controller.signal,
+      next: { revalidate: 3600 },
+    });
+    clearTimeout(timeout);
+    if (!res.ok) throw new Error(`Finnhub ${res.status}`);
     const data = await res.json();
-    const earnings: any[] = data.earningsCalendar ?? [];
+    return data.earningsCalendar ?? [];
+  } catch {
+    clearTimeout(timeout);
+    return [];
+  }
+}
 
-    // 주요 종목 필터 + KST 변환 + 한국어 매핑
-    const watchlist = new Set(Object.keys(COMPANY_KO));
+const fmt = (d: Date) => d.toISOString().slice(0, 10);
+
+export async function GET() {
+  const watchlist = new Set(Object.keys(COMPANY_KO));
+
+  // 2주 전 ~ 4주 후, 4주 후 ~ 12주 후 — 병렬 요청으로 타임아웃 방지
+  const now = new Date();
+  const p1From = new Date(now); p1From.setDate(now.getDate() - 14);
+  const p1To   = new Date(now); p1To.setDate(now.getDate() + 28);
+  const p2From = new Date(now); p2From.setDate(now.getDate() + 29);
+  const p2To   = new Date(now); p2To.setDate(now.getDate() + 84);
+
+  try {
+    const [part1, part2] = await Promise.all([
+      fetchEarnings(fmt(p1From), fmt(p1To), FINNHUB_KEY!),
+      fetchEarnings(fmt(p2From), fmt(p2To), FINNHUB_KEY!),
+    ]);
+
+    const earnings = [...part1, ...part2];
+
     const filtered = earnings
       .filter((e) => watchlist.has(e.symbol))
       .map((e) => {
-        const { dateKST, time } = toKST(e.date, e.hour === 'bmo' || e.hour === 'amc' ? null : null);
+        const { dateKST } = toKST(e.date, null);
         return {
           symbol: e.symbol,
           nameKo: COMPANY_KO[e.symbol] ?? e.symbol,
           date: e.date,
           dateKST,
-          timeKST: time,
           timing: translateTiming(e.hour),
           epsEstimate: e.epsEstimate ?? null,
           revenueEstimate: e.revenueEstimate ?? null,
         };
       })
+      // 중복 제거 (symbol+date 기준)
+      .filter((e, i, arr) => arr.findIndex(x => x.symbol === e.symbol && x.date === e.date) === i)
       .sort((a, b) => a.date.localeCompare(b.date));
 
     return NextResponse.json({ ok: true, earnings: filtered, updatedAt: new Date().toISOString() });

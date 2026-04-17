@@ -41,15 +41,39 @@ function getKSTToday(): string {
   return new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10);
 }
 
-// 달력 날짜 배열 생성
-function getCalendarDays(year: number, month: number): (string | null)[] {
-  const first = new Date(year, month - 1, 1).getDay(); // 0=일
-  const days: (string | null)[] = Array(first).fill(null);
-  const last = new Date(year, month, 0).getDate();
-  for (let d = 1; d <= last; d++) {
-    days.push(`${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`);
+// 날짜 문자열 생성 헬퍼
+function dateStr(y: number, m: number, d: number): string {
+  return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+}
+
+// 달력 날짜 배열 생성 (전달/다음달 날짜 포함, null 없음)
+function getCalendarDays(year: number, month: number): { date: string; isCurrentMonth: boolean }[] {
+  const firstDow = new Date(year, month - 1, 1).getDay(); // 0=일
+  const lastDay = new Date(year, month, 0).getDate();
+  const days: { date: string; isCurrentMonth: boolean }[] = [];
+
+  // 전달 날짜 채우기
+  if (firstDow > 0) {
+    const prevMonth = month === 1 ? 12 : month - 1;
+    const prevYear = month === 1 ? year - 1 : year;
+    const prevLast = new Date(prevYear, prevMonth, 0).getDate();
+    for (let d = prevLast - firstDow + 1; d <= prevLast; d++) {
+      days.push({ date: dateStr(prevYear, prevMonth, d), isCurrentMonth: false });
+    }
   }
-  while (days.length % 7 !== 0) days.push(null);
+
+  // 이번달
+  for (let d = 1; d <= lastDay; d++) {
+    days.push({ date: dateStr(year, month, d), isCurrentMonth: true });
+  }
+
+  // 다음달 채우기
+  const nextMonth = month === 12 ? 1 : month + 1;
+  const nextYear = month === 12 ? year + 1 : year;
+  let nd = 1;
+  while (days.length % 7 !== 0) {
+    days.push({ date: dateStr(nextYear, nextMonth, nd++), isCurrentMonth: false });
+  }
   return days;
 }
 
@@ -173,10 +197,7 @@ export default function EventsView() {
 
           {/* 날짜 그리드 */}
           <div className="grid grid-cols-7">
-            {days.map((day, idx) => {
-              if (!day) {
-                return <div key={`empty-${idx}`} className="border-r border-b min-h-[72px] md:min-h-[90px]" style={{ borderColor: '#1a1a1a', background: '#080808' }} />;
-              }
+            {days.map(({ date: day, isCurrentMonth }, idx) => {
               const dayNum = parseInt(day.slice(8));
               const dow = new Date(day + 'T00:00:00').getDay();
               const isToday = day === today;
@@ -184,9 +205,12 @@ export default function EventsView() {
               const isPast = day < today;
               const evs = eventsByDate[day] ?? [];
 
+              // 불투명도: 이번달=1.0, 전/다음달=0.3, 지난날(이번달)=0.5
+              const opacity = !isCurrentMonth ? 0.3 : isPast && !isToday ? 0.5 : 1;
+
               return (
                 <div
-                  key={day}
+                  key={`${day}-${idx}`}
                   onClick={() => setSelectedDate(isSelected ? null : day)}
                   className="border-r border-b min-h-[72px] md:min-h-[90px] p-1.5 cursor-pointer transition-colors"
                   style={{
@@ -194,7 +218,7 @@ export default function EventsView() {
                     background: isSelected ? '#1e1e1e' : isToday ? '#161610' : 'transparent',
                     outline: isSelected ? `1px solid #C89650` : isToday ? '1px solid #3a3a20' : 'none',
                     outlineOffset: '-1px',
-                    opacity: isPast && !isToday ? 0.5 : 1,
+                    opacity,
                   }}
                 >
                   {/* 날짜 숫자 */}
@@ -300,7 +324,7 @@ export default function EventsView() {
             {allEvents
               .filter(ev => ev.dateKST >= today)
               .sort((a, b) => a.dateKST.localeCompare(b.dateKST))
-              .slice(0, 8)
+              .slice(0, 10)
               .map((ev, i) => {
                 const diff = Math.ceil((new Date(ev.dateKST).getTime() - new Date(today).getTime()) / 86400000);
                 return (
