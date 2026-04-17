@@ -758,6 +758,7 @@ function CalculatorView({ selectedCalc, setSelectedCalc }) {
 
   return (
     <div>
+      {/* 상단 메타 바 */}
       <div className="mb-6 border-y" style={{ borderColor: border }}>
         <div className="flex items-center justify-between gap-3 py-2 border-b mono text-[10px] uppercase tracking-[0.2em] whitespace-nowrap" style={{ borderColor: border, color: '#7a7a7a' }}>
           <div className="flex items-center gap-3">
@@ -765,7 +766,6 @@ function CalculatorView({ selectedCalc, setSelectedCalc }) {
             <span className="w-4 h-px hidden md:inline-block" style={{ background: '#3a3a3a' }}></span>
             <span className="hidden md:inline">Index / 002</span>
           </div>
-          {/* URL 공유 버튼 — 계산기 선택된 경우에만 */}
           {selectedCalc && (
             <button
               onClick={handleShareUrl}
@@ -788,117 +788,144 @@ function CalculatorView({ selectedCalc, setSelectedCalc }) {
         </div>
       </div>
 
-      {/* 즐겨찾기 섹션 */}
-      {favCalcList.length > 0 && (
-        <div className="mb-5 border" style={{ borderColor: border }}>
-          <div className="px-4 md:px-6 py-3 flex items-center gap-3 border-b" style={{ background: '#0f0f0f', borderColor: border }}>
-            <Star size={12} fill="#C89650" stroke="#C89650" />
-            <span className="text-xs md:text-sm mono uppercase tracking-[0.2em]" style={{ color: '#C89650' }}>즐겨찾기</span>
-            <span className="ml-auto text-[10px] mono" style={{ color: '#5a5a5a' }}>{String(favCalcList.length).padStart(2, '0')} PINNED</span>
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-4">
-            {favCalcList.map((calc, i) => {
-              const active = selectedCalc === calc.id;
-              const isLastRow = Math.floor(i / (window.innerWidth >= 768 ? 4 : 2)) === Math.floor((favCalcList.length - 1) / (window.innerWidth >= 768 ? 4 : 2));
-              return (
-                <div
-                  key={`fav-${calc.id}`}
-                  className="relative group flex items-stretch"
-                  style={{ borderRight: '1px solid #1f1f1f', borderBottom: isLastRow ? 'none' : '1px solid #1f1f1f' }}
-                >
-                  <button
-                    onClick={() => setSelectedCalc(active ? '' : calc.id)}
-                    className="flex-1 flex items-center gap-2 px-3 md:px-4 py-3 md:py-4 text-xs md:text-sm transition-all text-left"
-                    style={{
-                      background: active ? calc.color : 'transparent',
-                      color: active ? '#0a0a0a' : '#d4d0c4',
-                    }}
-                  >
-                    <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: active ? '#0a0a0a' : calc.color }}></span>
-                    <span className="font-medium truncate">{calc.name}</span>
-                  </button>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
+      {/* PC: 좌측 목록 + 우측 계산기 패널 / 모바일: 기존 인라인 */}
+      <div className="flex gap-0 lg:gap-6 items-start">
 
-      <div className="border" style={{ borderColor: border }}>
-        {CALC_CATEGORIES.map((cat, ci) => {
-          const hasActiveInCategory = cat.calcs.some(c => c.id === selectedCalc);
-          return (
-            <div key={cat.name} className={ci !== CALC_CATEGORIES.length - 1 ? 'border-b' : ''} style={{ borderColor: border }}>
-              {/* 카테고리 헤더 */}
-              <div className="px-4 md:px-6 py-3 flex items-center gap-3" style={{ background: '#0f0f0f' }}>
-                <span className="w-2 h-2 rounded-full" style={{ background: cat.color }}></span>
-                <span className="text-xs md:text-sm mono uppercase tracking-[0.2em]" style={{ color: '#a8a49a' }}>{cat.name}</span>
-                <span className="ml-auto text-[10px] mono" style={{ color: '#5a5a5a' }}>{String(cat.calcs.length).padStart(2, '0')} MODULES</span>
+        {/* ── 좌측: 항목 목록 ── */}
+        <div className="w-full lg:w-[320px] xl:w-[360px] shrink-0">
+
+          {/* 즐겨찾기 섹션 */}
+          {favCalcList.length > 0 && (
+            <div className="mb-4 border" style={{ borderColor: border }}>
+              <div className="px-4 py-2.5 flex items-center gap-3 border-b" style={{ background: '#0f0f0f', borderColor: border }}>
+                <Star size={11} fill="#C89650" stroke="#C89650" />
+                <span className="text-[11px] mono uppercase tracking-[0.2em]" style={{ color: '#C89650' }}>즐겨찾기</span>
+                <span className="ml-auto text-[10px] mono" style={{ color: '#5a5a5a' }}>{String(favCalcList.length).padStart(2, '0')} PINNED</span>
               </div>
-
-              {/* 계산기 버튼 그리드 */}
-              <div className="grid grid-cols-2 md:grid-cols-4 border-t" style={{ borderColor: border }}>
-                {cat.calcs.map((calc) => {
+              <div className="grid grid-cols-2">
+                {favCalcList.map((calc, i) => {
                   const active = selectedCalc === calc.id;
-                  const isFav = favCalcs.has(calc.id);
                   return (
-                    <div
-                      key={calc.id}
-                      className="relative group flex items-stretch border-r border-b"
-                      style={{ borderColor: '#1f1f1f' }}
+                    <button
+                      key={`fav-${calc.id}`}
+                      onClick={() => setSelectedCalc(active ? '' : calc.id)}
+                      className="flex items-center gap-2 px-3 py-2.5 text-xs transition-all text-left border-r border-b"
+                      style={{
+                        borderColor: '#1f1f1f',
+                        background: active ? calc.color : 'transparent',
+                        color: active ? '#0a0a0a' : '#d4d0c4',
+                      }}
                     >
-                      <button
-                        onClick={() => setSelectedCalc(active ? '' : calc.id)}
-                        className="flex-1 flex items-center gap-2 px-3 md:px-4 py-3 md:py-4 text-xs md:text-sm transition-all text-left"
-                        style={{
-                          background: active ? cat.color : 'transparent',
-                          color: active ? '#0a0a0a' : '#d4d0c4',
-                        }}
-                      >
-                        <span className="text-[10px] mono opacity-60 w-5 shrink-0">{calc.num}</span>
-                        <span className="font-medium truncate">{calc.name}</span>
-                      </button>
-                      {/* 즐겨찾기 별 버튼 — 우측 겹쳐서 */}
-                      <button
-                        onClick={(e) => toggleFavCalc(calc.id, e)}
-                        className="absolute top-1/2 right-1.5 -translate-y-1/2 p-1.5 transition-opacity"
-                        style={{
-                          opacity: isFav ? 1 : 0,
-                          color: active ? '#0a0a0a' : '#C89650',
-                        }}
-                        title={isFav ? '즐겨찾기 해제' : '즐겨찾기 추가'}
-                      >
-                        <Star size={12} fill={isFav ? 'currentColor' : 'none'} />
-                      </button>
-                      {/* 비활성 상태에서 hover 시 별 표시 */}
-                      {!isFav && (
-                        <button
-                          onClick={(e) => toggleFavCalc(calc.id, e)}
-                          className="absolute top-1/2 right-1.5 -translate-y-1/2 p-1.5 opacity-0 group-hover:opacity-100 transition-opacity"
-                          style={{ color: active ? '#0a0a0a' : '#7a7a7a' }}
-                          title="즐겨찾기 추가"
-                        >
-                          <Star size={12} />
-                        </button>
-                      )}
-                    </div>
+                      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: active ? '#0a0a0a' : calc.color }}></span>
+                      <span className="font-medium truncate">{calc.name}</span>
+                    </button>
                   );
                 })}
               </div>
-
-              {/* 선택된 계산기 인라인 펼침 */}
-              {hasActiveInCategory && (
-                <div
-                  id={`calc-panel-${selectedCalc}`}
-                  className="border-t p-5 md:p-10 scroll-mt-24"
-                  style={{ borderColor: border, background: '#161616' }}
-                >
-                  {renderCalcComponent(selectedCalc)}
-                </div>
-              )}
             </div>
-          );
-        })}
+          )}
+
+          {/* 카테고리별 계산기 목록 */}
+          <div className="border" style={{ borderColor: border }}>
+            {CALC_CATEGORIES.map((cat, ci) => (
+              <div key={cat.name} className={ci !== CALC_CATEGORIES.length - 1 ? 'border-b' : ''} style={{ borderColor: border }}>
+                {/* 카테고리 헤더 */}
+                <div className="px-4 py-2.5 flex items-center gap-2.5" style={{ background: '#0f0f0f' }}>
+                  <span className="w-1.5 h-1.5 rounded-full" style={{ background: cat.color }}></span>
+                  <span className="text-[11px] mono uppercase tracking-[0.2em]" style={{ color: '#a8a49a' }}>{cat.name}</span>
+                  <span className="ml-auto text-[10px] mono" style={{ color: '#5a5a5a' }}>{String(cat.calcs.length).padStart(2, '0')}</span>
+                </div>
+                {/* 계산기 버튼 — 2열 */}
+                <div className="grid grid-cols-2 border-t" style={{ borderColor: border }}>
+                  {cat.calcs.map((calc) => {
+                    const active = selectedCalc === calc.id;
+                    const isFav = favCalcs.has(calc.id);
+                    return (
+                      <div key={calc.id} className="relative group flex items-stretch border-r border-b" style={{ borderColor: '#1f1f1f' }}>
+                        <button
+                          onClick={() => setSelectedCalc(active ? '' : calc.id)}
+                          className="flex-1 flex items-center gap-2 px-3 py-2.5 text-xs transition-all text-left"
+                          style={{
+                            background: active ? cat.color : 'transparent',
+                            color: active ? '#0a0a0a' : '#d4d0c4',
+                          }}
+                        >
+                          <span className="text-[10px] mono opacity-50 w-4 shrink-0">{calc.num}</span>
+                          <span className="font-medium truncate">{calc.name}</span>
+                        </button>
+                        {/* 즐겨찾기 별 */}
+                        <button
+                          onClick={(e) => toggleFavCalc(calc.id, e)}
+                          className="absolute top-1/2 right-1 -translate-y-1/2 p-1 transition-opacity"
+                          style={{ opacity: isFav ? 1 : 0, color: active ? '#0a0a0a' : '#C89650' }}
+                          title={isFav ? '즐겨찾기 해제' : '즐겨찾기 추가'}
+                        >
+                          <Star size={10} fill={isFav ? 'currentColor' : 'none'} />
+                        </button>
+                        {!isFav && (
+                          <button
+                            onClick={(e) => toggleFavCalc(calc.id, e)}
+                            className="absolute top-1/2 right-1 -translate-y-1/2 p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                            style={{ color: active ? '#0a0a0a' : '#7a7a7a' }}
+                          >
+                            <Star size={10} />
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* 모바일: 인라인 패널 (lg 이상에서는 숨김) */}
+                {cat.calcs.some(c => c.id === selectedCalc) && (
+                  <div className="lg:hidden border-t p-5" style={{ borderColor: border, background: '#161616' }}>
+                    {renderCalcComponent(selectedCalc)}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* ── 우측: 계산기 패널 (PC 전용 sticky) ── */}
+        <div className="hidden lg:block flex-1 min-w-0 sticky top-[90px] self-start">
+          {selectedCalc ? (
+            <div
+              id={`calc-panel-${selectedCalc}`}
+              className="border overflow-y-auto"
+              style={{
+                borderColor: border,
+                background: '#161616',
+                maxHeight: 'calc(100vh - 110px)',
+              }}
+            >
+              {/* 패널 헤더 */}
+              <div className="px-6 py-3 border-b flex items-center gap-3" style={{ borderColor: border, background: '#0f0f0f' }}>
+                <span className="text-[10px] mono uppercase tracking-[0.2em]" style={{ color: currentCalc?.color || '#a8a49a' }}>
+                  M—{currentCalc?.num}
+                </span>
+                <span className="text-sm font-medium" style={{ color: '#e8e4d6' }}>{currentCalc?.name}</span>
+                <button
+                  onClick={() => setSelectedCalc('')}
+                  className="ml-auto p-1 hover:bg-white/5 transition-colors"
+                  style={{ color: '#5a5a5a' }}
+                  title="닫기"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+              <div className="p-6 md:p-10">
+                {renderCalcComponent(selectedCalc)}
+              </div>
+            </div>
+          ) : (
+            <div className="border flex flex-col items-center justify-center py-24" style={{ borderColor: border, background: '#0d0d0d' }}>
+              <span className="text-[10px] mono uppercase tracking-[0.3em]" style={{ color: '#3a3a3a' }}>No Module Selected</span>
+              <span className="mt-3 text-xs" style={{ color: '#4a4a4a' }}>← 좌측에서 계산기를 선택하세요</span>
+            </div>
+          )}
+        </div>
+
       </div>
     </div>
   );
