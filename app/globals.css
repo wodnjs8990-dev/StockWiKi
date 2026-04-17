@@ -1,5 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+KR:wght@300;400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -8,7 +6,7 @@ html, body {
   background: #1a1a1a;
   color: #d4d0c4;
   -webkit-font-smoothing: antialiased;
-  font-family: 'Inter', 'Noto Sans KR', sans-serif;
+  font-family: var(--font-sans), sans-serif;
 }
 
 * {
@@ -16,7 +14,7 @@ html, body {
 }
 
 .mono {
-  font-family: 'IBM Plex Mono', monospace;
+  font-family: var(--font-mono), monospace;
   font-variant-numeric: tabular-nums;
 }
 

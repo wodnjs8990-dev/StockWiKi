@@ -1,6 +1,24 @@
 import type { Metadata } from 'next';
+import { Noto_Sans_KR, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
 import CookieBanner from '@/components/CookieBanner';
+
+// Noto Sans KR — OFL 1.1, 상업용 무료
+const notoSansKR = Noto_Sans_KR({
+  subsets: ['latin'],
+  weight: ['300', '400', '500', '700'],
+  variable: '--font-sans',
+  display: 'swap',
+  preload: false,
+});
+
+// JetBrains Mono — OFL 1.1, 상업용 무료 (수치/모노용)
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ['latin'],
+  weight: ['400', '500'],
+  variable: '--font-mono',
+  display: 'swap',
+});
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://stockwiki.kr'),
@@ -37,7 +55,7 @@ const GA_ID = 'G-N3N8D9KE10';
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="ko">
+    <html lang="ko" className={`${notoSansKR.variable} ${jetbrainsMono.variable}`}>
       <head>
         <script async src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`} />
         <script
