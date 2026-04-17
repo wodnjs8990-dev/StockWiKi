@@ -612,10 +612,44 @@ function Section({ label, color, children }) {
 // ─────────────────────────────────────────────
 // 계산기 뷰
 // ─────────────────────────────────────────────
-function CalculatorView({ selectedCalc, setSelectedCalc, sidebarOpen, setSidebarOpen }) {
+function CalculatorView({ selectedCalc, setSelectedCalc }) {
   const border = '#2a2a2a';
   const allCalcs = CALC_CATEGORIES.flatMap(cat => cat.calcs.map(c => ({ ...c, category: cat.name, color: cat.color })));
   const currentCalc = allCalcs.find(c => c.id === selectedCalc);
+
+  const renderCalcComponent = (id) => {
+    switch (id) {
+      case 'per': return <PERCalc />;
+      case 'pbr': return <PBRCalc />;
+      case 'target': return <TargetPriceCalc />;
+      case 'dcf': return <DCFCalc />;
+      case 'wacc': return <WACCCalc />;
+      case 'roe': return <ROECalc />;
+      case 'dupont': return <DuPontCalc />;
+      case 'margin': return <MarginCalc />;
+      case 'bep': return <BEPCalc />;
+      case 'dividend': return <DividendCalc />;
+      case 'compound': return <CompoundCalc />;
+      case 'cagr': return <CAGRCalc />;
+      case 'rule72': return <Rule72Calc />;
+      case 'avgprice': return <AvgPriceCalc />;
+      case 'commission': return <CommissionCalc />;
+      case 'breakeven': return <BreakevenCalc />;
+      case 'positionsize': return <PositionSizeCalc />;
+      case 'futures': return <FuturesCalc />;
+      case 'leverage': return <LeverageCalc />;
+      case 'bs': return <BlackScholesCalc />;
+      case 'greeks': return <GreeksCalc />;
+      case 'sharpe': return <SharpeCalc />;
+      case 'kelly': return <KellyCalc />;
+      case 'mdd': return <MDDCalc />;
+      case 'var': return <VaRCalc />;
+      case 'fx': return <FXCalc />;
+      case 'realrate': return <RealRateCalc />;
+      case 'bondprice': return <BondPriceCalc />;
+      default: return null;
+    }
+  };
 
   return (
     <div>
@@ -628,77 +662,53 @@ function CalculatorView({ selectedCalc, setSelectedCalc, sidebarOpen, setSidebar
         <div className="grid grid-cols-3 gap-2 md:gap-6 py-2 mono text-[10px] uppercase tracking-[0.2em]">
           <div className="flex items-baseline gap-1 md:gap-2"><span style={{ color: '#5a5a5a' }}>Groups</span><span style={{ color: '#e8e4d6' }}>{String(CALC_CATEGORIES.length).padStart(3, '0')}</span></div>
           <div className="flex items-baseline gap-1 md:gap-2"><span style={{ color: '#5a5a5a' }}>Modules</span><span style={{ color: '#e8e4d6' }}>{String(allCalcs.length).padStart(3, '0')}</span></div>
-          <div className="flex items-baseline gap-1 md:gap-2"><span style={{ color: '#5a5a5a' }}>Active</span><span style={{ color: currentCalc?.color || '#e8e4d6' }}>M—{currentCalc?.num}</span></div>
+          <div className="flex items-baseline gap-1 md:gap-2"><span style={{ color: '#5a5a5a' }}>Active</span><span style={{ color: currentCalc?.color || '#e8e4d6' }}>M—{currentCalc?.num || '—'}</span></div>
         </div>
       </div>
 
-      <div className="grid grid-cols-12 border" style={{ borderColor: border }}>
-        {/* 사이드바 */}
-        <div
-          className={`col-span-12 md:col-span-3 border-r md:border-r ${sidebarOpen ? 'block' : 'hidden md:block'}`}
-          style={{ borderColor: border, background: '#141414' }}
-        >
-          {CALC_CATEGORIES.map((cat, ci) => (
+      <div className="border" style={{ borderColor: border }}>
+        {CALC_CATEGORIES.map((cat, ci) => {
+          const hasActiveInCategory = cat.calcs.some(c => c.id === selectedCalc);
+          return (
             <div key={cat.name} className={ci !== CALC_CATEGORIES.length - 1 ? 'border-b' : ''} style={{ borderColor: border }}>
-              <div className="px-4 md:px-5 py-2 md:py-3 flex items-center gap-2" style={{ background: '#0f0f0f' }}>
-                <span className="w-1.5 h-1.5 rounded-full" style={{ background: cat.color }}></span>
-                <span className="text-[10px] mono uppercase tracking-[0.2em]" style={{ color: '#a8a49a' }}>{cat.name}</span>
-                <span className="ml-auto text-[10px] mono" style={{ color: '#5a5a5a' }}>{String(cat.calcs.length).padStart(2, '0')}</span>
+              {/* 카테고리 헤더 */}
+              <div className="px-4 md:px-6 py-3 flex items-center gap-3" style={{ background: '#0f0f0f' }}>
+                <span className="w-2 h-2 rounded-full" style={{ background: cat.color }}></span>
+                <span className="text-xs md:text-sm mono uppercase tracking-[0.2em]" style={{ color: '#a8a49a' }}>{cat.name}</span>
+                <span className="ml-auto text-[10px] mono" style={{ color: '#5a5a5a' }}>{String(cat.calcs.length).padStart(2, '0')} MODULES</span>
               </div>
-              {cat.calcs.map((calc) => {
-                const active = selectedCalc === calc.id;
-                return (
-                  <button
-                    key={calc.id}
-                    onClick={() => { setSelectedCalc(calc.id); setSidebarOpen(false); }}
-                    className="w-full flex items-center gap-3 px-4 md:px-5 py-2.5 md:py-3 text-sm border-b transition-all text-left"
-                    style={{
-                      borderColor: '#1f1f1f',
-                      background: active ? '#e8e4d6' : 'transparent',
-                      color: active ? '#1a1a1a' : '#a8a49a',
-                    }}
-                  >
-                    <span className="text-[10px] mono opacity-60 w-5">{calc.num}</span>
-                    <span className="font-medium">{calc.name}</span>
-                    {active && <ChevronRight size={12} className="ml-auto" />}
-                  </button>
-                );
-              })}
-            </div>
-          ))}
-        </div>
 
-        {/* 계산기 본체 */}
-        <div className="col-span-12 md:col-span-9 p-6 md:p-12" style={{ background: '#1a1a1a' }}>
-          {selectedCalc === 'per' && <PERCalc />}
-          {selectedCalc === 'pbr' && <PBRCalc />}
-          {selectedCalc === 'target' && <TargetPriceCalc />}
-          {selectedCalc === 'dcf' && <DCFCalc />}
-          {selectedCalc === 'wacc' && <WACCCalc />}
-          {selectedCalc === 'roe' && <ROECalc />}
-          {selectedCalc === 'dupont' && <DuPontCalc />}
-          {selectedCalc === 'margin' && <MarginCalc />}
-          {selectedCalc === 'bep' && <BEPCalc />}
-          {selectedCalc === 'dividend' && <DividendCalc />}
-          {selectedCalc === 'compound' && <CompoundCalc />}
-          {selectedCalc === 'cagr' && <CAGRCalc />}
-          {selectedCalc === 'rule72' && <Rule72Calc />}
-          {selectedCalc === 'avgprice' && <AvgPriceCalc />}
-          {selectedCalc === 'commission' && <CommissionCalc />}
-          {selectedCalc === 'breakeven' && <BreakevenCalc />}
-          {selectedCalc === 'positionsize' && <PositionSizeCalc />}
-          {selectedCalc === 'futures' && <FuturesCalc />}
-          {selectedCalc === 'leverage' && <LeverageCalc />}
-          {selectedCalc === 'bs' && <BlackScholesCalc />}
-          {selectedCalc === 'greeks' && <GreeksCalc />}
-          {selectedCalc === 'sharpe' && <SharpeCalc />}
-          {selectedCalc === 'kelly' && <KellyCalc />}
-          {selectedCalc === 'mdd' && <MDDCalc />}
-          {selectedCalc === 'var' && <VaRCalc />}
-          {selectedCalc === 'fx' && <FXCalc />}
-          {selectedCalc === 'realrate' && <RealRateCalc />}
-          {selectedCalc === 'bondprice' && <BondPriceCalc />}
-        </div>
+              {/* 계산기 버튼 그리드 */}
+              <div className="grid grid-cols-2 md:grid-cols-4 border-t" style={{ borderColor: border }}>
+                {cat.calcs.map((calc) => {
+                  const active = selectedCalc === calc.id;
+                  return (
+                    <button
+                      key={calc.id}
+                      onClick={() => setSelectedCalc(active ? '' : calc.id)}
+                      className="flex items-center gap-2 px-3 md:px-4 py-3 md:py-4 text-xs md:text-sm transition-all text-left border-r border-b"
+                      style={{
+                        borderColor: '#1f1f1f',
+                        background: active ? cat.color : 'transparent',
+                        color: active ? '#0a0a0a' : '#d4d0c4',
+                      }}
+                    >
+                      <span className="text-[10px] mono opacity-60 w-5 shrink-0">{calc.num}</span>
+                      <span className="font-medium truncate">{calc.name}</span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* 선택된 계산기 인라인 펼침 */}
+              {hasActiveInCategory && (
+                <div className="border-t p-5 md:p-10" style={{ borderColor: border, background: '#161616' }}>
+                  {renderCalcComponent(selectedCalc)}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
