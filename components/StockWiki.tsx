@@ -73,6 +73,22 @@ export default function StockWiki({ features }: { features?: Features }) {
     });
   };
 
+  // 홈으로 돌아가기 (로고 클릭 시)
+  const goHome = () => {
+    setActiveTab(feat.glossary ? 'glossary' : (feat.calculator ? 'calculator' : 'none'));
+    setSelectedCategory('전체');
+    setSearchQuery('');
+    setSelectedTerm(null);
+    setShowCommandK(false);
+    setSidebarOpen(false);
+    setSelectedCalc('');
+    // URL 파라미터 제거
+    if (typeof window !== 'undefined') {
+      router.replace('/', { scroll: false });
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
   const filteredTerms = useMemo(() => {
     return TERMS.filter(t => {
       const q = searchQuery.toLowerCase();
@@ -110,14 +126,19 @@ export default function StockWiki({ features }: { features?: Features }) {
       <header className="border-b sticky top-0 z-30" style={{ borderColor: '#2a2a2a', background: 'rgba(20,20,20,0.95)', backdropFilter: 'blur(8px)' }}>
         <div className="max-w-[1400px] mx-auto px-4 md:px-8 py-4 md:py-5 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 md:gap-4 min-w-0">
-            <div className="flex items-baseline gap-2 md:gap-3 leading-none min-w-0">
+            <button
+              onClick={goHome}
+              className="flex items-baseline gap-2 md:gap-3 leading-none min-w-0 transition-opacity hover:opacity-80 cursor-pointer"
+              title="홈으로"
+              aria-label="홈으로 이동"
+            >
               <span className="text-xl md:text-2xl font-light tracking-tight whitespace-nowrap" style={{ color: '#e8e4d6' }}>
                 Stock<span style={{ color: '#C89650', fontWeight: 500 }}>WiKi</span>
               </span>
               <span className="text-xs mono" style={{ color: '#7a7a7a' }}>.kr</span>
               <span className="hidden lg:inline-block w-px h-4" style={{ background: '#2a2a2a' }}></span>
               <span className="hidden lg:inline-block text-[10px] tracking-[0.3em] mono uppercase" style={{ color: '#7a7a7a' }}>Terms & Calculators</span>
-            </div>
+            </button>
           </div>
           <div className="flex items-center gap-2">
             {feat.commandK && (
