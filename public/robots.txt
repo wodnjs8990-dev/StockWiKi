@@ -1,4 +1,7 @@
 User-agent: *
 Allow: /
+Disallow: /admin-stk-2026
+Disallow: /api
+Disallow: /maintenance
 
 Sitemap: https://stockwiki.kr/sitemap.xml
