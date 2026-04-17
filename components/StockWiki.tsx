@@ -744,27 +744,86 @@ function CalculatorView({ selectedCalc, setSelectedCalc }) {
 
 const BORDER = '#2a2a2a';
 
+// 숫자를 한국어 단위로 변환 (100000000 → "1억")
+function formatKoreanUnit(value: string | number): string {
+  const n = typeof value === 'string' ? Number(value) : value;
+  if (!isFinite(n) || n === 0) return '';
+  const abs = Math.abs(n);
+  const sign = n < 0 ? '-' : '';
+
+  if (abs >= 1e12) {
+    const jo = Math.floor(abs / 1e12);
+    const rest = Math.floor((abs % 1e12) / 1e8);
+    return sign + (rest > 0 ? `${jo}조 ${rest}억` : `${jo}조`);
+  }
+  if (abs >= 1e8) {
+    const eok = Math.floor(abs / 1e8);
+    const rest = Math.floor((abs % 1e8) / 1e4);
+    return sign + (rest > 0 ? `${eok}억 ${rest.toLocaleString()}만` : `${eok}억`);
+  }
+  if (abs >= 1e4) {
+    const man = abs / 1e4;
+    // 정수면 정수로, 소수면 소수점 1자리
+    const manStr = man % 1 === 0 ? man.toString() : man.toFixed(1);
+    return sign + `${manStr}만`;
+  }
+  return '';
+}
+
 function NumInput({ label, value, onChange, unit, placeholder, hint }) {
+  // 표시용: 쉼표 포함된 값
+  const displayValue = value === '' || value === null || value === undefined
+    ? ''
+    : Number(value).toLocaleString('ko-KR');
+
+  // 입력 시: 쉼표 제거하고 숫자만 저장
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value.replace(/[^\d.-]/g, ''); // 숫자·소수점·음수만
+    onChange(raw);
+  };
+
+  // 한국어 단위
+  const koreanUnit = formatKoreanUnit(value);
+
   return (
     <div>
       <label className="block text-[10px] mono uppercase tracking-[0.2em] mb-2" style={{ color: '#7a7a7a' }}>{label}</label>
       <div className="relative border" style={{ borderColor: BORDER, background: '#141414' }}>
         <input
-          type="number"
-          value={value}
-          onChange={e => onChange(e.target.value)}
+          type="text"
+          inputMode="decimal"
+          value={displayValue}
+          onChange={handleChange}
           placeholder={placeholder}
           className="w-full px-4 py-3 mono text-base bg-transparent"
           style={{ color: '#e8e4d6' }}
         />
         {unit && <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs mono" style={{ color: '#7a7a7a' }}>{unit}</span>}
       </div>
-      {hint && <div className="text-[10px] mt-1" style={{ color: '#6a6a6a' }}>{hint}</div>}
+      {/* 한국어 단위 표시 (입력값 있을 때만) */}
+      {koreanUnit && (
+        <div className="text-xs mt-1.5 mono" style={{ color: '#C89650' }}>
+          ≈ {koreanUnit}
+        </div>
+      )}
+      {hint && !koreanUnit && <div className="text-[10px] mt-1" style={{ color: '#6a6a6a' }}>{hint}</div>}
+      {hint && koreanUnit && <div className="text-[10px] mt-0.5" style={{ color: '#6a6a6a' }}>{hint}</div>}
     </div>
   );
 }
 
 function ResultBox({ label, value, unit, highlight, color = '#C89650' }) {
+  // value가 쉼표 포함 숫자 문자열인지 확인해서 한국어 단위 계산
+  let koreanUnit = '';
+  if (typeof value === 'string') {
+    const num = Number(value.replace(/,/g, ''));
+    if (isFinite(num) && num !== 0) {
+      // 원 단위일 때만 한국어 단위 표시 (배, %, 도 등은 제외)
+      if (unit === '원' || unit === 'KRW') {
+        koreanUnit = formatKoreanUnit(num);
+      }
+    }
+  }
   return (
     <div className="p-4 md:p-5" style={{
       background: highlight ? color : '#141414',
@@ -774,6 +833,11 @@ function ResultBox({ label, value, unit, highlight, color = '#C89650' }) {
       <div className="text-2xl md:text-3xl font-light mono tabular-nums">
         {value} <span className="text-xs md:text-sm" style={{ opacity: 0.6 }}>{unit}</span>
       </div>
+      {koreanUnit && (
+        <div className="text-xs mt-2 mono" style={{ opacity: 0.7 }}>
+          ≈ {koreanUnit}
+        </div>
+      )}
     </div>
   );
 }
