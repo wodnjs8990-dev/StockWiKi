@@ -174,8 +174,6 @@ export default function StockWiki() {
           <CalculatorView
             selectedCalc={selectedCalc}
             setSelectedCalc={setSelectedCalc}
-            sidebarOpen={sidebarOpen}
-            setSidebarOpen={setSidebarOpen}
           />
         )}
       </main>
