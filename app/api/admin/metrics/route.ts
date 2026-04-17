@@ -35,26 +35,28 @@ async function checkEdgeConfig(): Promise<{ ok: boolean; latencyMs: number; erro
 async function checkEventsApi(): Promise<{ ok: boolean; latencyMs: number; earningsCount?: number; error?: string }> {
   const start = Date.now();
   try {
-    // 내부 /api/events를 직접 호출하는 대신 Finnhub 어닝 엔드포인트 간단히 체크
     const key = process.env.FINNHUB_API_KEY;
     if (!key) return { ok: false, latencyMs: 0, error: 'API 키 없음' };
 
-    const now = new Date();
-    const from = new Date(now); from.setDate(now.getDate() - 7);
-    const to = new Date(now); to.setDate(now.getDate() + 7);
-    const fmt = (d: Date) => d.toISOString().slice(0, 10);
+    // 어닝 캘린더는 느리므로 오늘 하루만 조회 (헬스체크용 최소 범위)
+    const today = new Date().toISOString().slice(0, 10);
 
-    const res = await fetch(
-      `https://finnhub.io/api/v1/calendar/earnings?from=${fmt(from)}&to=${fmt(to)}&token=${key}`,
-      { next: { revalidate: 0 } }
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('timeout')), 8000)
     );
-    const latencyMs = Date.now() - start;
-    if (!res.ok) return { ok: false, latencyMs, error: `HTTP ${res.status}` };
-    const data = await res.json();
-    const count = (data.earningsCalendar ?? []).length;
-    return { ok: true, latencyMs, earningsCount: count };
+    const fetchPromise = fetch(
+      `https://finnhub.io/api/v1/calendar/earnings?from=${today}&to=${today}&token=${key}`,
+      { next: { revalidate: 0 } }
+    ).then(async res => {
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      return (data.earningsCalendar ?? []).length as number;
+    });
+
+    const count = await Promise.race([fetchPromise, timeoutPromise]);
+    return { ok: true, latencyMs: Date.now() - start, earningsCount: count };
   } catch (e: any) {
-    return { ok: false, latencyMs: Date.now() - start, error: e.message };
+    return { ok: false, latencyMs: Date.now() - start, error: e.message === 'timeout' ? '응답 초과 (8s)' : e.message };
   }
 }
 
