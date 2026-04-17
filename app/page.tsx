@@ -1,32 +1,19 @@
 import { Suspense } from 'react';
 import StockWiki from '@/components/StockWiki';
 import { getSiteConfig } from '@/lib/config';
-import { getEarnings } from '@/lib/earnings';
 
-// Edge Config가 revalidate:0 을 사용하므로 페이지는 dynamic 유지
-// 어닝 데이터는 lib/earnings.ts 내부 fetch에서 개별 캐시 처리
 export const dynamic = 'force-dynamic';
 
 async function StockWikiWithConfig() {
-  // config + 어닝 데이터 서버에서 병렬 fetch
-  const [config, { earnings, updatedAt }] = await Promise.all([
-    getSiteConfig(),
-    getEarnings(),
-  ]);
-
+  const config = await getSiteConfig();
   const features = config.features ?? {
     glossary: true,
     calculator: true,
     commandK: true,
   };
-
-  return (
-    <StockWiki
-      features={features}
-      initialEarnings={earnings}
-      earningsUpdatedAt={updatedAt}
-    />
-  );
+  // 어닝 데이터는 EventsView에서 클라이언트 사이드로 /api/events 호출
+  // (서버사이드 fetch 시 Finnhub 타임아웃이 페이지 전체를 블로킹하는 문제 방지)
+  return <StockWiki features={features} />;
 }
 
 export default function HomePage() {

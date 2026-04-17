@@ -7,7 +7,6 @@ import Link from 'next/link';
 import { TERMS, CATEGORIES, CATEGORY_COLORS } from '@/data/terms';
 import { CALC_CATEGORIES } from '@/data/calcs';
 import EventsView from '@/components/EventsView';
-import type { EarningItem } from '@/lib/earnings';
 
 type Features = {
   glossary: boolean;
@@ -16,11 +15,7 @@ type Features = {
   events?: boolean;
 };
 
-export default function StockWiki({ features, initialEarnings = [], earningsUpdatedAt }: {
-  features?: Features;
-  initialEarnings?: EarningItem[];
-  earningsUpdatedAt?: string;
-}) {
+export default function StockWiki({ features }: { features?: Features }) {
   const feat = features ?? { glossary: true, calculator: true, commandK: true, events: true };
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -242,7 +237,7 @@ export default function StockWiki({ features, initialEarnings = [], earningsUpda
           />
         )}
         {activeTab === 'events' && feat.events !== false && (
-          <EventsView initialEarnings={initialEarnings} updatedAt={earningsUpdatedAt} />
+          <EventsView />
         )}
       </main>
 

@@ -1,8 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, RefreshCw, AlertCircle } from 'lucide-react';
-import type { EarningItem } from '@/lib/earnings';
 
 const BORDER = '#2a2a2a';
 
@@ -82,22 +81,26 @@ const DAY_LABELS = ['일', '월', '화', '수', '목', '금', '토'];
 
 type CalEvent = { dateKST: string; label: string; desc: string; color: string; symbol?: string; nameKo?: string; timing?: string };
 
-export default function EventsView({
-  initialEarnings = [],
-  updatedAt,
-}: {
-  initialEarnings?: EarningItem[];
-  updatedAt?: string;
-}) {
+export default function EventsView() {
   const today = getKSTToday();
   const [year, setYear] = useState(() => parseInt(today.slice(0, 4)));
   const [month, setMonth] = useState(() => parseInt(today.slice(5, 7)));
   const [selectedDate, setSelectedDate] = useState<string | null>(today);
+  const [earnings, setEarnings] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [updatedAt, setUpdatedAt] = useState<string | null>(null);
 
-  // 서버에서 미리 받은 데이터 바로 사용 — 로딩 없음
-  const earnings = initialEarnings;
-  const loading = false;
-  const error: string | null = earnings.length === 0 && !updatedAt ? '데이터 없음' : null;
+  useEffect(() => {
+    fetch('/api/events')
+      .then(r => r.json())
+      .then(data => {
+        if (data.ok) { setEarnings(data.earnings ?? []); setUpdatedAt(data.updatedAt); }
+        else setError(data.error ?? '로드 실패');
+      })
+      .catch(() => setError('네트워크 오류'))
+      .finally(() => setLoading(false));
+  }, []);
 
   // 어닝 → 달력 이벤트 변환
   const earningEvents: CalEvent[] = earnings.map(e => ({
