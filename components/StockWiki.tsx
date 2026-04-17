@@ -98,13 +98,6 @@ export default function StockWiki() {
       <header className="border-b sticky top-0 z-30" style={{ borderColor: '#2a2a2a', background: 'rgba(20,20,20,0.95)', backdropFilter: 'blur(8px)' }}>
         <div className="max-w-[1400px] mx-auto px-4 md:px-8 py-4 md:py-5 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 md:gap-4 min-w-0">
-            <button
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="md:hidden p-1.5 border"
-              style={{ borderColor: '#2a2a2a', color: '#a8a49a' }}
-            >
-              <Menu size={16} />
-            </button>
             <div className="flex items-baseline gap-2 md:gap-3 leading-none min-w-0">
               <span className="text-xl md:text-2xl font-light tracking-tight whitespace-nowrap" style={{ color: '#e8e4d6' }}>
                 Stock<span style={{ color: '#C89650', fontWeight: 500 }}>WiKi</span>
