@@ -305,18 +305,16 @@ function GlossaryView({ terms, searchQuery, setSearchQuery, searchRef, categorie
   return (
     <div>
       <div className="mb-6 border-y" style={{ borderColor: border }}>
-        <div className="flex items-center justify-between gap-3 py-2 mono text-[10px] uppercase tracking-[0.2em]">
-          <div className="grid grid-cols-4 gap-3 md:gap-6 flex-1">
-            <div className="flex items-baseline gap-2"><span style={{ color: '#5a5a5a' }}>Total</span><span style={{ color: '#e8e4d6' }}>{String(totalCount).padStart(3, '0')}</span></div>
-            <div className="flex items-baseline gap-2"><span style={{ color: '#5a5a5a' }}>Filter</span><span className="truncate" style={{ color: '#e8e4d6' }}>{selectedCategory === '전체' ? 'ALL' : selectedCategory.replace('★ ', '')}</span></div>
-            <div className="flex items-baseline gap-2"><span style={{ color: '#5a5a5a' }}>Shown</span><span style={{ color: '#e8e4d6' }}>{String(terms.length).padStart(3, '0')}</span></div>
-            <div className="flex items-baseline gap-2"><span style={{ color: '#5a5a5a' }}>Fav</span><span style={{ color: '#C89650' }}>{String(favorites.size).padStart(3, '0')}</span></div>
-          </div>
-          <div className="flex items-center gap-3 pl-3 border-l whitespace-nowrap" style={{ borderColor: border, color: '#7a7a7a' }}>
-            <span>§ Glossary</span>
-            <span className="w-4 h-px" style={{ background: '#3a3a3a' }}></span>
-            <span>Index / 001</span>
-          </div>
+        <div className="flex items-center justify-end gap-3 py-2 border-b mono text-[10px] uppercase tracking-[0.2em] whitespace-nowrap" style={{ borderColor: border, color: '#7a7a7a' }}>
+          <span>§ Glossary</span>
+          <span className="w-4 h-px" style={{ background: '#3a3a3a' }}></span>
+          <span>Index / 001</span>
+        </div>
+        <div className="grid grid-cols-4 gap-2 md:gap-6 py-2 mono text-[10px] uppercase tracking-[0.2em]">
+          <div className="flex items-baseline gap-1 md:gap-2"><span style={{ color: '#5a5a5a' }}>Total</span><span style={{ color: '#e8e4d6' }}>{String(totalCount).padStart(3, '0')}</span></div>
+          <div className="flex items-baseline gap-1 md:gap-2 min-w-0"><span style={{ color: '#5a5a5a' }}>Filter</span><span className="truncate" style={{ color: '#e8e4d6' }}>{selectedCategory === '전체' ? 'ALL' : selectedCategory.replace('★ ', '')}</span></div>
+          <div className="flex items-baseline gap-1 md:gap-2"><span style={{ color: '#5a5a5a' }}>Shown</span><span style={{ color: '#e8e4d6' }}>{String(terms.length).padStart(3, '0')}</span></div>
+          <div className="flex items-baseline gap-1 md:gap-2"><span style={{ color: '#5a5a5a' }}>Fav</span><span style={{ color: '#C89650' }}>{String(favorites.size).padStart(3, '0')}</span></div>
         </div>
       </div>
 
@@ -631,17 +629,15 @@ function CalculatorView({ selectedCalc, setSelectedCalc, sidebarOpen, setSidebar
   return (
     <div>
       <div className="mb-6 border-y" style={{ borderColor: border }}>
-        <div className="flex items-center justify-between gap-3 py-2 mono text-[10px] uppercase tracking-[0.2em]">
-          <div className="grid grid-cols-3 gap-3 md:gap-6 flex-1">
-            <div className="flex items-baseline gap-2"><span style={{ color: '#5a5a5a' }}>Groups</span><span style={{ color: '#e8e4d6' }}>{String(CALC_CATEGORIES.length).padStart(3, '0')}</span></div>
-            <div className="flex items-baseline gap-2"><span style={{ color: '#5a5a5a' }}>Modules</span><span style={{ color: '#e8e4d6' }}>{String(allCalcs.length).padStart(3, '0')}</span></div>
-            <div className="flex items-baseline gap-2"><span style={{ color: '#5a5a5a' }}>Active</span><span style={{ color: currentCalc?.color || '#e8e4d6' }}>M — {currentCalc?.num}</span></div>
-          </div>
-          <div className="flex items-center gap-3 pl-3 border-l whitespace-nowrap" style={{ borderColor: border, color: '#7a7a7a' }}>
-            <span>§ Calculator</span>
-            <span className="w-4 h-px" style={{ background: '#3a3a3a' }}></span>
-            <span>Index / 002</span>
-          </div>
+        <div className="flex items-center justify-end gap-3 py-2 border-b mono text-[10px] uppercase tracking-[0.2em] whitespace-nowrap" style={{ borderColor: border, color: '#7a7a7a' }}>
+          <span>§ Calculator</span>
+          <span className="w-4 h-px" style={{ background: '#3a3a3a' }}></span>
+          <span>Index / 002</span>
+        </div>
+        <div className="grid grid-cols-3 gap-2 md:gap-6 py-2 mono text-[10px] uppercase tracking-[0.2em]">
+          <div className="flex items-baseline gap-1 md:gap-2"><span style={{ color: '#5a5a5a' }}>Groups</span><span style={{ color: '#e8e4d6' }}>{String(CALC_CATEGORIES.length).padStart(3, '0')}</span></div>
+          <div className="flex items-baseline gap-1 md:gap-2"><span style={{ color: '#5a5a5a' }}>Modules</span><span style={{ color: '#e8e4d6' }}>{String(allCalcs.length).padStart(3, '0')}</span></div>
+          <div className="flex items-baseline gap-1 md:gap-2"><span style={{ color: '#5a5a5a' }}>Active</span><span style={{ color: currentCalc?.color || '#e8e4d6' }}>M—{currentCalc?.num}</span></div>
         </div>
       </div>
 
