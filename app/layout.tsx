@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import CookieBanner from '@/components/CookieBanner';
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://stockwiki.kr'),
@@ -50,7 +51,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           }}
         />
       </head>
-      <body>{children}</body>
+      <body>
+        {children}
+        <CookieBanner />
+      </body>
     </html>
   );
 }
