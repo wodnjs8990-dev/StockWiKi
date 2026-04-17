@@ -35,19 +35,16 @@ function translateTiming(hour: string | null): string {
 const fmt = (d: Date) => d.toISOString().slice(0, 10);
 
 async function fetchRange(from: string, to: string, token: string): Promise<any[]> {
-  const controller = new AbortController();
-  const tid = setTimeout(() => controller.abort(), 9000);
   try {
+    // next.revalidate + signal 동시 사용 시 캐시 무시됨 → signal 제거하고 캐시 우선
     const res = await fetch(
       `https://finnhub.io/api/v1/calendar/earnings?from=${from}&to=${to}&token=${token}`,
-      { signal: controller.signal, next: { revalidate: 3600 } }
+      { next: { revalidate: 3600, tags: ['finnhub-earnings'] } }
     );
-    clearTimeout(tid);
     if (!res.ok) return [];
     const data = await res.json();
     return data.earningsCalendar ?? [];
   } catch {
-    clearTimeout(tid);
     return [];
   }
 }

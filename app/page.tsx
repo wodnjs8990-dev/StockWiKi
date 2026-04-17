@@ -3,9 +3,9 @@ import StockWiki from '@/components/StockWiki';
 import { getSiteConfig } from '@/lib/config';
 import { getEarnings } from '@/lib/earnings';
 
-// ISR: 1시간마다 백그라운드 재검증
-// 사용자는 항상 캐시된 데이터를 로딩 없이 즉시 봄
-export const revalidate = 3600;
+// Edge Config가 revalidate:0 을 사용하므로 페이지는 dynamic 유지
+// 어닝 데이터는 lib/earnings.ts 내부 fetch에서 개별 캐시 처리
+export const dynamic = 'force-dynamic';
 
 async function StockWikiWithConfig() {
   // config + 어닝 데이터 서버에서 병렬 fetch
