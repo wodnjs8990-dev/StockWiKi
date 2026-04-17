@@ -968,10 +968,18 @@ function formatKoreanUnit(value: string | number): string {
 }
 
 function NumInput({ label, value, onChange, unit, placeholder, hint }) {
-  // 표시용: 쉼표 포함된 값
-  const displayValue = value === '' || value === null || value === undefined
-    ? ''
-    : Number(value).toLocaleString('ko-KR');
+  const [isFocused, setIsFocused] = useState(false);
+
+  // 포커스 중: 원본값 표시 (소수점 입력 가능하도록)
+  // 포커스 해제 시: 쉼표 포함 형식으로 표시
+  const displayValue = (() => {
+    if (value === '' || value === null || value === undefined) return '';
+    if (isFocused) return String(value); // 편집 중엔 원본 그대로
+    const num = Number(value);
+    if (!isFinite(num)) return String(value);
+    // 소수점 이하 자리 보존 (toLocaleString은 소수점 잘라낼 수 있음)
+    return num.toLocaleString('ko-KR', { maximumFractionDigits: 10 });
+  })();
 
   // 입력 시: 쉼표 제거하고 숫자만 저장
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -991,6 +999,8 @@ function NumInput({ label, value, onChange, unit, placeholder, hint }) {
           inputMode="decimal"
           value={displayValue}
           onChange={handleChange}
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => setIsFocused(false)}
           placeholder={placeholder}
           className="w-full px-4 py-3 mono text-base bg-transparent"
           style={{ color: '#e8e4d6' }}
