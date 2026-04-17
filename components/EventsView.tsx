@@ -144,10 +144,10 @@ export default function EventsView() {
         </div>
       </div>
 
-      <div className="flex flex-col xl:flex-row gap-5 items-start">
+      <div className="flex flex-col gap-5">
 
         {/* ── 달력 본체 ── */}
-        <div className="w-full xl:flex-1 min-w-0 border" style={{ borderColor: BORDER }}>
+        <div className="w-full min-w-0 border" style={{ borderColor: BORDER, maxWidth: '720px', margin: '0 auto' }}>
 
           {/* 월 네비게이션 */}
           <div className="flex items-center justify-between px-4 md:px-6 py-3 border-b" style={{ borderColor: BORDER, background: '#0f0f0f' }}>
@@ -181,8 +181,8 @@ export default function EventsView() {
             ))}
           </div>
 
-          {/* 날짜 그리드 — 6행 고정 (달마다 높이 통일) */}
-          <div className="grid grid-cols-7" style={{ gridTemplateRows: `repeat(${days.length / 7}, 1fr)` }}>
+          {/* 날짜 그리드 — 항상 6행으로 패딩, 셀은 aspect-ratio로 정사각형 유지 */}
+          <div className="grid grid-cols-7">
             {days.map(({ date: day, isCurrentMonth }, idx) => {
               const dayNum = parseInt(day.slice(8));
               const dow = new Date(day + 'T00:00:00').getDay();
@@ -190,17 +190,15 @@ export default function EventsView() {
               const isSelected = day === selectedDate;
               const isPast = day < today;
               const evs = eventsByDate[day] ?? [];
-
-              // 불투명도: 이번달=1.0, 전/다음달=0.3, 지난날(이번달)=0.5
               const opacity = !isCurrentMonth ? 0.3 : isPast && !isToday ? 0.5 : 1;
 
               return (
                 <div
                   key={`${day}-${idx}`}
                   onClick={() => setSelectedDate(isSelected ? null : day)}
-                  className="border-r border-b p-1.5 cursor-pointer transition-colors"
-                  style={{ height: '90px' }}
+                  className="border-r border-b p-1.5 cursor-pointer transition-colors overflow-hidden"
                   style={{
+                    aspectRatio: '1 / 1',
                     borderColor: '#1a1a1a',
                     background: isSelected ? '#1e1e1e' : isToday ? '#161610' : 'transparent',
                     outline: isSelected ? `1px solid #C89650` : isToday ? '1px solid #3a3a20' : 'none',
@@ -265,12 +263,12 @@ export default function EventsView() {
           </div>
         </div>
 
-        {/* ── 우측: 선택 날짜 상세 / 다가오는 이벤트 ── */}
-        <div className="w-full xl:w-[260px] shrink-0 xl:sticky xl:top-[90px]">
+        {/* ── 하단: 선택 날짜 상세 / 다가오는 이벤트 ── */}
+        <div className="grid md:grid-cols-2 gap-5" style={{ maxWidth: '720px', margin: '0 auto', width: '100%' }}>
 
           {/* 선택 날짜 이벤트 */}
           {selectedDate && (
-            <div className="border mb-4" style={{ borderColor: BORDER }}>
+            <div className="border" style={{ borderColor: BORDER }}>
               <div className="px-4 py-3 border-b flex items-center justify-between" style={{ borderColor: BORDER, background: '#0f0f0f' }}>
                 <span className="text-[11px] mono uppercase tracking-[0.2em]" style={{ color: '#a8a49a' }}>
                   {parseInt(selectedDate.slice(5, 7))}월 {parseInt(selectedDate.slice(8, 10))}일
