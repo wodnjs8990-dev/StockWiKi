@@ -1,0 +1,51 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+KR:wght@300;400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body {
+  background: #1a1a1a;
+  color: #d4d0c4;
+  -webkit-font-smoothing: antialiased;
+  font-family: 'Inter', 'Noto Sans KR', sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+.mono {
+  font-family: 'IBM Plex Mono', monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+input, button, select {
+  font-family: inherit;
+  color: inherit;
+}
+
+input:focus { outline: none; }
+input::placeholder { color: #5a5a5a; }
+
+.scroll-hide::-webkit-scrollbar { display: none; }
+.scroll-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.ball-joint {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #8a8a8a;
+  display: inline-block;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.15);
+}
+
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
