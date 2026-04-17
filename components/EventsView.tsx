@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, RefreshCw, AlertCircle } from 'lucide-react';
+import React, { useState } from 'react';
+import { ChevronLeft, ChevronRight, RefreshCw, AlertCircle, Clock } from 'lucide-react';
 
 const BORDER = '#2a2a2a';
 
@@ -86,21 +86,9 @@ export default function EventsView() {
   const [year, setYear] = useState(() => parseInt(today.slice(0, 4)));
   const [month, setMonth] = useState(() => parseInt(today.slice(5, 7)));
   const [selectedDate, setSelectedDate] = useState<string | null>(today);
-  const [earnings, setEarnings] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [updatedAt, setUpdatedAt] = useState<string | null>(null);
-
-  useEffect(() => {
-    fetch('/api/events')
-      .then(r => r.json())
-      .then(data => {
-        if (data.ok) { setEarnings(data.earnings ?? []); setUpdatedAt(data.updatedAt); }
-        else setError(data.error ?? '로드 실패');
-      })
-      .catch(() => setError('네트워크 오류'))
-      .finally(() => setLoading(false));
-  }, []);
+  const earnings: any[] = []; // 어닝 데이터 준비 중
+  const loading = false;
+  const updatedAt = null;
 
   // 어닝 → 달력 이벤트 변환
   const earningEvents: CalEvent[] = earnings.map(e => ({
@@ -144,24 +132,22 @@ export default function EventsView() {
             <span className="w-4 h-px hidden md:inline-block" style={{ background: '#3a3a3a' }}></span>
             <span className="hidden md:inline">Index / 003</span>
           </div>
-          {updatedAt && (
-            <span className="flex items-center gap-1.5" style={{ color: '#4a4a4a' }}>
-              <RefreshCw size={9} />
-              KST {new Date(new Date(updatedAt).getTime() + 9 * 3600 * 1000).toISOString().slice(11, 16)} 업데이트
-            </span>
-          )}
+          <span className="flex items-center gap-1.5" style={{ color: '#4a4a4a' }}>
+            <Clock size={9} />
+            어닝 데이터 준비 중
+          </span>
         </div>
         <div className="grid grid-cols-3 gap-2 md:gap-6 py-2 mono text-[10px] uppercase tracking-[0.2em]">
           <div className="flex items-baseline gap-1 md:gap-2"><span style={{ color: '#5a5a5a' }}>이달 이벤트</span><span style={{ color: '#e8e4d6' }}>{String(monthEventCount).padStart(3, '0')}</span></div>
-          <div className="flex items-baseline gap-1 md:gap-2"><span style={{ color: '#5a5a5a' }}>어닝</span><span style={{ color: loading ? '#5a5a5a' : '#e8e4d6' }}>{loading ? '···' : String(earnings.length).padStart(3, '0')}</span></div>
+          <div className="flex items-baseline gap-1 md:gap-2"><span style={{ color: '#5a5a5a' }}>어닝</span><span style={{ color: '#3a3a3a' }}>준비 중</span></div>
           <div className="flex items-baseline gap-1 md:gap-2"><span style={{ color: '#5a5a5a' }}>KST 기준</span></div>
         </div>
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-5 items-start">
+      <div className="flex flex-col xl:flex-row gap-5 items-start">
 
         {/* ── 달력 본체 ── */}
-        <div className="flex-1 min-w-0 border" style={{ borderColor: BORDER }}>
+        <div className="w-full xl:flex-1 min-w-0 border" style={{ borderColor: BORDER }}>
 
           {/* 월 네비게이션 */}
           <div className="flex items-center justify-between px-4 md:px-6 py-3 border-b" style={{ borderColor: BORDER, background: '#0f0f0f' }}>
@@ -195,8 +181,8 @@ export default function EventsView() {
             ))}
           </div>
 
-          {/* 날짜 그리드 */}
-          <div className="grid grid-cols-7">
+          {/* 날짜 그리드 — 6행 고정 (달마다 높이 통일) */}
+          <div className="grid grid-cols-7" style={{ gridTemplateRows: `repeat(${days.length / 7}, 1fr)` }}>
             {days.map(({ date: day, isCurrentMonth }, idx) => {
               const dayNum = parseInt(day.slice(8));
               const dow = new Date(day + 'T00:00:00').getDay();
@@ -212,7 +198,8 @@ export default function EventsView() {
                 <div
                   key={`${day}-${idx}`}
                   onClick={() => setSelectedDate(isSelected ? null : day)}
-                  className="border-r border-b min-h-[72px] md:min-h-[90px] p-1.5 cursor-pointer transition-colors"
+                  className="border-r border-b p-1.5 cursor-pointer transition-colors"
+                  style={{ height: '90px' }}
                   style={{
                     borderColor: '#1a1a1a',
                     background: isSelected ? '#1e1e1e' : isToday ? '#161610' : 'transparent',
@@ -272,21 +259,14 @@ export default function EventsView() {
                 <span className="text-[10px] mono" style={{ color: '#5a5a5a' }}>{label}</span>
               </div>
             ))}
-            {loading && (
-              <span className="flex items-center gap-1 ml-auto text-[10px] mono" style={{ color: '#5a5a5a' }}>
-                <RefreshCw size={9} className="animate-spin" /> 어닝 로딩 중
-              </span>
-            )}
-            {error && (
-              <span className="flex items-center gap-1 ml-auto text-[10px] mono" style={{ color: '#A63D33' }}>
-                <AlertCircle size={9} /> {error}
-              </span>
-            )}
+            <span className="flex items-center gap-1 ml-auto text-[10px] mono" style={{ color: '#3a3a3a' }}>
+              <Clock size={9} /> 미국 어닝 준비 중
+            </span>
           </div>
         </div>
 
         {/* ── 우측: 선택 날짜 상세 / 다가오는 이벤트 ── */}
-        <div className="w-full lg:w-[280px] shrink-0 sticky top-[90px]">
+        <div className="w-full xl:w-[260px] shrink-0 xl:sticky xl:top-[90px]">
 
           {/* 선택 날짜 이벤트 */}
           {selectedDate && (
