@@ -132,7 +132,7 @@ export default function EventsView() {
             <span className="w-4 h-px hidden md:inline-block" style={{ background: '#3a3a3a' }}></span>
             <span className="hidden md:inline">Index / 003</span>
           </div>
-          <span className="flex items-center gap-1.5" style={{ color: '#4a4a4a' }}>
+          <span className="flex items-center gap-1.5" style={{ color: '#C89650' }}>
             <Clock size={9} />
             어닝 데이터 준비 중
           </span>
