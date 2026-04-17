@@ -1,27 +1,31 @@
 'use client';
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { Search, Calculator, BookOpen, ChevronRight, X, ArrowUpRight, Star, Clock, Menu, Link as LinkIcon, Copy, Check, Share2 } from 'lucide-react';
+import { Search, Calculator, BookOpen, ChevronRight, X, ArrowUpRight, Star, Clock, Menu, Link as LinkIcon, Copy, Check, Share2, CalendarDays } from 'lucide-react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { TERMS, CATEGORIES, CATEGORY_COLORS } from '@/data/terms';
 import { CALC_CATEGORIES } from '@/data/calcs';
+import EventsView from '@/components/EventsView';
 
 type Features = {
   glossary: boolean;
   calculator: boolean;
   commandK: boolean;
+  events?: boolean;
 };
 
 export default function StockWiki({ features }: { features?: Features }) {
-  const feat = features ?? { glossary: true, calculator: true, commandK: true };
+  const feat = features ?? { glossary: true, calculator: true, commandK: true, events: true };
   const searchParams = useSearchParams();
   const router = useRouter();
 
   // 접근 가능한 탭 결정 — 활성화된 탭 중 첫 번째를 기본값으로
-  const initialTabFromUrl = searchParams?.get('tab') === 'calculator' ? 'calculator' : 'glossary';
-  const isRequestedTabAvailable = feat[initialTabFromUrl as 'glossary' | 'calculator'];
-  const fallbackTab = feat.glossary ? 'glossary' : feat.calculator ? 'calculator' : 'none';
+  const tabFromUrl = searchParams?.get('tab');
+  const validTabs = ['glossary', 'calculator', 'events'] as const;
+  const initialTabFromUrl = validTabs.includes(tabFromUrl as any) ? tabFromUrl : 'glossary';
+  const isRequestedTabAvailable = feat[initialTabFromUrl as keyof Features];
+  const fallbackTab = feat.glossary ? 'glossary' : feat.calculator ? 'calculator' : feat.events ? 'events' : 'none';
   const initialTab = isRequestedTabAvailable ? initialTabFromUrl : fallbackTab;
   const initialCalc = searchParams?.get('calc') || 'per';
 
@@ -162,7 +166,8 @@ export default function StockWiki({ features }: { features?: Features }) {
           {[
             { id: 'glossary', label: '금융 사전', icon: BookOpen, idx: '01', count: TERMS.length },
             { id: 'calculator', label: '계산기', icon: Calculator, idx: '02', count: CALC_CATEGORIES.reduce((s, c) => s + c.calcs.length, 0) },
-          ].filter(tab => feat[tab.id as 'glossary' | 'calculator']).map(tab => {
+            { id: 'events', label: '이벤트', icon: CalendarDays, idx: '03', count: null },
+          ].filter(tab => feat[tab.id as keyof Features] !== false).map(tab => {
             const active = activeTab === tab.id;
             const Icon = tab.icon;
             return (
@@ -178,7 +183,7 @@ export default function StockWiki({ features }: { features?: Features }) {
                 <span className="text-[10px] mono opacity-60">{tab.idx}</span>
                 <Icon size={14} />
                 <span className="font-medium">{tab.label}</span>
-                <span className="text-[10px] mono opacity-50">{tab.count}</span>
+                {tab.count !== null && <span className="text-[10px] mono opacity-50">{tab.count}</span>}
               </button>
             );
           })}
@@ -230,6 +235,9 @@ export default function StockWiki({ features }: { features?: Features }) {
             selectedCalc={selectedCalc}
             setSelectedCalc={setSelectedCalc}
           />
+        )}
+        {activeTab === 'events' && feat.events !== false && (
+          <EventsView />
         )}
       </main>
 
