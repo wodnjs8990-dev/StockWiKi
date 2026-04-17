@@ -2,10 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { get } from '@vercel/edge-config';
 
 export const config = {
-  // admin 페이지, API, 정적 파일, 점검 페이지는 제외
-  matcher: [
-    '/((?!admin-stk-2026|api|maintenance|_next|favicon.ico|robots.txt|sitemap.xml).*)',
-  ],
+  // 메인 페이지만 점검 모드 체크 대상으로 제한
+  // 다른 경로(terms, calc, admin, api 등)는 모두 정상 통과
+  matcher: ['/'],
 };
 
 export async function middleware(req: NextRequest) {
