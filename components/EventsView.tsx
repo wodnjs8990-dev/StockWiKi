@@ -1,328 +1,341 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, RefreshCw, ChevronDown, ChevronUp, AlertCircle } from 'lucide-react';
+import { ChevronLeft, ChevronRight, RefreshCw, AlertCircle } from 'lucide-react';
 
 const BORDER = '#2a2a2a';
 
-// ── FOMC 2026 일정 (KST 기준, 연준 공식 발표 기준 +14시간)
+// ── FOMC 2026 (KST 기준)
 const FOMC_2026 = [
-  { date: '2026-01-29', dateKST: '2026-01-30', label: 'FOMC 정례회의', desc: '금리 결정 발표' },
-  { date: '2026-03-19', dateKST: '2026-03-20', label: 'FOMC 정례회의', desc: '금리 결정 발표 + 점도표' },
-  { date: '2026-05-07', dateKST: '2026-05-08', label: 'FOMC 정례회의', desc: '금리 결정 발표' },
-  { date: '2026-06-18', dateKST: '2026-06-19', label: 'FOMC 정례회의', desc: '금리 결정 발표 + 점도표' },
-  { date: '2026-07-30', dateKST: '2026-07-31', label: 'FOMC 정례회의', desc: '금리 결정 발표' },
-  { date: '2026-09-17', dateKST: '2026-09-18', label: 'FOMC 정례회의', desc: '금리 결정 발표 + 점도표' },
-  { date: '2026-11-05', dateKST: '2026-11-06', label: 'FOMC 정례회의', desc: '금리 결정 발표' },
-  { date: '2026-12-17', dateKST: '2026-12-18', label: 'FOMC 정례회의', desc: '금리 결정 발표 + 점도표' },
+  { dateKST: '2026-01-30', label: 'FOMC', desc: '금리 결정', color: '#4F7E7C' },
+  { dateKST: '2026-03-20', label: 'FOMC', desc: '금리+점도표', color: '#4F7E7C' },
+  { dateKST: '2026-05-08', label: 'FOMC', desc: '금리 결정', color: '#4F7E7C' },
+  { dateKST: '2026-06-19', label: 'FOMC', desc: '금리+점도표', color: '#4F7E7C' },
+  { dateKST: '2026-07-31', label: 'FOMC', desc: '금리 결정', color: '#4F7E7C' },
+  { dateKST: '2026-09-18', label: 'FOMC', desc: '금리+점도표', color: '#4F7E7C' },
+  { dateKST: '2026-11-06', label: 'FOMC', desc: '금리 결정', color: '#4F7E7C' },
+  { dateKST: '2026-12-18', label: 'FOMC', desc: '금리+점도표', color: '#4F7E7C' },
 ];
 
-// ── 코스피200 선물 만기일 계산 (매 분기 둘째 주 목요일)
+// ── 코스피200 선물 만기 (분기 둘째 목요일)
 function getFuturesExpiry(year: number, month: number): string {
   const d = new Date(year, month - 1, 1);
-  let thursCount = 0;
+  let count = 0;
   while (true) {
     if (d.getMonth() !== month - 1) break;
-    if (d.getDay() === 4) {
-      thursCount++;
-      if (thursCount === 2) break;
-    }
+    if (d.getDay() === 4) { count++; if (count === 2) break; }
     d.setDate(d.getDate() + 1);
   }
   return d.toISOString().slice(0, 10);
 }
 
-function getFuturesEvents() {
-  const quarters = [3, 6, 9, 12];
-  const events = [];
-  for (const m of quarters) {
-    const date = getFuturesExpiry(2026, m);
-    events.push({
-      date,
-      dateKST: date,
-      label: `코스피200 선물 만기`,
-      desc: `${m}월 분기물 최종거래일`,
-    });
+const FUTURES_EVENTS = [3, 6, 9, 12].map(m => ({
+  dateKST: getFuturesExpiry(2026, m),
+  label: 'K200만기',
+  desc: `${m}월 선물 최종거래`,
+  color: '#8A8A8A',
+}));
+
+// KST 오늘
+function getKSTToday(): string {
+  return new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10);
+}
+
+// 달력 날짜 배열 생성
+function getCalendarDays(year: number, month: number): (string | null)[] {
+  const first = new Date(year, month - 1, 1).getDay(); // 0=일
+  const days: (string | null)[] = Array(first).fill(null);
+  const last = new Date(year, month, 0).getDate();
+  for (let d = 1; d <= last; d++) {
+    days.push(`${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`);
   }
-  return events;
+  while (days.length % 7 !== 0) days.push(null);
+  return days;
 }
 
-// D-Day 계산 (KST 기준 오늘)
-function getDDay(dateStr: string): { label: string; value: number } {
-  const today = new Date();
-  const kstToday = new Date(today.getTime() + 9 * 60 * 60 * 1000);
-  const todayStr = kstToday.toISOString().slice(0, 10);
-  const diff = Math.ceil(
-    (new Date(dateStr).getTime() - new Date(todayStr).getTime()) / (1000 * 60 * 60 * 24)
-  );
-  if (diff === 0) return { label: 'D-Day', value: 0 };
-  if (diff > 0) return { label: `D-${diff}`, value: diff };
-  return { label: `D+${Math.abs(diff)}`, value: diff };
-}
+const DAY_LABELS = ['일', '월', '화', '수', '목', '금', '토'];
 
-function formatDateKO(dateStr: string): string {
-  const d = new Date(dateStr + 'T00:00:00');
-  const days = ['일', '월', '화', '수', '목', '금', '토'];
-  return `${dateStr.slice(0, 4)}년 ${parseInt(dateStr.slice(5, 7))}월 ${parseInt(dateStr.slice(8, 10))}일 (${days[d.getDay()]})`;
-}
-
-// 섹션 헤더
-function SectionHeader({ title, color, count }: { title: string; color: string; count: number }) {
-  return (
-    <div className="px-4 md:px-6 py-3 flex items-center gap-3 border-b" style={{ background: '#0f0f0f', borderColor: BORDER }}>
-      <span className="w-2 h-2 rounded-full" style={{ background: color }}></span>
-      <span className="text-xs md:text-sm mono uppercase tracking-[0.2em]" style={{ color: '#a8a49a' }}>{title}</span>
-      <span className="ml-auto text-[10px] mono" style={{ color: '#5a5a5a' }}>{String(count).padStart(2, '0')} EVENTS</span>
-    </div>
-  );
-}
-
-// 이벤트 행 (FOMC / 선물만기)
-function EventRow({ event, color }: { event: any; color: string }) {
-  const dday = getDDay(event.dateKST);
-  const isPast = dday.value < 0;
-  const isToday = dday.value === 0;
-
-  return (
-    <div
-      className="flex items-center gap-3 px-4 md:px-6 py-3 border-b text-sm"
-      style={{
-        borderColor: '#1a1a1a',
-        opacity: isPast ? 0.4 : 1,
-        background: isToday ? `${color}10` : 'transparent',
-      }}
-    >
-      {/* D-Day 뱃지 */}
-      <span
-        className="text-[10px] mono w-14 shrink-0 text-center py-0.5 border"
-        style={{
-          borderColor: isToday ? color : '#2a2a2a',
-          color: isToday ? color : dday.value > 0 ? '#a8a49a' : '#5a5a5a',
-          background: isToday ? `${color}15` : 'transparent',
-        }}
-      >
-        {dday.label}
-      </span>
-
-      {/* 날짜 */}
-      <span className="text-[11px] mono shrink-0" style={{ color: '#7a7a7a' }}>
-        {formatDateKO(event.dateKST)}
-      </span>
-
-      {/* 이벤트명 */}
-      <div className="flex-1 min-w-0">
-        <span className="font-medium" style={{ color: '#e8e4d6' }}>{event.label}</span>
-        {event.desc && (
-          <span className="ml-2 text-[11px]" style={{ color: '#5a5a5a' }}>{event.desc}</span>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// 어닝 행
-function EarningRow({ e }: { e: any }) {
-  const dday = getDDay(e.dateKST);
-  const isPast = dday.value < 0;
-  const isToday = dday.value === 0;
-  const color = '#C89650';
-
-  return (
-    <div
-      className="flex items-center gap-3 px-4 md:px-6 py-3 border-b text-sm"
-      style={{
-        borderColor: '#1a1a1a',
-        opacity: isPast ? 0.4 : 1,
-        background: isToday ? `${color}10` : 'transparent',
-      }}
-    >
-      {/* D-Day */}
-      <span
-        className="text-[10px] mono w-14 shrink-0 text-center py-0.5 border"
-        style={{
-          borderColor: isToday ? color : '#2a2a2a',
-          color: isToday ? color : dday.value > 0 ? '#a8a49a' : '#5a5a5a',
-          background: isToday ? `${color}15` : 'transparent',
-        }}
-      >
-        {dday.label}
-      </span>
-
-      {/* 날짜 */}
-      <span className="text-[11px] mono shrink-0 hidden md:inline" style={{ color: '#7a7a7a' }}>
-        {formatDateKO(e.dateKST)}
-      </span>
-      <span className="text-[11px] mono shrink-0 md:hidden" style={{ color: '#7a7a7a' }}>
-        {e.dateKST.slice(5).replace('-', '/')}
-      </span>
-
-      {/* 종목 */}
-      <span
-        className="text-[11px] mono w-12 shrink-0 font-bold"
-        style={{ color: '#C89650' }}
-      >
-        {e.symbol}
-      </span>
-
-      {/* 회사명 */}
-      <span className="font-medium truncate" style={{ color: '#e8e4d6' }}>{e.nameKo}</span>
-
-      {/* 발표 타이밍 */}
-      {e.timing && (
-        <span className="ml-auto text-[10px] mono shrink-0 hidden sm:inline" style={{ color: '#5a5a5a' }}>
-          {e.timing}
-        </span>
-      )}
-    </div>
-  );
-}
+type CalEvent = { dateKST: string; label: string; desc: string; color: string; symbol?: string; nameKo?: string; timing?: string };
 
 export default function EventsView() {
+  const today = getKSTToday();
+  const [year, setYear] = useState(() => parseInt(today.slice(0, 4)));
+  const [month, setMonth] = useState(() => parseInt(today.slice(5, 7)));
   const [earnings, setEarnings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [updatedAt, setUpdatedAt] = useState<string | null>(null);
-  const [showPast, setShowPast] = useState(false);
-
-  const futuresEvents = getFuturesEvents();
-  const today = new Date(new Date().getTime() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
-
-  // 예정 FOMC (오늘 이후)
-  const upcomingFomc = FOMC_2026.filter(f => f.dateKST >= today);
-  const pastFomc = FOMC_2026.filter(f => f.dateKST < today);
-  const upcomingFutures = futuresEvents.filter(f => f.dateKST >= today);
+  const [selectedDate, setSelectedDate] = useState<string | null>(today);
 
   useEffect(() => {
     fetch('/api/events')
       .then(r => r.json())
       .then(data => {
-        if (data.ok) {
-          setEarnings(data.earnings ?? []);
-          setUpdatedAt(data.updatedAt);
-        } else {
-          setError(data.error ?? '데이터 로드 실패');
-        }
+        if (data.ok) { setEarnings(data.earnings ?? []); setUpdatedAt(data.updatedAt); }
+        else setError(data.error ?? '로드 실패');
       })
       .catch(() => setError('네트워크 오류'))
       .finally(() => setLoading(false));
   }, []);
 
-  const upcomingEarnings = earnings.filter(e => e.dateKST >= today);
-  const pastEarnings = earnings.filter(e => e.dateKST < today);
+  // 어닝 → 달력 이벤트 변환
+  const earningEvents: CalEvent[] = earnings.map(e => ({
+    dateKST: e.dateKST,
+    label: e.symbol,
+    desc: e.nameKo + (e.timing ? ` · ${e.timing}` : ''),
+    color: '#C89650',
+    symbol: e.symbol,
+    nameKo: e.nameKo,
+    timing: e.timing,
+  }));
 
-  // 다음 FOMC까지 D-Day
-  const nextFomc = upcomingFomc[0];
-  const nextFomcDday = nextFomc ? getDDay(nextFomc.dateKST) : null;
+  // 모든 이벤트를 날짜별로 그룹화
+  const allEvents: CalEvent[] = [...FOMC_2026, ...FUTURES_EVENTS, ...earningEvents];
+  const eventsByDate: Record<string, CalEvent[]> = {};
+  for (const ev of allEvents) {
+    if (!eventsByDate[ev.dateKST]) eventsByDate[ev.dateKST] = [];
+    eventsByDate[ev.dateKST].push(ev);
+  }
+
+  const days = getCalendarDays(year, month);
+
+  const prevMonth = () => { if (month === 1) { setYear(y => y - 1); setMonth(12); } else setMonth(m => m - 1); };
+  const nextMonth = () => { if (month === 12) { setYear(y => y + 1); setMonth(1); } else setMonth(m => m + 1); };
+  const goToday = () => { const t = getKSTToday(); setYear(parseInt(t.slice(0, 4))); setMonth(parseInt(t.slice(5, 7))); setSelectedDate(t); };
+
+  // 선택된 날짜 이벤트
+  const selectedEvents = selectedDate ? (eventsByDate[selectedDate] ?? []) : [];
+
+  // 이번 달 이벤트 요약 (범례용)
+  const monthStr = `${year}-${String(month).padStart(2, '0')}`;
+  const monthEventCount = Object.entries(eventsByDate).filter(([d]) => d.startsWith(monthStr)).reduce((s, [, evs]) => s + evs.length, 0);
 
   return (
     <div>
-      {/* 헤더 메타 바 */}
+      {/* 상단 메타 바 */}
       <div className="mb-6 border-y" style={{ borderColor: BORDER }}>
         <div className="flex items-center justify-between gap-3 py-2 border-b mono text-[10px] uppercase tracking-[0.2em]" style={{ borderColor: BORDER, color: '#7a7a7a' }}>
           <div className="flex items-center gap-3">
-            <span>§ Events</span>
+            <span>§ Events Calendar</span>
             <span className="w-4 h-px hidden md:inline-block" style={{ background: '#3a3a3a' }}></span>
             <span className="hidden md:inline">Index / 003</span>
           </div>
           {updatedAt && (
             <span className="flex items-center gap-1.5" style={{ color: '#4a4a4a' }}>
               <RefreshCw size={9} />
-              KST {new Date(new Date(updatedAt).getTime() + 9 * 60 * 60 * 1000).toISOString().slice(11, 16)} 업데이트
+              KST {new Date(new Date(updatedAt).getTime() + 9 * 3600 * 1000).toISOString().slice(11, 16)} 업데이트
             </span>
           )}
         </div>
-
-        {/* 요약 카운터 */}
         <div className="grid grid-cols-3 gap-2 md:gap-6 py-2 mono text-[10px] uppercase tracking-[0.2em]">
-          <div className="flex items-baseline gap-1 md:gap-2">
-            <span style={{ color: '#5a5a5a' }}>FOMC</span>
-            <span style={{ color: nextFomcDday ? '#C89650' : '#e8e4d6' }}>
-              {nextFomcDday ? nextFomcDday.label : '—'}
-            </span>
-          </div>
-          <div className="flex items-baseline gap-1 md:gap-2">
-            <span style={{ color: '#5a5a5a' }}>어닝</span>
-            <span style={{ color: '#e8e4d6' }}>{String(upcomingEarnings.length).padStart(3, '0')}</span>
-          </div>
-          <div className="flex items-baseline gap-1 md:gap-2">
-            <span style={{ color: '#5a5a5a' }}>만기</span>
-            <span style={{ color: '#e8e4d6' }}>{upcomingFutures.length > 0 ? getDDay(upcomingFutures[0].dateKST).label : '—'}</span>
-          </div>
+          <div className="flex items-baseline gap-1 md:gap-2"><span style={{ color: '#5a5a5a' }}>이달 이벤트</span><span style={{ color: '#e8e4d6' }}>{String(monthEventCount).padStart(3, '0')}</span></div>
+          <div className="flex items-baseline gap-1 md:gap-2"><span style={{ color: '#5a5a5a' }}>어닝</span><span style={{ color: loading ? '#5a5a5a' : '#e8e4d6' }}>{loading ? '···' : String(earnings.length).padStart(3, '0')}</span></div>
+          <div className="flex items-baseline gap-1 md:gap-2"><span style={{ color: '#5a5a5a' }}>KST 기준</span></div>
         </div>
       </div>
 
-      <div className="space-y-5">
+      <div className="flex flex-col lg:flex-row gap-5 items-start">
 
-        {/* ── FOMC 섹션 ── */}
-        <div className="border" style={{ borderColor: BORDER }}>
-          <SectionHeader title="FOMC 금리 결정" color="#4F7E7C" count={upcomingFomc.length} />
-          {upcomingFomc.length === 0 ? (
-            <div className="px-6 py-8 text-center text-sm" style={{ color: '#5a5a5a' }}>2026년 일정 종료</div>
-          ) : (
-            upcomingFomc.map((f, i) => (
-              <EventRow key={i} event={f} color="#4F7E7C" />
-            ))
-          )}
-          {pastFomc.length > 0 && (
-            <button
-              onClick={() => setShowPast(p => !p)}
-              className="w-full flex items-center justify-center gap-2 py-2 text-[11px] mono uppercase tracking-[0.2em] hover:bg-white/5 transition-colors border-t"
-              style={{ borderColor: BORDER, color: '#4a4a4a' }}
-            >
-              {showPast ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
-              {showPast ? '지난 일정 접기' : `지난 일정 ${pastFomc.length}개 보기`}
+        {/* ── 달력 본체 ── */}
+        <div className="flex-1 min-w-0 border" style={{ borderColor: BORDER }}>
+
+          {/* 월 네비게이션 */}
+          <div className="flex items-center justify-between px-4 md:px-6 py-3 border-b" style={{ borderColor: BORDER, background: '#0f0f0f' }}>
+            <button onClick={prevMonth} className="p-1.5 hover:bg-white/5 transition-colors" style={{ color: '#a8a49a' }}>
+              <ChevronLeft size={16} />
             </button>
-          )}
-          {showPast && pastFomc.map((f, i) => (
-            <EventRow key={`past-${i}`} event={f} color="#4F7E7C" />
-          ))}
+            <div className="flex items-center gap-4">
+              <span className="text-base font-medium tracking-tight" style={{ color: '#e8e4d6' }}>
+                {year}년 {month}월
+              </span>
+              <button
+                onClick={goToday}
+                className="text-[10px] mono uppercase tracking-[0.2em] px-2 py-0.5 border hover:bg-white/5 transition-colors"
+                style={{ borderColor: BORDER, color: '#7a7a7a' }}
+              >
+                오늘
+              </button>
+            </div>
+            <button onClick={nextMonth} className="p-1.5 hover:bg-white/5 transition-colors" style={{ color: '#a8a49a' }}>
+              <ChevronRight size={16} />
+            </button>
+          </div>
+
+          {/* 요일 헤더 */}
+          <div className="grid grid-cols-7 border-b" style={{ borderColor: BORDER }}>
+            {DAY_LABELS.map((d, i) => (
+              <div key={d} className="text-center py-2 text-[10px] mono uppercase tracking-[0.15em]"
+                style={{ color: i === 0 ? '#7a3a3a' : i === 6 ? '#3a5a7a' : '#5a5a5a' }}>
+                {d}
+              </div>
+            ))}
+          </div>
+
+          {/* 날짜 그리드 */}
+          <div className="grid grid-cols-7">
+            {days.map((day, idx) => {
+              if (!day) {
+                return <div key={`empty-${idx}`} className="border-r border-b min-h-[72px] md:min-h-[90px]" style={{ borderColor: '#1a1a1a', background: '#080808' }} />;
+              }
+              const dayNum = parseInt(day.slice(8));
+              const dow = new Date(day + 'T00:00:00').getDay();
+              const isToday = day === today;
+              const isSelected = day === selectedDate;
+              const isPast = day < today;
+              const evs = eventsByDate[day] ?? [];
+
+              return (
+                <div
+                  key={day}
+                  onClick={() => setSelectedDate(isSelected ? null : day)}
+                  className="border-r border-b min-h-[72px] md:min-h-[90px] p-1.5 cursor-pointer transition-colors"
+                  style={{
+                    borderColor: '#1a1a1a',
+                    background: isSelected ? '#1e1e1e' : isToday ? '#161610' : 'transparent',
+                    outline: isSelected ? `1px solid #C89650` : isToday ? '1px solid #3a3a20' : 'none',
+                    outlineOffset: '-1px',
+                    opacity: isPast && !isToday ? 0.5 : 1,
+                  }}
+                >
+                  {/* 날짜 숫자 */}
+                  <div className="flex items-center justify-between mb-1">
+                    <span
+                      className="text-xs mono w-5 h-5 flex items-center justify-center"
+                      style={{
+                        color: isToday ? '#C89650' : dow === 0 ? '#7a3a3a' : dow === 6 ? '#3a5a7a' : '#7a7a7a',
+                        fontWeight: isToday ? 700 : 400,
+                        background: isToday ? '#C8965020' : 'transparent',
+                        borderRadius: '2px',
+                      }}
+                    >
+                      {dayNum}
+                    </span>
+                  </div>
+
+                  {/* 이벤트 도트/뱃지 */}
+                  <div className="flex flex-col gap-0.5">
+                    {evs.slice(0, 3).map((ev, i) => (
+                      <div
+                        key={i}
+                        className="flex items-center gap-1 px-1 py-0.5 text-[9px] md:text-[10px] truncate"
+                        style={{
+                          background: `${ev.color}22`,
+                          borderLeft: `2px solid ${ev.color}`,
+                          color: ev.color,
+                        }}
+                      >
+                        <span className="truncate font-medium">{ev.label}</span>
+                      </div>
+                    ))}
+                    {evs.length > 3 && (
+                      <div className="text-[9px] mono px-1" style={{ color: '#5a5a5a' }}>+{evs.length - 3}개</div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* 범례 */}
+          <div className="flex items-center gap-4 px-4 md:px-6 py-3 border-t" style={{ borderColor: BORDER, background: '#0a0a0a' }}>
+            {[
+              { color: '#4F7E7C', label: 'FOMC' },
+              { color: '#C89650', label: '미국 어닝' },
+              { color: '#8A8A8A', label: 'K200 선물만기' },
+            ].map(({ color, label }) => (
+              <div key={label} className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-sm" style={{ background: `${color}44`, borderLeft: `2px solid ${color}` }} />
+                <span className="text-[10px] mono" style={{ color: '#5a5a5a' }}>{label}</span>
+              </div>
+            ))}
+            {loading && (
+              <span className="flex items-center gap-1 ml-auto text-[10px] mono" style={{ color: '#5a5a5a' }}>
+                <RefreshCw size={9} className="animate-spin" /> 어닝 로딩 중
+              </span>
+            )}
+            {error && (
+              <span className="flex items-center gap-1 ml-auto text-[10px] mono" style={{ color: '#A63D33' }}>
+                <AlertCircle size={9} /> {error}
+              </span>
+            )}
+          </div>
         </div>
 
-        {/* ── 미국 주요 어닝 섹션 ── */}
-        <div className="border" style={{ borderColor: BORDER }}>
-          <SectionHeader title="미국 주요 실적 발표 (KST)" color="#C89650" count={upcomingEarnings.length} />
-          {loading && (
-            <div className="flex items-center justify-center gap-3 py-12" style={{ color: '#5a5a5a' }}>
-              <RefreshCw size={14} className="animate-spin" />
-              <span className="text-sm">Finnhub에서 불러오는 중...</span>
-            </div>
-          )}
-          {error && (
-            <div className="flex items-center gap-3 px-6 py-5 text-sm" style={{ color: '#A63D33' }}>
-              <AlertCircle size={14} />
-              <span>데이터 로드 실패: {error}</span>
-            </div>
-          )}
-          {!loading && !error && upcomingEarnings.length === 0 && (
-            <div className="px-6 py-8 text-center text-sm" style={{ color: '#5a5a5a' }}>
-              향후 8주 이내 주요 실적 발표 없음
-            </div>
-          )}
-          {!loading && upcomingEarnings.map((e, i) => (
-            <EarningRow key={i} e={e} />
-          ))}
-          {!loading && pastEarnings.length > 0 && (
-            <div className="px-4 md:px-6 py-2 text-[10px] mono border-t" style={{ borderColor: BORDER, color: '#4a4a4a' }}>
-              지난 실적 {pastEarnings.length}개 — 스크롤 상단 기준 오늘부터 표시
-            </div>
-          )}
-        </div>
+        {/* ── 우측: 선택 날짜 상세 / 다가오는 이벤트 ── */}
+        <div className="w-full lg:w-[280px] shrink-0 sticky top-[90px]">
 
-        {/* ── 선물 만기 섹션 ── */}
-        <div className="border" style={{ borderColor: BORDER }}>
-          <SectionHeader title="코스피200 선물 만기" color="#8A8A8A" count={upcomingFutures.length} />
-          {upcomingFutures.map((f, i) => (
-            <EventRow key={i} event={f} color="#8A8A8A" />
-          ))}
-          {upcomingFutures.length === 0 && (
-            <div className="px-6 py-8 text-center text-sm" style={{ color: '#5a5a5a' }}>2026년 만기 종료</div>
+          {/* 선택 날짜 이벤트 */}
+          {selectedDate && (
+            <div className="border mb-4" style={{ borderColor: BORDER }}>
+              <div className="px-4 py-3 border-b flex items-center justify-between" style={{ borderColor: BORDER, background: '#0f0f0f' }}>
+                <span className="text-[11px] mono uppercase tracking-[0.2em]" style={{ color: '#a8a49a' }}>
+                  {parseInt(selectedDate.slice(5, 7))}월 {parseInt(selectedDate.slice(8, 10))}일
+                </span>
+                {selectedDate === today && (
+                  <span className="text-[9px] mono px-1.5 py-0.5" style={{ background: '#C8965020', color: '#C89650', border: '1px solid #C8965040' }}>TODAY</span>
+                )}
+              </div>
+              {selectedEvents.length === 0 ? (
+                <div className="px-4 py-6 text-center text-[11px]" style={{ color: '#4a4a4a' }}>이벤트 없음</div>
+              ) : (
+                <div>
+                  {selectedEvents.map((ev, i) => (
+                    <div key={i} className="px-4 py-3 border-b" style={{ borderColor: '#1a1a1a', borderLeft: `3px solid ${ev.color}` }}>
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <span className="text-xs font-semibold" style={{ color: ev.color }}>{ev.label}</span>
+                      </div>
+                      <div className="text-[11px]" style={{ color: '#7a7a7a' }}>{ev.desc}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           )}
-        </div>
 
-        {/* 주의 문구 */}
-        <p className="text-[10px] mono text-center pb-4" style={{ color: '#3a3a3a' }}>
-          모든 날짜·시간은 KST(한국 표준시) 기준 · 어닝 데이터 출처: Finnhub · FOMC 일정은 연준 공식 발표 기준
-        </p>
+          {/* 다가오는 이벤트 리스트 */}
+          <div className="border" style={{ borderColor: BORDER }}>
+            <div className="px-4 py-3 border-b" style={{ borderColor: BORDER, background: '#0f0f0f' }}>
+              <span className="text-[11px] mono uppercase tracking-[0.2em]" style={{ color: '#a8a49a' }}>다가오는 이벤트</span>
+            </div>
+            {allEvents
+              .filter(ev => ev.dateKST >= today)
+              .sort((a, b) => a.dateKST.localeCompare(b.dateKST))
+              .slice(0, 8)
+              .map((ev, i) => {
+                const diff = Math.ceil((new Date(ev.dateKST).getTime() - new Date(today).getTime()) / 86400000);
+                return (
+                  <div
+                    key={i}
+                    className="px-4 py-2.5 border-b flex items-start gap-3 cursor-pointer hover:bg-white/5 transition-colors"
+                    style={{ borderColor: '#1a1a1a' }}
+                    onClick={() => {
+                      setYear(parseInt(ev.dateKST.slice(0, 4)));
+                      setMonth(parseInt(ev.dateKST.slice(5, 7)));
+                      setSelectedDate(ev.dateKST);
+                    }}
+                  >
+                    <span className="text-[10px] mono w-10 shrink-0 text-center py-0.5 mt-0.5"
+                      style={{ color: diff === 0 ? ev.color : '#5a5a5a', border: `1px solid ${diff === 0 ? ev.color : '#2a2a2a'}` }}>
+                      {diff === 0 ? 'D-Day' : `D-${diff}`}
+                    </span>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5 mb-0.5">
+                        <span className="w-1.5 h-1.5 rounded-sm shrink-0" style={{ background: ev.color }} />
+                        <span className="text-xs font-medium truncate" style={{ color: '#e8e4d6' }}>{ev.label}</span>
+                      </div>
+                      <div className="text-[10px] mono truncate" style={{ color: '#5a5a5a' }}>
+                        {ev.dateKST.slice(5).replace('-', '/')} · {ev.desc}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+          </div>
+
+          <p className="text-[9px] mono text-center mt-3" style={{ color: '#2a2a2a' }}>
+            모든 날짜·시간 KST 기준 · 어닝: Finnhub
+          </p>
+        </div>
       </div>
     </div>
   );
