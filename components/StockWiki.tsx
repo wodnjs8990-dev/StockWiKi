@@ -7,10 +7,22 @@ import Link from 'next/link';
 import { TERMS, CATEGORIES, CATEGORY_COLORS } from '@/data/terms';
 import { CALC_CATEGORIES } from '@/data/calcs';
 
-export default function StockWiki() {
+type Features = {
+  glossary: boolean;
+  calculator: boolean;
+  commandK: boolean;
+};
+
+export default function StockWiki({ features }: { features?: Features }) {
+  const feat = features ?? { glossary: true, calculator: true, commandK: true };
   const searchParams = useSearchParams();
   const router = useRouter();
-  const initialTab = searchParams?.get('tab') === 'calculator' ? 'calculator' : 'glossary';
+
+  // 접근 가능한 탭 결정 — 활성화된 탭 중 첫 번째를 기본값으로
+  const initialTabFromUrl = searchParams?.get('tab') === 'calculator' ? 'calculator' : 'glossary';
+  const isRequestedTabAvailable = feat[initialTabFromUrl as 'glossary' | 'calculator'];
+  const fallbackTab = feat.glossary ? 'glossary' : feat.calculator ? 'calculator' : 'none';
+  const initialTab = isRequestedTabAvailable ? initialTabFromUrl : fallbackTab;
   const initialCalc = searchParams?.get('calc') || 'per';
 
   const [activeTab, setActiveTab] = useState(initialTab);
@@ -29,7 +41,7 @@ export default function StockWiki() {
     const handler = (e) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault();
-        setShowCommandK(true);
+        if (feat.commandK) setShowCommandK(true);
       }
       if (e.key === '/' && document.activeElement.tagName !== 'INPUT') {
         e.preventDefault();
@@ -43,7 +55,7 @@ export default function StockWiki() {
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, []);
+  }, [feat.commandK]);
 
   const toggleFav = (id) => {
     setFavorites(prev => {
@@ -108,15 +120,17 @@ export default function StockWiki() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => setShowCommandK(true)}
-              className="hidden md:flex items-center gap-2 px-3 py-1.5 border text-xs"
-              style={{ borderColor: '#2a2a2a', color: '#7a7a7a' }}
-            >
-              <Search size={12} />
-              <span>빠른 검색</span>
-              <span className="mono text-[10px] px-1.5 py-0.5 border" style={{ borderColor: '#2a2a2a' }}>⌘K</span>
-            </button>
+            {feat.commandK && (
+              <button
+                onClick={() => setShowCommandK(true)}
+                className="hidden md:flex items-center gap-2 px-3 py-1.5 border text-xs"
+                style={{ borderColor: '#2a2a2a', color: '#7a7a7a' }}
+              >
+                <Search size={12} />
+                <span>빠른 검색</span>
+                <span className="mono text-[10px] px-1.5 py-0.5 border" style={{ borderColor: '#2a2a2a' }}>⌘K</span>
+              </button>
+            )}
             <div className="hidden lg:flex items-center gap-4 text-[11px] mono uppercase tracking-wider" style={{ color: '#7a7a7a' }}>
               <span>{new Date().toLocaleDateString('ko-KR')}</span>
             </div>
@@ -127,7 +141,7 @@ export default function StockWiki() {
           {[
             { id: 'glossary', label: '금융 사전', icon: BookOpen, idx: '01', count: TERMS.length },
             { id: 'calculator', label: '계산기', icon: Calculator, idx: '02', count: CALC_CATEGORIES.reduce((s, c) => s + c.calcs.length, 0) },
-          ].map(tab => {
+          ].filter(tab => feat[tab.id as 'glossary' | 'calculator']).map(tab => {
             const active = activeTab === tab.id;
             const Icon = tab.icon;
             return (
@@ -151,7 +165,27 @@ export default function StockWiki() {
       </header>
 
       <main className="max-w-[1400px] mx-auto px-4 md:px-8 pt-5 md:pt-6 pb-12 min-h-[calc(100vh-180px)]">
-        {activeTab === 'glossary' && (
+        {activeTab === 'none' && (
+          <div className="flex items-center justify-center" style={{ minHeight: '60vh' }}>
+            <div className="text-center max-w-md px-6">
+              <div className="text-[10px] mono uppercase tracking-[0.3em] mb-3" style={{ color: '#7a7a7a' }}>
+                § Temporarily Disabled
+              </div>
+              <h2 className="text-2xl md:text-3xl font-light tracking-tight mb-4" style={{ color: '#e8e4d6' }}>
+                일시 비활성화<span style={{ color: '#C89650' }}>.</span>
+              </h2>
+              <p className="text-sm leading-relaxed mb-6" style={{ color: '#a8a49a' }}>
+                모든 기능이 일시적으로 비활성화되었습니다.<br />
+                관리자가 설정을 업데이트하면 자동으로 사용 가능해집니다.
+              </p>
+              <div className="inline-flex items-center gap-2 text-[10px] mono uppercase tracking-[0.25em] px-3 py-1.5 border" style={{ borderColor: '#2a2a2a', color: '#7a7a7a' }}>
+                <span className="w-1.5 h-1.5 rounded-full" style={{ background: '#C89650' }} />
+                <span>Service Standby</span>
+              </div>
+            </div>
+          </div>
+        )}
+        {activeTab === 'glossary' && feat.glossary && (
           <GlossaryView
             terms={filteredTerms}
             searchQuery={searchQuery}
@@ -170,7 +204,7 @@ export default function StockWiki() {
             recent={recent}
           />
         )}
-        {activeTab === 'calculator' && (
+        {activeTab === 'calculator' && feat.calculator && (
           <CalculatorView
             selectedCalc={selectedCalc}
             setSelectedCalc={setSelectedCalc}
@@ -178,7 +212,7 @@ export default function StockWiki() {
         )}
       </main>
 
-      {showCommandK && (
+      {showCommandK && feat.commandK && (
         <CommandK
           terms={TERMS}
           onClose={() => setShowCommandK(false)}
