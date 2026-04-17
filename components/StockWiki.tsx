@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { Search, Calculator, BookOpen, ChevronRight, X, ArrowUpRight, Star, Clock, Menu, Link as LinkIcon } from 'lucide-react';
+import { Search, Calculator, BookOpen, ChevronRight, X, ArrowUpRight, Star, Clock, Menu, Link as LinkIcon, Copy, Check, Share2 } from 'lucide-react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { TERMS, CATEGORIES, CATEGORY_COLORS } from '@/data/terms';
@@ -643,12 +643,48 @@ function CalculatorView({ selectedCalc, setSelectedCalc }) {
   const allCalcs = CALC_CATEGORIES.flatMap(cat => cat.calcs.map(c => ({ ...c, category: cat.name, color: cat.color })));
   const currentCalc = allCalcs.find(c => c.id === selectedCalc);
 
+  // 즐겨찾기 상태 (LocalStorage 동기화)
+  const [favCalcs, setFavCalcs] = useState<Set<string>>(new Set());
+  const [urlCopied, setUrlCopied] = useState(false);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('stockwiki_fav_calcs');
+      if (saved) setFavCalcs(new Set(JSON.parse(saved)));
+    } catch {}
+  }, []);
+
+  const toggleFavCalc = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setFavCalcs(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      try {
+        localStorage.setItem('stockwiki_fav_calcs', JSON.stringify([...next]));
+      } catch {}
+      return next;
+    });
+  };
+
+  // 현재 페이지 URL 공유
+  const handleShareUrl = async () => {
+    const url = `${window.location.origin}/?tab=calculator&calc=${selectedCalc}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      setUrlCopied(true);
+      setTimeout(() => setUrlCopied(false), 2000);
+    } catch {}
+  };
+
+  // 즐겨찾기된 계산기 배열
+  const favCalcList = allCalcs.filter(c => favCalcs.has(c.id));
+
   const renderCalcComponent = (id) => {
     switch (id) {
       case 'per': return <PERCalc />;
       case 'psr': return <PSRCalc />;
       case 'pbr': return <PBRCalc />;
-      case 'psr': return <PSRCalc />;
       case 'target': return <TargetPriceCalc />;
       case 'dcf': return <DCFCalc />;
       case 'wacc': return <WACCCalc />;
@@ -682,10 +718,27 @@ function CalculatorView({ selectedCalc, setSelectedCalc }) {
   return (
     <div>
       <div className="mb-6 border-y" style={{ borderColor: border }}>
-        <div className="flex items-center justify-end gap-3 py-2 border-b mono text-[10px] uppercase tracking-[0.2em] whitespace-nowrap" style={{ borderColor: border, color: '#7a7a7a' }}>
-          <span>§ Calculator</span>
-          <span className="w-4 h-px" style={{ background: '#3a3a3a' }}></span>
-          <span>Index / 002</span>
+        <div className="flex items-center justify-between gap-3 py-2 border-b mono text-[10px] uppercase tracking-[0.2em] whitespace-nowrap" style={{ borderColor: border, color: '#7a7a7a' }}>
+          <div className="flex items-center gap-3">
+            <span>§ Calculator</span>
+            <span className="w-4 h-px hidden md:inline-block" style={{ background: '#3a3a3a' }}></span>
+            <span className="hidden md:inline">Index / 002</span>
+          </div>
+          {/* URL 공유 버튼 — 계산기 선택된 경우에만 */}
+          {selectedCalc && (
+            <button
+              onClick={handleShareUrl}
+              className="flex items-center gap-1.5 px-2 py-1 border transition-all hover:bg-white/5"
+              style={{ borderColor: border, color: urlCopied ? '#C89650' : '#a8a49a' }}
+              title="이 계산기 링크 복사"
+            >
+              {urlCopied ? (
+                <><Check size={10} /><span>링크 복사됨</span></>
+              ) : (
+                <><Share2 size={10} /><span>링크 공유</span></>
+              )}
+            </button>
+          )}
         </div>
         <div className="grid grid-cols-3 gap-2 md:gap-6 py-2 mono text-[10px] uppercase tracking-[0.2em]">
           <div className="flex items-baseline gap-1 md:gap-2"><span style={{ color: '#5a5a5a' }}>Groups</span><span style={{ color: '#e8e4d6' }}>{String(CALC_CATEGORIES.length).padStart(3, '0')}</span></div>
@@ -693,6 +746,42 @@ function CalculatorView({ selectedCalc, setSelectedCalc }) {
           <div className="flex items-baseline gap-1 md:gap-2"><span style={{ color: '#5a5a5a' }}>Active</span><span style={{ color: currentCalc?.color || '#e8e4d6' }}>M—{currentCalc?.num || '—'}</span></div>
         </div>
       </div>
+
+      {/* 즐겨찾기 섹션 */}
+      {favCalcList.length > 0 && (
+        <div className="mb-5 border" style={{ borderColor: border }}>
+          <div className="px-4 md:px-6 py-3 flex items-center gap-3 border-b" style={{ background: '#0f0f0f', borderColor: border }}>
+            <Star size={12} fill="#C89650" stroke="#C89650" />
+            <span className="text-xs md:text-sm mono uppercase tracking-[0.2em]" style={{ color: '#C89650' }}>즐겨찾기</span>
+            <span className="ml-auto text-[10px] mono" style={{ color: '#5a5a5a' }}>{String(favCalcList.length).padStart(2, '0')} PINNED</span>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4">
+            {favCalcList.map((calc, i) => {
+              const active = selectedCalc === calc.id;
+              const isLastRow = Math.floor(i / (window.innerWidth >= 768 ? 4 : 2)) === Math.floor((favCalcList.length - 1) / (window.innerWidth >= 768 ? 4 : 2));
+              return (
+                <div
+                  key={`fav-${calc.id}`}
+                  className="relative group flex items-stretch"
+                  style={{ borderRight: '1px solid #1f1f1f', borderBottom: isLastRow ? 'none' : '1px solid #1f1f1f' }}
+                >
+                  <button
+                    onClick={() => setSelectedCalc(active ? '' : calc.id)}
+                    className="flex-1 flex items-center gap-2 px-3 md:px-4 py-3 md:py-4 text-xs md:text-sm transition-all text-left"
+                    style={{
+                      background: active ? calc.color : 'transparent',
+                      color: active ? '#0a0a0a' : '#d4d0c4',
+                    }}
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: active ? '#0a0a0a' : calc.color }}></span>
+                    <span className="font-medium truncate">{calc.name}</span>
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       <div className="border" style={{ borderColor: border }}>
         {CALC_CATEGORIES.map((cat, ci) => {
@@ -710,20 +799,48 @@ function CalculatorView({ selectedCalc, setSelectedCalc }) {
               <div className="grid grid-cols-2 md:grid-cols-4 border-t" style={{ borderColor: border }}>
                 {cat.calcs.map((calc) => {
                   const active = selectedCalc === calc.id;
+                  const isFav = favCalcs.has(calc.id);
                   return (
-                    <button
+                    <div
                       key={calc.id}
-                      onClick={() => setSelectedCalc(active ? '' : calc.id)}
-                      className="flex items-center gap-2 px-3 md:px-4 py-3 md:py-4 text-xs md:text-sm transition-all text-left border-r border-b"
-                      style={{
-                        borderColor: '#1f1f1f',
-                        background: active ? cat.color : 'transparent',
-                        color: active ? '#0a0a0a' : '#d4d0c4',
-                      }}
+                      className="relative group flex items-stretch border-r border-b"
+                      style={{ borderColor: '#1f1f1f' }}
                     >
-                      <span className="text-[10px] mono opacity-60 w-5 shrink-0">{calc.num}</span>
-                      <span className="font-medium truncate">{calc.name}</span>
-                    </button>
+                      <button
+                        onClick={() => setSelectedCalc(active ? '' : calc.id)}
+                        className="flex-1 flex items-center gap-2 px-3 md:px-4 py-3 md:py-4 text-xs md:text-sm transition-all text-left"
+                        style={{
+                          background: active ? cat.color : 'transparent',
+                          color: active ? '#0a0a0a' : '#d4d0c4',
+                        }}
+                      >
+                        <span className="text-[10px] mono opacity-60 w-5 shrink-0">{calc.num}</span>
+                        <span className="font-medium truncate">{calc.name}</span>
+                      </button>
+                      {/* 즐겨찾기 별 버튼 — 우측 겹쳐서 */}
+                      <button
+                        onClick={(e) => toggleFavCalc(calc.id, e)}
+                        className="absolute top-1/2 right-1.5 -translate-y-1/2 p-1.5 transition-opacity"
+                        style={{
+                          opacity: isFav ? 1 : 0,
+                          color: active ? '#0a0a0a' : '#C89650',
+                        }}
+                        title={isFav ? '즐겨찾기 해제' : '즐겨찾기 추가'}
+                      >
+                        <Star size={12} fill={isFav ? 'currentColor' : 'none'} />
+                      </button>
+                      {/* 비활성 상태에서 hover 시 별 표시 */}
+                      {!isFav && (
+                        <button
+                          onClick={(e) => toggleFavCalc(calc.id, e)}
+                          className="absolute top-1/2 right-1.5 -translate-y-1/2 p-1.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                          style={{ color: active ? '#0a0a0a' : '#7a7a7a' }}
+                          title="즐겨찾기 추가"
+                        >
+                          <Star size={12} />
+                        </button>
+                      )}
+                    </div>
                   );
                 })}
               </div>
@@ -813,23 +930,60 @@ function NumInput({ label, value, onChange, unit, placeholder, hint }) {
 }
 
 function ResultBox({ label, value, unit, highlight, color = '#C89650' }) {
+  const [copied, setCopied] = useState(false);
+
   // value가 쉼표 포함 숫자 문자열인지 확인해서 한국어 단위 계산
   let koreanUnit = '';
   if (typeof value === 'string') {
     const num = Number(value.replace(/,/g, ''));
     if (isFinite(num) && num !== 0) {
-      // 원 단위일 때만 한국어 단위 표시 (배, %, 도 등은 제외)
       if (unit === '원' || unit === 'KRW') {
         koreanUnit = formatKoreanUnit(num);
       }
     }
   }
+
+  const handleCopy = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    // 복사 형식: "라벨: 값 단위 (한국어단위) · stockwiki.kr"
+    const text = koreanUnit
+      ? `${label}: ${value} ${unit || ''} (${koreanUnit}) · stockwiki.kr`
+      : `${label}: ${value} ${unit || ''} · stockwiki.kr`;
+    try {
+      await navigator.clipboard.writeText(text.trim());
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {}
+  };
+
+  // 값이 비어있거나 '—'면 복사 버튼 비활성
+  const hasValue = value && value !== '—' && value !== '0';
+
   return (
-    <div className="p-4 md:p-5" style={{
+    <div className="p-4 md:p-5 relative group" style={{
       background: highlight ? color : '#141414',
       color: highlight ? '#0a0a0a' : '#e8e4d6'
     }}>
-      <div className="text-[10px] mono uppercase tracking-[0.2em] mb-2" style={{ opacity: 0.7 }}>{label}</div>
+      <div className="flex items-center justify-between mb-2">
+        <div className="text-[10px] mono uppercase tracking-[0.2em]" style={{ opacity: 0.7 }}>{label}</div>
+        {hasValue && (
+          <button
+            onClick={handleCopy}
+            className="text-[9px] mono uppercase tracking-[0.15em] px-1.5 py-0.5 transition-all flex items-center gap-1"
+            style={{
+              opacity: copied ? 1 : 0.4,
+              color: 'inherit',
+            }}
+            title="결과 복사"
+          >
+            {copied ? (
+              <><Check size={10} /><span>복사됨</span></>
+            ) : (
+              <><Copy size={10} /><span>복사</span></>
+            )}
+          </button>
+        )}
+      </div>
       <div className="text-2xl md:text-3xl font-light mono tabular-nums">
         {value} <span className="text-xs md:text-sm" style={{ opacity: 0.6 }}>{unit}</span>
       </div>
