@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { RefreshCw } from 'lucide-react';
 
 type SiteConfig = {
   maintenanceMode: boolean;
@@ -23,6 +24,36 @@ type Stats = {
   calcGroups: number;
 };
 
+type ServiceStatus = { ok: boolean; latencyMs: number; error?: string; earningsCount?: number };
+type Metrics = {
+  checkedAt: string;
+  system: {
+    nodeVersion: string;
+    region: string;
+    environment: string;
+    memory: { heapUsedMB: number; heapTotalMB: number; rssMB: number };
+  };
+  services: {
+    finnhub: ServiceStatus;
+    edgeConfig: ServiceStatus;
+    eventsApi: ServiceStatus;
+  };
+} | null;
+
+function StatusDot({ ok, loading }: { ok?: boolean; loading: boolean }) {
+  if (loading) return <span className="w-2 h-2 rounded-full animate-pulse" style={{ background: '#3a3a3a' }} />;
+  return <span className="w-2 h-2 rounded-full" style={{ background: ok ? '#4A7045' : '#A63D33' }} />;
+}
+
+function LatencyBadge({ ms }: { ms: number }) {
+  const color = ms < 300 ? '#4A7045' : ms < 800 ? '#C89650' : '#A63D33';
+  return (
+    <span className="text-[10px] mono px-1.5 py-0.5" style={{ color, border: `1px solid ${color}40`, background: `${color}10` }}>
+      {ms}ms
+    </span>
+  );
+}
+
 export default function AdminDashboard({
   initialConfig,
   stats,
@@ -37,10 +68,35 @@ export default function AdminDashboard({
   const [toast, setToast] = useState<{ text: string; kind: 'ok' | 'err' } | null>(null);
   const router = useRouter();
 
+  // 모니터링 상태
+  const [metrics, setMetrics] = useState<Metrics>(null);
+  const [metricsLoading, setMetricsLoading] = useState(false);
+  const [metricsError, setMetricsError] = useState<string | null>(null);
+  const [lastChecked, setLastChecked] = useState<string | null>(null);
+
   const showToast = (text: string, kind: 'ok' | 'err' = 'ok') => {
     setToast({ text, kind });
     setTimeout(() => setToast(null), 3000);
   };
+
+  const fetchMetrics = useCallback(async () => {
+    setMetricsLoading(true);
+    setMetricsError(null);
+    try {
+      const res = await fetch('/api/admin/metrics');
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      setMetrics(data);
+      setLastChecked(new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+    } catch (e: any) {
+      setMetricsError(e.message);
+    } finally {
+      setMetricsLoading(false);
+    }
+  }, []);
+
+  // 페이지 로드 시 자동 1회 체크
+  useEffect(() => { fetchMetrics(); }, [fetchMetrics]);
 
   const toggleMaintenance = async () => {
     startTransition(async () => {
@@ -113,6 +169,8 @@ export default function AdminDashboard({
     router.push('/admin-stk-2026/login');
     router.refresh();
   };
+
+  const services = metrics?.services;
 
   return (
     <div className="min-h-screen" style={{ background: '#0f0f0f', color: '#d4d0c4' }}>
@@ -266,6 +324,125 @@ export default function AdminDashboard({
               </div>
             ))}
           </div>
+        </section>
+
+        {/* ── 시스템 모니터링 ── */}
+        <section className="mb-6 border" style={{ borderColor: '#2a2a2a', background: '#141414' }}>
+          <div className="px-5 py-3 border-b flex items-center justify-between" style={{ borderColor: '#2a2a2a', background: '#0f0f0f' }}>
+            <span className="text-[10px] mono uppercase tracking-[0.2em]" style={{ color: '#a8a49a' }}>System Monitor</span>
+            <div className="flex items-center gap-3">
+              {lastChecked && (
+                <span className="text-[10px] mono" style={{ color: '#4a4a4a' }}>
+                  마지막 체크 {lastChecked}
+                </span>
+              )}
+              <button
+                onClick={fetchMetrics}
+                disabled={metricsLoading}
+                className="flex items-center gap-1.5 text-[10px] mono uppercase tracking-[0.2em] px-2.5 py-1 border transition-all hover:bg-white/5"
+                style={{ borderColor: '#2a2a2a', color: '#7a7a7a', opacity: metricsLoading ? 0.5 : 1 }}
+              >
+                <RefreshCw size={9} className={metricsLoading ? 'animate-spin' : ''} />
+                새로고침
+              </button>
+            </div>
+          </div>
+
+          {/* API 서비스 상태 */}
+          <div className="border-b" style={{ borderColor: '#1f1f1f' }}>
+            <div className="px-5 py-2" style={{ color: '#5a5a5a' }}>
+              <span className="text-[9px] mono uppercase tracking-[0.25em]">API Services</span>
+            </div>
+            {[
+              { key: 'finnhub' as const, label: 'Finnhub', desc: '주식 시세 · 어닝 데이터' },
+              { key: 'edgeConfig' as const, label: 'Edge Config', desc: 'Vercel 실시간 설정' },
+              { key: 'eventsApi' as const, label: 'Events API', desc: '어닝 캘린더 엔드포인트' },
+            ].map((svc, i, arr) => {
+              const s = services?.[svc.key];
+              return (
+                <div
+                  key={svc.key}
+                  className="flex items-center justify-between px-5 py-3 border-b"
+                  style={{ borderColor: i === arr.length - 1 ? 'transparent' : '#1a1a1a' }}
+                >
+                  <div className="flex items-center gap-3">
+                    <StatusDot ok={s?.ok} loading={metricsLoading} />
+                    <div>
+                      <div className="text-sm" style={{ color: '#e8e4d6' }}>{svc.label}</div>
+                      <div className="text-[10px] mono" style={{ color: '#5a5a5a' }}>
+                        {s?.error
+                          ? <span style={{ color: '#A63D33' }}>{s.error}</span>
+                          : svc.key === 'eventsApi' && s?.earningsCount !== undefined
+                          ? `${svc.desc} · ${s.earningsCount}개 종목`
+                          : svc.desc}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {s && !metricsLoading && <LatencyBadge ms={s.latencyMs} />}
+                    {!metricsLoading && s && (
+                      <span className="text-[10px] mono" style={{ color: s.ok ? '#4A7045' : '#A63D33' }}>
+                        {s.ok ? '● 정상' : '● 오류'}
+                      </span>
+                    )}
+                    {metricsLoading && (
+                      <span className="text-[10px] mono" style={{ color: '#3a3a3a' }}>확인 중</span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* 시스템 정보 */}
+          <div className="px-5 py-2 border-b" style={{ borderColor: '#1f1f1f', color: '#5a5a5a' }}>
+            <span className="text-[9px] mono uppercase tracking-[0.25em]">Runtime</span>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4">
+            {[
+              {
+                label: 'Node.js',
+                value: metricsLoading ? '···' : metrics?.system.nodeVersion ?? '-',
+                color: '#4F7E7C',
+              },
+              {
+                label: 'Region',
+                value: metricsLoading ? '···' : metrics?.system.region ?? '-',
+                color: '#a8a49a',
+              },
+              {
+                label: 'Heap Used',
+                value: metricsLoading ? '···' : metrics ? `${metrics.system.memory.heapUsedMB}MB` : '-',
+                color: metrics && !metricsLoading
+                  ? metrics.system.memory.heapUsedMB / metrics.system.memory.heapTotalMB > 0.8
+                    ? '#A63D33'
+                    : metrics.system.memory.heapUsedMB / metrics.system.memory.heapTotalMB > 0.6
+                    ? '#C89650'
+                    : '#4A7045'
+                  : '#5a5a5a',
+              },
+              {
+                label: 'Heap Total',
+                value: metricsLoading ? '···' : metrics ? `${metrics.system.memory.heapTotalMB}MB` : '-',
+                color: '#7a7a7a',
+              },
+            ].map((item, i) => (
+              <div
+                key={item.label}
+                className={`p-4 md:p-5 ${i % 2 === 0 ? 'border-r' : ''} ${i < 2 ? 'border-b md:border-b-0' : ''} md:[&:not(:last-child)]:border-r`}
+                style={{ borderColor: '#1a1a1a' }}
+              >
+                <div className="text-[9px] mono uppercase tracking-[0.2em] mb-1.5" style={{ color: '#5a5a5a' }}>{item.label}</div>
+                <div className="text-base md:text-lg font-light mono" style={{ color: item.color }}>{item.value}</div>
+              </div>
+            ))}
+          </div>
+
+          {metricsError && (
+            <div className="px-5 py-3 border-t text-[11px] mono" style={{ borderColor: '#1f1f1f', color: '#A63D33' }}>
+              ⚠ 메트릭 로드 실패: {metricsError}
+            </div>
+          )}
         </section>
 
         {/* 통계 */}
