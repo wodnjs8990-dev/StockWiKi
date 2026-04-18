@@ -590,34 +590,6 @@ export default function StockWiki({ features }: { features?: Features }) {
               </button>
             </div>
 
-            {/* 탭 네비게이션 */}
-            <div className="px-4 py-3 border-b" style={{ borderColor: T.border }}>
-              <div className="text-[12px] mono uppercase tracking-[0.2em] mb-2" style={{ color: T.textFaint }}>Navigation</div>
-              {[
-                { id: 'glossary', label: '금융 사전', icon: BookOpen, count: TERMS.length },
-                { id: 'calculator', label: '계산기', icon: Calculator, count: CALC_CATEGORIES.reduce((s, c) => s + c.calcs.length, 0) },
-                { id: 'events', label: '이벤트', icon: CalendarDays, count: null },
-              ].filter(tab => feat[tab.id as keyof Features] !== false).map(tab => {
-                const active = activeTab === tab.id;
-                const Icon = tab.icon;
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => { setActiveTab(tab.id); setSidebarOpen(false); }}
-                    className="w-full flex items-center gap-3 px-3 py-2.5 mb-1 text-sm transition-all"
-                    style={{
-                      background: active ? T.bgTabActive : 'transparent',
-                      color: active ? T.textTabActive : T.textMuted,
-                    }}
-                  >
-                    <Icon size={14} />
-                    <span className="font-medium">{tab.label}</span>
-                    {tab.count !== null && <span className="ml-auto text-[12px] mono opacity-50">{tab.count}</span>}
-                  </button>
-                );
-              })}
-            </div>
-
             {/* 최근 본 용어 */}
             {recent.length > 0 && (
               <div className="px-4 py-3 border-b" style={{ borderColor: T.border }}>
@@ -941,8 +913,8 @@ function GlossaryView({ terms, searchQuery, setSearchQuery, searchRef, categorie
           type="text"
           value={searchQuery}
           onChange={e => setSearchQuery(e.target.value)}
-          placeholder="용어명, 영문, 설명으로 검색 (단축키: /)"
-          className="flex-1 px-4 md:px-5 py-3 md:py-4 bg-transparent text-sm md:text-base"
+          placeholder="검색 — 용어명 · 영문 · 설명"
+          className="flex-1 px-4 md:px-5 py-3.5 md:py-4 bg-transparent text-sm md:text-base"
           style={{ color: T.textPrimary }}
         />
         {searchQuery && (
@@ -953,8 +925,35 @@ function GlossaryView({ terms, searchQuery, setSearchQuery, searchRef, categorie
       </div>
 
       {/* 카테고리 */}
-      <div className="mb-8 md:mb-10 border-y" style={{ borderColor: T.border }}>
-        <div className="grid grid-cols-3 md:grid-cols-5 lg:grid-cols-8" style={{ gridAutoRows: '1fr' }}>
+      <div className="mb-6 md:mb-10 border-y" style={{ borderColor: T.border }}>
+        {/* 모바일: 가로 스크롤 pill */}
+        <div className="md:hidden flex gap-2 px-4 py-3 overflow-x-auto scroll-smooth" style={{ borderColor: T.border }}>
+          {categories.map((cat) => {
+            const active = selectedCategory === cat;
+            const isFav = cat === '★ 즐겨찾기';
+            const color = categoryColors[cat];
+            return (
+              <button
+                key={cat}
+                onClick={() => setSelectedCategory(cat)}
+                className="shrink-0 flex items-center gap-1.5 px-3 py-2 text-xs border transition-all whitespace-nowrap"
+                style={{
+                  borderColor: active ? 'transparent' : T.border,
+                  background: active ? (isFav ? T.accent : (color?.bg || T.bgTabActive)) : 'transparent',
+                  color: active ? (isFav ? '#0a0a0a' : (color?.text || T.textTabActive)) : T.textMuted,
+                  borderRadius: '2px',
+                }}
+              >
+                {!isFav && cat !== '전체' && (
+                  <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: active ? (color?.text || '#1a1a1a') : (color?.bg || '#8a8a8a') }} />
+                )}
+                <span>{cat}</span>
+              </button>
+            );
+          })}
+        </div>
+        {/* 데스크탑: 기존 그리드 */}
+        <div className="hidden md:grid md:grid-cols-5 lg:grid-cols-8 border-t" style={{ gridAutoRows: '1fr', borderColor: T.border }}>
           {categories.map((cat, idx) => {
             const active = selectedCategory === cat;
             const isFav = cat === '★ 즐겨찾기';
@@ -994,35 +993,35 @@ function GlossaryView({ terms, searchQuery, setSearchQuery, searchRef, categorie
               onMouseEnter={e => e.currentTarget.style.background = isDark ? '#202020' : '#ece0d0'}
               onMouseLeave={e => e.currentTarget.style.background = T.bgPage}
             >
-              <div className="flex items-center justify-between px-5 md:px-6 pt-5 md:pt-6 mb-3">
-                <span className="text-[12px] mono uppercase tracking-wider px-2 py-1" style={{ background: color?.bg, color: color?.text }}>
-                  {term.category}
-                </span>
-                <div className="flex items-center gap-2">
+              {/* 즐겨찾기 버튼 — 절대 위치 */}
+              <button
+                onClick={(e) => { e.stopPropagation(); toggleFav(term.id); }}
+                className="absolute top-3 md:top-5 right-3 md:right-5 z-10 p-1.5"
+                style={{ color: isFav ? T.accent : T.textDimmer }}
+              >
+                <Star size={14} fill={isFav ? T.accent : 'none'} />
+              </button>
+              {/* 전체 클릭 가능 영역 */}
+              <button
+                onClick={() => setSelectedTerm(term)}
+                className="w-full text-left px-4 md:px-6 pt-4 md:pt-6 pb-4 md:pb-6"
+              >
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-[11px] md:text-[12px] mono uppercase tracking-wider px-2 py-1" style={{ background: color?.bg, color: color?.text }}>
+                    {term.category}
+                  </span>
                   {term.detailed && (
                     <span className="text-[11px] mono uppercase tracking-wider px-1.5 py-0.5 border" style={{ borderColor: T.borderMid, color: T.textFaint }}>
                       심화
                     </span>
                   )}
-                  <button
-                    onClick={(e) => { e.stopPropagation(); toggleFav(term.id); }}
-                    className="p-1"
-                    style={{ color: isFav ? T.accent : T.textDimmer }}
-                  >
-                    <Star size={14} fill={isFav ? T.accent : 'none'} />
-                  </button>
                 </div>
-              </div>
-              <button
-                onClick={() => setSelectedTerm(term)}
-                className="w-full text-left px-5 md:px-6 pb-5 md:pb-6"
-              >
-                <div className="text-xl md:text-2xl font-medium tracking-tight leading-tight mb-1" style={{ color: T.textPrimary }}>
+                <div className="text-xl md:text-2xl font-medium tracking-tight leading-tight mb-1 pr-8" style={{ color: T.textPrimary }}>
                   <Highlight text={term.name} query={searchQuery} color={T.accent + '55'} />
                 </div>
                 <div className="text-xs mono italic mb-3" style={{ color: T.textFaint }}>{term.en}</div>
                 <div className="text-sm leading-relaxed line-clamp-2" style={{ color: T.textMuted }}>{term.description}</div>
-                <div className="mt-4 flex items-center gap-1 text-[12px] mono uppercase tracking-wider" style={{ color: T.textDimmer }}>
+                <div className="mt-3 md:mt-4 flex items-center gap-1 text-[12px] mono uppercase tracking-wider" style={{ color: T.textDimmer }}>
                   <span>자세히</span>
                   <ArrowUpRight size={12} className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
                 </div>
@@ -1074,12 +1073,46 @@ function TermModal({ term, termList, onClose, categoryColors, favorites, toggleF
   const memo = favMemos?.[term.id] || '';
   const [memoText, setMemoText] = useState(memo);
   const [memoSaved, setMemoSaved] = useState(false);
+  const modalRef = useRef<HTMLDivElement>(null);
 
   const saveMemo = () => {
     updateFavMemo?.(term.id, memoText);
     setMemoSaved(true);
     setTimeout(() => setMemoSaved(false), 1500);
     showToast?.('메모 저장됨');
+  };
+
+  // 모바일: 드래그 다운으로 닫기
+  const handleTouchStart = (e: React.TouchEvent) => {
+    const el = modalRef.current;
+    if (!el) return;
+    (el as any)._touchStartY = e.touches[0].clientY;
+    (el as any)._touchStartScrollTop = el.scrollTop;
+  };
+  const handleTouchMove = (e: React.TouchEvent) => {
+    const el = modalRef.current;
+    if (!el) return;
+    const dy = e.touches[0].clientY - ((el as any)._touchStartY ?? 0);
+    const startScroll = (el as any)._touchStartScrollTop ?? 0;
+    // 최상단에서 아래로 드래그할 때만
+    if (dy > 0 && startScroll <= 0) {
+      el.style.transform = `translateY(${Math.min(dy * 0.5, 120)}px)`;
+      el.style.transition = 'none';
+    }
+  };
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    const el = modalRef.current;
+    if (!el) return;
+    const dy = e.changedTouches[0].clientY - ((el as any)._touchStartY ?? 0);
+    const startScroll = (el as any)._touchStartScrollTop ?? 0;
+    if (dy > 80 && startScroll <= 0) {
+      el.style.transform = 'translateY(100%)';
+      el.style.transition = 'transform 0.25s ease';
+      setTimeout(() => onClose(), 220);
+    } else {
+      el.style.transform = '';
+      el.style.transition = 'transform 0.2s ease';
+    }
   };
   const relatedTerms = term.related?.map(id => TERMS.find(t => t.id === id)).filter(Boolean) || [];
   const hasDetailed = !!term.detailed;
@@ -1118,15 +1151,28 @@ function TermModal({ term, termList, onClose, categoryColors, favorites, toggleF
 
   return (
     <div
-      className="modal-overlay-in fixed inset-0 z-50 flex items-center justify-center p-2 md:p-4"
+      className="modal-overlay-in fixed inset-0 z-50 flex md:items-center md:justify-center md:p-4 items-end"
       style={{ background: T.bgOverlay }}
       onClick={onClose}
     >
       <div
-        className="modal-panel-in max-w-4xl w-full border max-h-[92vh] overflow-y-auto"
-        style={{ background: T.bgSurface, borderColor: T.border }}
+        ref={modalRef}
+        className="modal-panel-in w-full md:max-w-4xl border md:max-h-[92vh] overflow-y-auto"
+        style={{
+          background: T.bgSurface,
+          borderColor: T.border,
+          maxHeight: '90vh',
+          borderRadius: '0',
+        }}
         onClick={e => e.stopPropagation()}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
       >
+        {/* 모바일 드래그 핸들 */}
+        <div className="md:hidden flex justify-center pt-3 pb-1" style={{ touchAction: 'none' }}>
+          <div className="w-10 h-1 rounded-full" style={{ background: T.borderMid }} />
+        </div>
         <div
           className="px-4 md:px-8 py-4 md:py-5 flex items-center justify-between border-b sticky top-0 z-10"
           style={{ background: categoryColors[term.category]?.bg, color: categoryColors[term.category]?.text, borderColor: T.border }}
@@ -1136,7 +1182,7 @@ function TermModal({ term, termList, onClose, categoryColors, favorites, toggleF
             <button
               onClick={(e) => { e.stopPropagation(); onPrev?.(); }}
               disabled={!hasPrev}
-              className="flex items-center justify-center w-7 h-7 border transition-all"
+              className="flex items-center justify-center w-10 h-10 md:w-7 md:h-7 border transition-all"
               style={{
                 borderColor: hasPrev ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.08)',
                 color: hasPrev ? 'inherit' : 'rgba(255,255,255,0.25)',
@@ -1193,7 +1239,7 @@ function TermModal({ term, termList, onClose, categoryColors, favorites, toggleF
             <button
               onClick={(e) => { e.stopPropagation(); onNext?.(); }}
               disabled={!hasNext}
-              className="flex items-center justify-center w-7 h-7 border transition-all"
+              className="flex items-center justify-center w-10 h-10 md:w-7 md:h-7 border transition-all"
               style={{
                 borderColor: hasNext ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.08)',
                 color: hasNext ? 'inherit' : 'rgba(255,255,255,0.25)',
@@ -1204,7 +1250,7 @@ function TermModal({ term, termList, onClose, categoryColors, favorites, toggleF
             >
               <ChevronRight size={14} />
             </button>
-            <button onClick={onClose} className="flex items-center justify-center w-7 h-7 shrink-0"><X size={18} /></button>
+            <button onClick={onClose} className="flex items-center justify-center w-10 h-10 md:w-7 md:h-7 shrink-0"><X size={18} /></button>
           </div>
         </div>
 
@@ -1562,12 +1608,17 @@ function CalculatorView({ selectedCalc, setSelectedCalc, T, isDark }) {
   // 선택된 계산기 패널로 자동 스크롤 (id 기반 — 루프 내 ref 중복 문제 해결)
   useEffect(() => {
     if (!selectedCalc) return;
-    // 두 프레임 대기: 패널 펼침 애니메이션 완료 후 정확한 위치 계산
+    // 두 프레임 대기: 패널 렌더 완료 후 정확한 위치 계산
     const raf1 = requestAnimationFrame(() => {
       requestAnimationFrame(() => {
-        const el = document.getElementById(`calc-panel-${selectedCalc}`);
+        // 모바일: 하단 모바일 패널로 스크롤, PC: 우측 패널로 스크롤
+        const isMobile = window.innerWidth < 1024;
+        const panelId = isMobile
+          ? `calc-panel-mobile-${selectedCalc}`
+          : `calc-panel-${selectedCalc}`;
+        const el = document.getElementById(panelId);
         if (!el) return;
-        const headerOffset = 90;
+        const headerOffset = isMobile ? 70 : 90;
         const rect = el.getBoundingClientRect();
         const targetY = window.scrollY + rect.top - headerOffset;
         window.scrollTo({ top: targetY, behavior: 'smooth' });
@@ -1773,16 +1824,59 @@ function CalculatorView({ selectedCalc, setSelectedCalc, T, isDark }) {
                   })}
                 </div>
 
-                {/* 모바일: 인라인 패널 (lg 이상에서는 숨김) */}
-                {cat.calcs.some(c => c.id === selectedCalc) && (
-                  <div className="lg:hidden border-t p-5" style={{ borderColor: T.border, background: T.bgSurface }}>
-                    {renderCalcComponent(selectedCalc)}
-                  </div>
-                )}
+                {/* 모바일 인라인 패널은 목록 아래로 이동됨 */}
               </div>
             ))}
           </div>
         </div>
+
+        {/* ── 모바일: 계산기 패널 (항목 목록 아래) ── */}
+        {selectedCalc && currentCalc && (
+          <div className="lg:hidden mt-4 border" style={{ borderColor: T.border, background: T.bgSurface }}>
+            {/* 패널 헤더 */}
+            <div className="px-4 py-3 border-b flex items-center gap-3 sticky top-[56px] z-10"
+              style={{ borderColor: T.border, background: T.bgCard }}>
+              <span className="text-[11px] mono uppercase tracking-[0.2em]" style={{ color: currentCalc.color }}>
+                M—{currentCalc.num}
+              </span>
+              <span className="text-sm font-medium flex-1 truncate" style={{ color: T.textPrimary }}>{currentCalc.name}</span>
+              {/* 결과 저장 버튼 */}
+              <button
+                onClick={() => {
+                  const panel = document.getElementById(`calc-panel-mobile-${selectedCalc}`);
+                  if (!panel) return;
+                  const boxes = panel.querySelectorAll('[data-result-label]');
+                  const results: { label: string; value: string; unit?: string }[] = [];
+                  boxes.forEach(box => {
+                    const label = box.getAttribute('data-result-label') || '';
+                    const value = box.getAttribute('data-result-value') || '';
+                    const unit = box.getAttribute('data-result-unit') || undefined;
+                    if (value && value !== '—' && value !== '') results.push({ label, value, unit });
+                  });
+                  if (results.length > 0) {
+                    dispatchCalcHistory(selectedCalc, currentCalc.name, results);
+                    setShowHistory(true);
+                  }
+                }}
+                className="flex items-center gap-1 text-[11px] mono px-2 py-1 border"
+                style={{ borderColor: T.border, color: T.textFaint }}
+              >
+                <Clock size={10} />
+                <span>저장</span>
+              </button>
+              <button
+                onClick={() => setSelectedCalc('')}
+                className="p-1.5"
+                style={{ color: T.textDimmer }}
+              >
+                <X size={14} />
+              </button>
+            </div>
+            <div id={`calc-panel-mobile-${selectedCalc}`} className="p-5">
+              {renderCalcComponent(selectedCalc)}
+            </div>
+          </div>
+        )}
 
         {/* ── 우측: 계산기 패널 (PC 전용 sticky) ── */}
         <div className="hidden lg:block flex-1 min-w-0 sticky top-[90px] self-start">

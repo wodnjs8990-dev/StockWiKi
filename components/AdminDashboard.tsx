@@ -3,7 +3,7 @@
 import { useState, useTransition, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { RefreshCw, Sun, Moon } from 'lucide-react';
+import { RefreshCw, Sun, Moon, Activity, ToggleLeft, BarChart2, Settings } from 'lucide-react';
 
 type SiteConfig = {
   maintenanceMode: boolean;
@@ -126,6 +126,7 @@ export default function AdminDashboard({
   const [isPending, startTransition] = useTransition();
   const [toast, setToast] = useState<{ text: string; kind: 'ok' | 'err' } | null>(null);
   const [dark, setDark] = useState(true);
+  const [mobileSection, setMobileSection] = useState<'status' | 'features' | 'monitor' | 'stats'>('status');
   const router = useRouter();
 
   const T = dark ? DARK_THEME : LIGHT_THEME;
@@ -232,47 +233,58 @@ export default function AdminDashboard({
     <div className="min-h-screen" style={{ background: T.bg, color: T.text }}>
       {/* 헤더 */}
       <header className="border-b sticky top-0 z-20" style={{ borderColor: T.border, background: T.bgHeader, backdropFilter: 'blur(8px)' }}>
-        <div className="max-w-[1000px] mx-auto px-4 md:px-8 py-4 flex items-center justify-between">
-          <div className="flex items-baseline gap-3">
-            <span className="text-xl font-light" style={{ color: T.textPrimary }}>
+        <div className="max-w-[1000px] mx-auto px-4 md:px-8 py-3 md:py-4 flex items-center justify-between">
+          <div className="flex items-center gap-2 md:gap-3">
+            <span className="text-lg md:text-xl font-light" style={{ color: T.textPrimary }}>
               Stock<span style={{ color: T.accent, fontWeight: 500 }}>WiKi</span>
             </span>
-            <span className="text-[13px] mono uppercase tracking-[0.3em] px-2 py-0.5 border" style={{ borderColor: T.accent, color: T.accent }}>
+            <span className="text-[11px] md:text-[13px] mono uppercase tracking-[0.25em] px-1.5 md:px-2 py-0.5 border" style={{ borderColor: T.accent, color: T.accent }}>
               ADMIN
             </span>
           </div>
-          <div className="flex items-center gap-2">
-            {/* 테마 토글 */}
+          <div className="flex items-center gap-1.5 md:gap-2">
             <button
               onClick={toggleTheme}
-              className="p-2 border transition-all hover:opacity-70"
+              className="w-8 h-8 flex items-center justify-center border transition-all hover:opacity-70"
               style={{ borderColor: T.border, color: T.textFaint }}
-              title={dark ? '라이트 모드' : '다크 모드'}
             >
               {dark ? <Sun size={14} /> : <Moon size={14} />}
             </button>
             <Link href="/" target="_blank"
-              className="text-[13px] mono uppercase tracking-[0.2em] px-3 py-1.5 border transition-all hover:opacity-70"
+              className="hidden md:flex text-[13px] mono uppercase tracking-[0.2em] px-3 py-1.5 border transition-all hover:opacity-70"
               style={{ borderColor: T.border, color: T.textMuted }}>
               사이트 보기 ↗
             </Link>
             <button onClick={logout}
-              className="text-[13px] mono uppercase tracking-[0.2em] px-3 py-1.5 border transition-all hover:opacity-70"
+              className="text-[12px] md:text-[13px] mono uppercase tracking-[0.15em] md:tracking-[0.2em] px-2.5 md:px-3 py-1.5 border transition-all hover:opacity-70"
               style={{ borderColor: T.border, color: T.textMuted }}>
               Logout
             </button>
           </div>
         </div>
+        {/* 모바일: 현재 섹션 표시 */}
+        <div className="md:hidden px-4 pb-2.5 flex items-center gap-2">
+          {mobileSection === 'status'   && <Activity   size={11} style={{ color: T.accent }} />}
+          {mobileSection === 'features' && <ToggleLeft size={11} style={{ color: T.accent }} />}
+          {mobileSection === 'monitor'  && <BarChart2  size={11} style={{ color: T.accent }} />}
+          {mobileSection === 'stats'    && <Settings   size={11} style={{ color: T.accent }} />}
+          <span className="text-[11px] mono uppercase tracking-[0.25em]" style={{ color: T.textFaint }}>
+            { mobileSection === 'status'   ? 'Site Status'
+            : mobileSection === 'features' ? 'Feature Toggles'
+            : mobileSection === 'monitor'  ? 'System Monitor'
+            :                                'Content Statistics' }
+          </span>
+        </div>
       </header>
 
-      <main className="max-w-[1000px] mx-auto px-4 md:px-8 py-8">
+      <main className="max-w-[1000px] mx-auto px-4 md:px-8 py-6 md:py-8 pb-24 md:pb-8">
         {/* 섹션 라벨 */}
-        <div className="mb-8">
+        <div className="hidden md:block mb-8">
           <div className="text-[13px] mono uppercase tracking-[0.3em]" style={{ color: T.textFaint }}>§ Dashboard · Control Panel</div>
         </div>
 
         {/* 사이트 상태 카드 */}
-        <section className="mb-6 border" style={{ borderColor: T.border, background: T.bgCard }}>
+        <section className={`mb-6 border ${mobileSection !== 'status' ? 'hidden md:block' : ''}`} style={{ borderColor: T.border, background: T.bgCard }}>
           <div className="px-5 py-3 border-b flex items-center justify-between" style={{ borderColor: T.border, background: T.bgSection }}>
             <div className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full" style={{ background: config.maintenanceMode ? T.accent : T.green }} />
@@ -298,13 +310,14 @@ export default function AdminDashboard({
               <button
                 onClick={toggleMaintenance}
                 disabled={isPending}
-                className="shrink-0 px-4 py-2 text-sm mono uppercase tracking-[0.2em] border transition-all"
+                className="shrink-0 px-4 py-2.5 md:py-2 text-sm mono uppercase tracking-[0.2em] border transition-all"
                 style={{
                   borderColor: config.maintenanceMode ? T.green : T.accent,
                   background: config.maintenanceMode ? T.green : T.accent,
                   color: '#0a0a0a',
                   opacity: isPending ? 0.5 : 1,
                   cursor: isPending ? 'wait' : 'pointer',
+                  minWidth: '5.5rem',
                 }}>
                 {isPending ? '처리 중...' : config.maintenanceMode ? '점검 해제' : '점검 시작'}
               </button>
@@ -348,7 +361,7 @@ export default function AdminDashboard({
         </section>
 
         {/* 기능 토글 */}
-        <section className="mb-6 border" style={{ borderColor: T.border, background: T.bgCard }}>
+        <section className={`mb-6 border ${mobileSection !== 'features' ? 'hidden md:block' : ''}`} style={{ borderColor: T.border, background: T.bgCard }}>
           <div className="px-5 py-3 border-b" style={{ borderColor: T.border, background: T.bgSection }}>
             <span className="text-[13px] mono uppercase tracking-[0.2em]" style={{ color: T.textMuted }}>Feature Toggles</span>
           </div>
@@ -359,7 +372,7 @@ export default function AdminDashboard({
               { key: 'commandK' as const, label: '빠른 검색', desc: 'Cmd+K 빠른 검색 팝업' },
               { key: 'events' as const, label: '이벤트', desc: 'FOMC·미국 어닝·선물만기 달력' },
             ].map((f, i, arr) => (
-              <div key={f.key} className="flex items-center justify-between px-5 py-4 border-b"
+              <div key={f.key} className="flex items-center justify-between px-5 py-5 md:py-4 border-b"
                 style={{ borderColor: i === arr.length - 1 ? 'transparent' : T.borderSoft }}>
                 <div>
                   <div className="text-base mb-0.5" style={{ color: T.textPrimary }}>{f.label}</div>
@@ -368,11 +381,11 @@ export default function AdminDashboard({
                 <button
                   onClick={() => toggleFeature(f.key)}
                   disabled={isPending}
-                  className="relative w-12 h-6 transition-all"
+                  className="relative w-14 h-7 md:w-12 md:h-6 shrink-0 transition-all"
                   style={{ background: config.features[f.key] ? T.green : T.border, opacity: isPending ? 0.5 : 1 }}
                   aria-label={`Toggle ${f.label}`}>
-                  <span className="absolute top-0.5 w-5 h-5 transition-all"
-                    style={{ left: config.features[f.key] ? 'calc(100% - 22px)' : '2px', background: T.textPrimary }} />
+                  <span className="absolute top-0.5 w-6 h-6 md:w-5 md:h-5 transition-all"
+                    style={{ left: config.features[f.key] ? 'calc(100% - 26px)' : '2px', background: T.textPrimary }} />
                 </button>
               </div>
             ))}
@@ -380,7 +393,7 @@ export default function AdminDashboard({
         </section>
 
         {/* 시스템 모니터링 */}
-        <section className="mb-6 border" style={{ borderColor: T.border, background: T.bgCard }}>
+        <section className={`mb-6 border ${mobileSection !== 'monitor' ? 'hidden md:block' : ''}`} style={{ borderColor: T.border, background: T.bgCard }}>
           <div className="px-5 py-3 border-b flex items-center justify-between" style={{ borderColor: T.border, background: T.bgSection }}>
             <span className="text-[13px] mono uppercase tracking-[0.2em]" style={{ color: T.textMuted }}>System Monitor</span>
             <div className="flex items-center gap-3">
@@ -388,9 +401,9 @@ export default function AdminDashboard({
                 <span className="text-[12px] mono" style={{ color: T.textDimmer }}>마지막 체크 {lastChecked}</span>
               )}
               <button onClick={fetchMetrics} disabled={metricsLoading}
-                className="flex items-center gap-1.5 text-[13px] mono uppercase tracking-[0.2em] px-2.5 py-1 border transition-all hover:opacity-70"
+                className="flex items-center gap-1.5 text-[12px] md:text-[13px] mono uppercase tracking-[0.2em] px-3 md:px-2.5 py-1.5 md:py-1 border transition-all hover:opacity-70"
                 style={{ borderColor: T.border, color: T.textFaint, opacity: metricsLoading ? 0.5 : 1 }}>
-                <RefreshCw size={10} className={metricsLoading ? 'animate-spin' : ''} />
+                <RefreshCw size={11} className={metricsLoading ? 'animate-spin' : ''} />
                 새로고침
               </button>
             </div>
@@ -512,7 +525,7 @@ export default function AdminDashboard({
         </section>
 
         {/* 통계 */}
-        <section className="mb-6 border" style={{ borderColor: T.border, background: T.bgCard }}>
+        <section className={`mb-6 border ${mobileSection !== 'stats' ? 'hidden md:block' : ''}`} style={{ borderColor: T.border, background: T.bgCard }}>
           <div className="px-5 py-3 border-b" style={{ borderColor: T.border, background: T.bgSection }}>
             <span className="text-[13px] mono uppercase tracking-[0.2em]" style={{ color: T.textMuted }}>Content Statistics</span>
           </div>
@@ -536,7 +549,7 @@ export default function AdminDashboard({
         </section>
 
         {/* 배포 정보 */}
-        <section className="border" style={{ borderColor: T.border, background: T.bgCard }}>
+        <section className={`border ${mobileSection !== 'stats' ? 'hidden md:block' : ''}`} style={{ borderColor: T.border, background: T.bgCard }}>
           <div className="px-5 py-3 border-b" style={{ borderColor: T.border, background: T.bgSection }}>
             <span className="text-[13px] mono uppercase tracking-[0.2em]" style={{ color: T.textMuted }}>Deployment</span>
           </div>
@@ -554,16 +567,43 @@ export default function AdminDashboard({
           </div>
         </section>
 
-        <footer className="mt-10 pb-6 text-center">
+        <footer className={`mt-10 pb-6 text-center ${mobileSection !== 'stats' ? 'hidden md:block' : ''}`}>
           <div className="text-[13px] mono uppercase tracking-[0.3em]" style={{ color: T.textDimmer }}>
             Restricted Area · Designed by Ones
           </div>
         </footer>
       </main>
 
+      {/* 모바일 하단 탭바 */}
+      <nav className="md:hidden fixed bottom-0 inset-x-0 z-20 flex border-t"
+        style={{ background: T.bgHeader, borderColor: T.border, backdropFilter: 'blur(8px)' }}>
+        {([
+          { id: 'status' as const,   label: 'Status',   icon: Activity },
+          { id: 'features' as const, label: 'Features', icon: ToggleLeft },
+          { id: 'monitor' as const,  label: 'Monitor',  icon: BarChart2 },
+          { id: 'stats' as const,    label: 'Stats',    icon: Settings },
+        ]).map(tab => {
+          const active = mobileSection === tab.id;
+          const Icon = tab.icon;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setMobileSection(tab.id)}
+              className="relative flex-1 flex flex-col items-center justify-center gap-1 py-3 transition-opacity"
+              style={{ color: active ? T.accent : T.textDimmer }}>
+              {active && (
+                <span className="absolute top-0 inset-x-3 h-0.5" style={{ background: T.accent }} />
+              )}
+              <Icon size={20} strokeWidth={active ? 2 : 1.5} />
+              <span className="text-[10px] mono uppercase tracking-[0.15em]">{tab.label}</span>
+            </button>
+          );
+        })}
+      </nav>
+
       {/* Toast */}
       {toast && (
-        <div className="fixed bottom-6 right-6 px-4 py-3 border text-sm mono uppercase tracking-[0.15em] z-30"
+        <div className="fixed bottom-20 md:bottom-6 right-4 md:right-6 px-4 py-3 border text-sm mono uppercase tracking-[0.15em] z-30"
           style={{
             background: T.bgCard,
             borderColor: toast.kind === 'ok' ? T.green : T.red,
