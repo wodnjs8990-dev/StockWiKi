@@ -35,6 +35,38 @@ type Features = {
   events?: boolean;
 };
 
+// example 문자열 → KPI 3칸 파싱
+// "주가 50,000원, EPS 5,000원 → PER = 10배" 패턴 추출
+function parseExampleKPI(example: string, formula: string): { label: string; value: string }[] | null {
+  if (!example) return null;
+  // "→" 기준으로 입력부 / 결과부 분리
+  const arrowIdx = example.indexOf('→');
+  if (arrowIdx === -1) return null;
+  const inputPart = example.slice(0, arrowIdx).trim();
+  const resultPart = example.slice(arrowIdx + 1).trim();
+  // 입력부: 쉼표·및 구분으로 최대 2개 추출
+  // 각 청크에서 숫자+단위 추출
+  function extractChunks(s: string): { label: string; value: string }[] {
+    return s.split(/[,，]/).map(chunk => {
+      const m = chunk.match(/^(.+?)\s+([\d,.]+\s*[%배조억원B만T\w]*)\s*$/);
+      if (m) return { label: m[1].trim().replace(/^(주가|EPS|BPS|ROE|시총|순이익|자본|자산|영업익|매출|PER|성장률)\s*/,'').replace(/\s*(은|는|이|가|을|를)\s*$/, ''), value: m[2].trim() };
+      const m2 = chunk.match(/([\d,.]+\s*[%배조억원B만T\w]*)/);
+      const label2 = chunk.replace(/[\d,.]+\s*[%배조억원B만T\w]*/g,'').trim().replace(/[,，\s]+$/,'').replace(/^\s*/,'') || '입력';
+      return m2 ? { label: label2, value: m2[1].trim() } : null;
+    }).filter(Boolean) as { label: string; value: string }[];
+  }
+  const inputs = extractChunks(inputPart).slice(0, 2);
+  if (inputs.length === 0) return null;
+  // 결과부: "= 10배", "= 20%" 형태에서 결과값 추출
+  const resultM = resultPart.match(/=?\s*([\d,.]+\s*[%배조억원B만T배\w]*)/) ;
+  if (!resultM) return null;
+  const resultLabel = resultPart.replace(/=?\s*[\d,.]+\s*[%배조억원B만T배\w]*/,'').trim().replace(/^=\s*/,'') || formula.split('=')[0]?.trim() || '결과';
+  const result = { label: resultLabel || '결과', value: resultM[1].trim() };
+  const items = [...inputs, result];
+  if (items.length < 2) return null;
+  return items;
+}
+
 // 검색 키워드 하이라이팅 컴포넌트
 function Highlight({ text, query, color }: { text: string; query: string; color: string }) {
   if (!query) return <>{text}</>;
@@ -1029,6 +1061,24 @@ function GlossaryView({ terms, searchQuery, setSearchQuery, searchRef, categorie
                     ƒ {term.formula}
                   </div>
                 )}
+                {/* KPI 3칸 — example 파싱 인라인 예시 */}
+                {(() => {
+                  const kpi = parseExampleKPI(term.example, term.formula);
+                  if (!kpi || kpi.length < 2) return null;
+                  const items = kpi.slice(0, 3);
+                  return (
+                    <div className="mt-2 grid gap-px border" style={{ gridTemplateColumns: `repeat(${items.length},1fr)`, borderColor: T.border, background: T.border }}>
+                      {items.map((item, ki) => (
+                        <div key={ki} className="flex flex-col gap-0.5 px-2 py-1.5" style={{ background: T.bgCard }}>
+                          <span className="mono text-[9px] uppercase tracking-[0.15em] truncate" style={{ color: T.textDimmer }}>{item.label}</span>
+                          <span className="mono text-[12px] font-medium leading-none truncate" style={{ color: ki === items.length - 1 ? (color?.bg || T.accent) : T.textSecondary }}>
+                            {item.value}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
                 {/* 관련 용어 chips */}
                 {term.related && term.related.length > 0 && (
                   <div className="mt-2 flex flex-wrap gap-1">
@@ -1175,6 +1225,25 @@ function TermModal({ term, termList, onClose, categoryColors, favorites, toggleF
     return () => window.removeEventListener('keydown', handler);
   }, [hasPrev, hasNext, onPrev, onNext, compareMode]);
 
+  // Scrollspy — 본문 섹션 교차 관찰
+  const [activeTocId, setActiveTocId] = useState<string>('sec-overview');
+  const mainScrollRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const container = mainScrollRef.current;
+    if (!container) return;
+    const observer = new IntersectionObserver(
+      entries => {
+        // 가장 위에 있는 intersecting 섹션을 활성으로
+        const visible = entries.filter(e => e.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+        if (visible.length > 0) setActiveTocId(visible[0].target.id);
+      },
+      { root: container, threshold: 0.25, rootMargin: '0px 0px -40% 0px' }
+    );
+    const sections = container.querySelectorAll('[id^="sec-"]');
+    sections.forEach(s => observer.observe(s));
+    return () => observer.disconnect();
+  }, [term.id]);
+
   return (
     <div
       className="modal-overlay-in fixed inset-0 z-50 flex md:items-center md:justify-center md:p-4 items-end"
@@ -1254,7 +1323,7 @@ function TermModal({ term, termList, onClose, categoryColors, favorites, toggleF
         <div className="flex flex-1 min-h-0">
 
           {/* 본문 스크롤 영역 */}
-          <div className="flex-1 overflow-y-auto p-6 md:p-10 min-w-0">
+          <div ref={mainScrollRef} className="flex-1 overflow-y-auto p-6 md:p-10 min-w-0">
 
           {/* 비교 모드 */}
           {compareMode && (
@@ -1390,39 +1459,39 @@ function TermModal({ term, termList, onClose, categoryColors, favorites, toggleF
 
           {/* 한 줄 요약 (easy) */}
           {hasEasy && (
-            <div className="mb-6 px-5 py-4 border-l-4" style={{ background: T.accentGreenBg, borderColor: T.accentGreen }}>
+            <div id="sec-easy" className="mb-6 px-5 py-4 border-l-4" style={{ background: T.accentGreenBg, borderColor: T.accentGreen, scrollMarginTop: '8px' }}>
               <div className="text-[12px] mono uppercase tracking-[0.2em] mb-2" style={{ color: T.accentGreen }}>💡 쉽게 말하면</div>
               <p className="text-sm md:text-base leading-relaxed" style={{ color: T.accentGreenText }}>{term.easy}</p>
             </div>
           )}
 
           {/* 요약 */}
-          <Section label="개요 · Summary" color={categoryColors[term.category]?.bg} T={T}>
+          <Section id="sec-overview" label="개요 · Summary" color={categoryColors[term.category]?.bg} T={T}>
             <p className="text-base md:text-lg leading-relaxed" style={{ color: T.textPrimary }}>{term.description}</p>
           </Section>
 
           {/* 상세 설명 */}
           {hasDetailed && (
-            <Section label="심화 · In-Depth" color={categoryColors[term.category]?.bg} T={T}>
+            <Section id="sec-detailed" label="심화 · In-Depth" color={categoryColors[term.category]?.bg} T={T}>
               <p className="text-sm md:text-base leading-[1.8]" style={{ color: T.textSecondary }}>{term.detailed}</p>
             </Section>
           )}
 
           {/* 공식 */}
-          <Section label="공식 · Formula" color={categoryColors[term.category]?.bg} T={T}>
+          <Section id="sec-formula" label="공식 · Formula" color={categoryColors[term.category]?.bg} T={T}>
             <div className="mono text-sm md:text-base px-4 md:px-5 py-3 md:py-4 border-l-4" style={{ background: T.bgCard, borderColor: categoryColors[term.category]?.bg, color: T.textPrimary }}>
               {term.formula}
             </div>
           </Section>
 
           {/* 예시 */}
-          <Section label="예시 · Example" color={categoryColors[term.category]?.bg} T={T}>
+          <Section id="sec-example" label="예시 · Example" color={categoryColors[term.category]?.bg} T={T}>
             <div className="text-sm italic" style={{ color: T.textMuted }}>{term.example}</div>
           </Section>
 
           {/* 관계성 카드 */}
           {hasRelations && (
-            <Section label="연결 관계 · Relations" color={categoryColors[term.category]?.bg} T={T}>
+            <Section id="sec-relations" label="연결 관계 · Relations" color={categoryColors[term.category]?.bg} T={T}>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-3">
                 {Object.entries(term.relations).map(([key, value]) => {
                   const matchTerm = TERMS.find(t =>
@@ -1456,7 +1525,7 @@ function TermModal({ term, termList, onClose, categoryColors, favorites, toggleF
 
           {/* 시장 영향 */}
           {hasImpact && (
-            <Section label="시장 영향 · Market Impact" color={categoryColors[term.category]?.bg} T={T}>
+            <Section id="sec-impact" label="시장 영향 · Market Impact" color={categoryColors[term.category]?.bg} T={T}>
               <div className="text-sm md:text-base leading-relaxed px-4 py-3 border-l-2" style={{ background: T.marketImpactBg, borderColor: T.accent, color: T.textPrimary }}>
                 {term.marketImpact}
               </div>
@@ -1542,43 +1611,37 @@ function TermModal({ term, termList, onClose, categoryColors, favorites, toggleF
             {/* § 목차 */}
             <div className="px-5 pt-5 pb-3 border-b" style={{ borderColor: T.border }}>
               <div className="text-[11px] mono uppercase tracking-[0.25em] mb-3" style={{ color: T.textFaint }}>목차 · Contents</div>
-              <div className="flex flex-col gap-1">
-                {hasEasy && (
-                  <div className="flex items-center gap-2 text-xs py-1" style={{ color: T.textMuted }}>
-                    <span className="w-4 text-right mono text-[10px]" style={{ color: T.textDimmer }}>01</span>
-                    <span>쉽게 말하면</span>
-                  </div>
-                )}
-                <div className="flex items-center gap-2 text-xs py-1" style={{ color: T.textMuted }}>
-                  <span className="w-4 text-right mono text-[10px]" style={{ color: T.textDimmer }}>02</span>
-                  <span>개요</span>
-                </div>
-                {hasDetailed && (
-                  <div className="flex items-center gap-2 text-xs py-1" style={{ color: T.textMuted }}>
-                    <span className="w-4 text-right mono text-[10px]" style={{ color: T.textDimmer }}>03</span>
-                    <span>심화 설명</span>
-                  </div>
-                )}
-                <div className="flex items-center gap-2 text-xs py-1" style={{ color: T.textMuted }}>
-                  <span className="w-4 text-right mono text-[10px]" style={{ color: T.textDimmer }}>04</span>
-                  <span>공식</span>
-                </div>
-                <div className="flex items-center gap-2 text-xs py-1" style={{ color: T.textMuted }}>
-                  <span className="w-4 text-right mono text-[10px]" style={{ color: T.textDimmer }}>05</span>
-                  <span>예시</span>
-                </div>
-                {hasRelations && (
-                  <div className="flex items-center gap-2 text-xs py-1" style={{ color: T.textMuted }}>
-                    <span className="w-4 text-right mono text-[10px]" style={{ color: T.textDimmer }}>06</span>
-                    <span>연결 관계</span>
-                  </div>
-                )}
-                {hasImpact && (
-                  <div className="flex items-center gap-2 text-xs py-1" style={{ color: T.textMuted }}>
-                    <span className="w-4 text-right mono text-[10px]" style={{ color: T.textDimmer }}>07</span>
-                    <span>시장 영향</span>
-                  </div>
-                )}
+              <div className="flex flex-col">
+                {([
+                  ...(hasEasy ? [{ id: 'sec-easy', n: '01', label: '쉽게 말하면' }] : []),
+                  { id: 'sec-overview',  n: hasEasy ? '02' : '01', label: '개요' },
+                  ...(hasDetailed ? [{ id: 'sec-detailed', n: hasEasy ? '03' : '02', label: '심화 설명' }] : []),
+                  { id: 'sec-formula', n: (() => { let c = 1; if (hasEasy) c++; if (hasDetailed) c++; return String(c + 1).padStart(2,'0'); })(), label: '공식' },
+                  { id: 'sec-example', n: (() => { let c = 2; if (hasEasy) c++; if (hasDetailed) c++; return String(c + 1).padStart(2,'0'); })(), label: '예시' },
+                  ...(hasRelations ? [{ id: 'sec-relations', n: (() => { let c = 3; if (hasEasy) c++; if (hasDetailed) c++; return String(c + 1).padStart(2,'0'); })(), label: '연결 관계' }] : []),
+                  ...(hasImpact ? [{ id: 'sec-impact', n: (() => { let c = 4; if (hasEasy) c++; if (hasDetailed) c++; if (hasRelations) c++; return String(c + 1).padStart(2,'0'); })(), label: '시장 영향' }] : []),
+                ] as { id: string; n: string; label: string }[]).map(item => {
+                  const isActive = activeTocId === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => {
+                        const el = mainScrollRef.current?.querySelector(`#${item.id}`);
+                        el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                      }}
+                      className="flex items-center gap-2 text-xs py-1.5 px-1 rounded-sm text-left transition-all"
+                      style={{
+                        color: isActive ? (categoryColors[term.category]?.bg || T.accent) : T.textMuted,
+                        background: isActive ? `${categoryColors[term.category]?.bg || T.accent}15` : 'transparent',
+                        fontWeight: isActive ? 600 : 400,
+                      }}
+                    >
+                      <span className="w-4 text-right mono text-[10px] shrink-0" style={{ color: isActive ? (categoryColors[term.category]?.bg || T.accent) : T.textDimmer }}>{item.n}</span>
+                      <span>{item.label}</span>
+                      {isActive && <span className="ml-auto w-1 h-3 rounded-full shrink-0" style={{ background: categoryColors[term.category]?.bg || T.accent }} />}
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
@@ -1667,9 +1730,9 @@ function TermModal({ term, termList, onClose, categoryColors, favorites, toggleF
   );
 }
 
-function Section({ label, color, children, T }: { label: any; color: any; children: React.ReactNode; T: any }): JSX.Element {
+function Section({ label, color, children, T, id }: { label: any; color: any; children: React.ReactNode; T: any; id?: string }): JSX.Element {
   return (
-    <div className="mb-6 md:mb-8">
+    <div id={id} className="mb-6 md:mb-8" style={{ scrollMarginTop: '8px' }}>
       <div className="flex items-center gap-2 mb-3">
         <span className="w-1 h-3" style={{ background: color || T.accent }}></span>
         <div className="text-[12px] mono uppercase tracking-[0.25em]" style={{ color: T.textFaint }}>{label}</div>
@@ -5661,45 +5724,101 @@ function DerivTaxCalc() {
 }
 
 // ─────────────────────────────────────────────
-// Market Pulse Rail — PC 전용 상단 정보 레일
+// Market Pulse Rail — editorial hero + info rail
 // ─────────────────────────────────────────────
 function MarketPulseRail({ T, totalTerms }: { T: any; totalTerms: number }) {
   const [now, setNow] = React.useState(() => new Date());
   React.useEffect(() => {
-    const id = setInterval(() => setNow(new Date()), 60_000);
+    const id = setInterval(() => setNow(new Date()), 1_000);
     return () => clearInterval(id);
   }, []);
 
-  const timeStr = now.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Seoul' });
-  const dateStr = now.toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit', timeZone: 'Asia/Seoul' });
+  const timeStr = now.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false, timeZone: 'Asia/Seoul' });
+  const dateStr = now.toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit', weekday: 'short', timeZone: 'Asia/Seoul' });
 
-  const indices = [
-    { k: 'Terms',  v: String(totalTerms).padStart(3, '0'), u: '개',    bars: 4 },
-    { k: 'Calcs',  v: '052',                               u: '개',    bars: 4 },
-    { k: 'Events', v: '07',                                u: '이번주', bars: 2 },
-    { k: 'KST',    v: timeStr,                             u: dateStr, bars: 5 },
+  // 거래 시간 판별 (KST 09:00-15:30 평일)
+  const kstHour = parseInt(now.toLocaleTimeString('ko-KR', { hour: '2-digit', hour12: false, timeZone: 'Asia/Seoul' }));
+  const kstMin  = parseInt(now.toLocaleTimeString('ko-KR', { minute: '2-digit', timeZone: 'Asia/Seoul' }));
+  const kstDay  = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Seoul' })).getDay();
+  const isMarketOpen = kstDay >= 1 && kstDay <= 5 && (kstHour > 9 || (kstHour === 9 && kstMin >= 0)) && (kstHour < 15 || (kstHour === 15 && kstMin <= 30));
+
+  const stats = [
+    { k: 'Terms',  v: String(totalTerms).padStart(3, '0'), u: '개 용어' },
+    { k: 'Calcs',  v: '052',                               u: '개 계산기' },
+    { k: 'Events', v: '008',                               u: '이번달 이벤트' },
   ];
 
   return (
-    <div
-      className="hidden md:grid mb-5 border"
-      style={{ gridTemplateColumns: 'auto 1fr', borderColor: T.border, background: T.bgCard }}
-    >
-      <div className="flex items-center px-4 border-r" style={{ borderColor: T.border }}>
-        <span className="mono text-[11px] tracking-[0.3em] uppercase" style={{ color: T.textDimmer }}>§ Desk</span>
+    <div className="mb-6 border" style={{ borderColor: T.border }}>
+      {/* ── 에디토리얼 히어로 (PC 전용) ── */}
+      <div className="hidden md:block relative overflow-hidden border-b" style={{ borderColor: T.border, background: T.bgCard }}>
+        {/* 볼 조인트 코너 장식 */}
+        {[['top-0 left-0', 'translate(-50%,-50%)'], ['top-0 right-0', 'translate(50%,-50%)'], ['bottom-0 left-0', 'translate(-50%,50%)'], ['bottom-0 right-0', 'translate(50%,50%)']].map(([pos], ci) => (
+          <span key={ci} className={`absolute ${pos} w-3 h-3 rounded-full border-2 z-10`}
+            style={{ borderColor: T.border, background: T.bgPage }} />
+        ))}
+        {/* 배경 그리드 패턴 */}
+        <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: `repeating-linear-gradient(0deg, ${T.textPrimary} 0 1px, transparent 1px 40px), repeating-linear-gradient(90deg, ${T.textPrimary} 0 1px, transparent 1px 40px)` }} />
+        <div className="relative px-8 py-8">
+          <div className="flex items-start justify-between gap-6">
+            {/* 왼쪽: 타이포그래피 */}
+            <div className="flex-1 min-w-0">
+              <div className="mono text-[10px] uppercase tracking-[0.4em] mb-3" style={{ color: T.textFaint }}>
+                § stockwiki · kr — 주식 투자자를 위한 책상
+              </div>
+              <h1 className="font-light tracking-[-0.04em] leading-[0.92] mb-4" style={{ fontSize: 'clamp(28px, 4vw, 52px)', color: T.textPrimary }}>
+                사전 · 계산기 ·<br />
+                <span style={{ color: T.accent }}>한 벌의 책상.</span>
+              </h1>
+              <p className="text-sm leading-relaxed max-w-xs" style={{ color: T.textMuted }}>
+                주요 재무지표 {totalTerms}개 용어 사전,<br />
+                52개 전문 계산기, 어닝·지표 이벤트 캘린더.
+              </p>
+              {/* CTA 단축키 */}
+              <div className="flex items-center gap-3 mt-5 flex-wrap">
+                {[
+                  { key: 'G', desc: '사전 바로가기' },
+                  { key: '⌘K', desc: '빠른 검색' },
+                  { key: 'C', desc: '계산기' },
+                ].map(({ key, desc }) => (
+                  <div key={key} className="flex items-center gap-1.5">
+                    <span className="mono text-[11px] px-1.5 py-0.5 border" style={{ borderColor: T.borderMid, color: T.textSecondary, background: T.bgPage }}>
+                      {key}
+                    </span>
+                    <span className="mono text-[10px]" style={{ color: T.textDimmer }}>{desc}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            {/* 오른쪽: 시계 + 시장 상태 */}
+            <div className="shrink-0 text-right flex flex-col items-end gap-3">
+              <div>
+                <div className="mono text-[10px] uppercase tracking-[0.3em] mb-1" style={{ color: T.textFaint }}>KST</div>
+                <div className="mono font-medium tracking-[-0.02em]" style={{ fontSize: 28, color: T.textPrimary }}>{timeStr}</div>
+                <div className="mono text-[11px] mt-0.5" style={{ color: T.textDimmer }}>{dateStr}</div>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full animate-pulse" style={{ background: isMarketOpen ? '#4A7045' : T.textDimmer }} />
+                <span className="mono text-[11px] uppercase tracking-[0.15em]" style={{ color: isMarketOpen ? '#4A7045' : T.textDimmer }}>
+                  {isMarketOpen ? '장중' : '장외'}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)' }}>
-        {indices.map((idx, i) => (
-          <div key={idx.k} style={{ display: 'flex', flexDirection: 'column', gap: 4, padding: '10px 16px', borderRight: i < indices.length - 1 ? `1px solid ${T.border}` : 'none' }}>
-            <span className="mono text-[10px] tracking-[0.28em] uppercase" style={{ color: T.textFaint }}>{idx.k}</span>
-            <span className="mono font-medium" style={{ fontSize: 18, color: T.textPrimary, letterSpacing: '-0.01em' }}>
-              {idx.v}
-              <span className="mono text-[10px] tracking-[0.1em] uppercase ml-1.5" style={{ color: T.textFaint }}>{idx.u}</span>
-            </span>
-            <div style={{ display: 'flex', gap: 2, marginTop: 2 }}>
-              {Array.from({ length: 5 }).map((_, j) => (
-                <span key={j} style={{ display: 'block', width: 4, height: 6, background: j < idx.bars ? T.accent : T.border, opacity: j < idx.bars ? 1 : 0.4 }} />
-              ))}
+
+      {/* ── 하단 stats rail ── */}
+      <div className="grid border-b" style={{ gridTemplateColumns: `repeat(${stats.length + 1},1fr)`, borderColor: T.border }}>
+        <div className="flex items-center px-4 py-3 border-r" style={{ borderColor: T.border }}>
+          <span className="mono text-[10px] tracking-[0.3em] uppercase" style={{ color: T.textDimmer }}>§ Desk</span>
+        </div>
+        {stats.map((s, i) => (
+          <div key={s.k} className="flex flex-col gap-1 px-4 py-3 border-r" style={{ borderColor: i < stats.length - 1 ? T.border : 'transparent' }}>
+            <span className="mono text-[10px] tracking-[0.25em] uppercase" style={{ color: T.textFaint }}>{s.k}</span>
+            <div className="flex items-baseline gap-1">
+              <span className="mono font-medium" style={{ fontSize: 20, color: T.textPrimary, letterSpacing: '-0.02em' }}>{s.v}</span>
+              <span className="mono text-[10px]" style={{ color: T.textDimmer }}>{s.u}</span>
             </div>
           </div>
         ))}

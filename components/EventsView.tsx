@@ -6,14 +6,14 @@ import type { EarningItem, Sector } from '@/app/api/earnings/route';
 
 // ── FOMC 2026 (KST 기준)
 const FOMC_2026 = [
-  { dateKST: '2026-01-30', label: 'FOMC', desc: '금리 결정', color: '#4F7E7C' },
-  { dateKST: '2026-03-20', label: 'FOMC', desc: '금리+점도표', color: '#4F7E7C' },
-  { dateKST: '2026-05-08', label: 'FOMC', desc: '금리 결정', color: '#4F7E7C' },
-  { dateKST: '2026-06-19', label: 'FOMC', desc: '금리+점도표', color: '#4F7E7C' },
-  { dateKST: '2026-07-31', label: 'FOMC', desc: '금리 결정', color: '#4F7E7C' },
-  { dateKST: '2026-09-18', label: 'FOMC', desc: '금리+점도표', color: '#4F7E7C' },
-  { dateKST: '2026-11-06', label: 'FOMC', desc: '금리 결정', color: '#4F7E7C' },
-  { dateKST: '2026-12-18', label: 'FOMC', desc: '금리+점도표', color: '#4F7E7C' },
+  { dateKST: '2026-01-30', label: 'FOMC', desc: '금리 결정', color: '#4F7E7C', importance: 3 as const },
+  { dateKST: '2026-03-20', label: 'FOMC', desc: '금리+점도표', color: '#4F7E7C', importance: 3 as const },
+  { dateKST: '2026-05-08', label: 'FOMC', desc: '금리 결정', color: '#4F7E7C', importance: 3 as const },
+  { dateKST: '2026-06-19', label: 'FOMC', desc: '금리+점도표', color: '#4F7E7C', importance: 3 as const },
+  { dateKST: '2026-07-31', label: 'FOMC', desc: '금리 결정', color: '#4F7E7C', importance: 3 as const },
+  { dateKST: '2026-09-18', label: 'FOMC', desc: '금리+점도표', color: '#4F7E7C', importance: 3 as const },
+  { dateKST: '2026-11-06', label: 'FOMC', desc: '금리 결정', color: '#4F7E7C', importance: 3 as const },
+  { dateKST: '2026-12-18', label: 'FOMC', desc: '금리+점도표', color: '#4F7E7C', importance: 3 as const },
 ];
 
 // ── 미국 주요 경제지표 2026
@@ -22,49 +22,49 @@ const FOMC_2026 = [
 // PCE: BEA 마지막 금요일 근처 (12월 크리스마스 → 12/23로 조정)
 const MACRO_2026 = [
   // ── CPI (소비자물가)
-  { dateKST: '2026-01-14', label: 'CPI',  desc: '12월 소비자물가 (美)',   color: '#E07B54' },
-  { dateKST: '2026-02-13', label: 'CPI',  desc: '1월 소비자물가 (美)',    color: '#E07B54' },
-  { dateKST: '2026-03-11', label: 'CPI',  desc: '2월 소비자물가 (美)',    color: '#E07B54' },
-  { dateKST: '2026-04-10', label: 'CPI',  desc: '3월 소비자물가 (美)',    color: '#E07B54' },
-  { dateKST: '2026-05-12', label: 'CPI',  desc: '4월 소비자물가 (美)',    color: '#E07B54' },
-  { dateKST: '2026-06-10', label: 'CPI',  desc: '5월 소비자물가 (美)',    color: '#E07B54' },
-  { dateKST: '2026-07-14', label: 'CPI',  desc: '6월 소비자물가 (美)',    color: '#E07B54' },
-  { dateKST: '2026-08-12', label: 'CPI',  desc: '7월 소비자물가 (美)',    color: '#E07B54' },
-  { dateKST: '2026-09-11', label: 'CPI',  desc: '8월 소비자물가 (美)',    color: '#E07B54' },
-  { dateKST: '2026-10-13', label: 'CPI',  desc: '9월 소비자물가 (美)',    color: '#E07B54' },
-  { dateKST: '2026-11-12', label: 'CPI',  desc: '10월 소비자물가 (美)',   color: '#E07B54' },
-  { dateKST: '2026-12-11', label: 'CPI',  desc: '11월 소비자물가 (美)',   color: '#E07B54' },
+  { dateKST: '2026-01-14', label: 'CPI',  desc: '12월 소비자물가 (美)',   color: '#E07B54', importance: 3 as const },
+  { dateKST: '2026-02-13', label: 'CPI',  desc: '1월 소비자물가 (美)',    color: '#E07B54', importance: 3 as const },
+  { dateKST: '2026-03-11', label: 'CPI',  desc: '2월 소비자물가 (美)',    color: '#E07B54', importance: 3 as const },
+  { dateKST: '2026-04-10', label: 'CPI',  desc: '3월 소비자물가 (美)',    color: '#E07B54', importance: 3 as const },
+  { dateKST: '2026-05-12', label: 'CPI',  desc: '4월 소비자물가 (美)',    color: '#E07B54', importance: 3 as const },
+  { dateKST: '2026-06-10', label: 'CPI',  desc: '5월 소비자물가 (美)',    color: '#E07B54', importance: 3 as const },
+  { dateKST: '2026-07-14', label: 'CPI',  desc: '6월 소비자물가 (美)',    color: '#E07B54', importance: 3 as const },
+  { dateKST: '2026-08-12', label: 'CPI',  desc: '7월 소비자물가 (美)',    color: '#E07B54', importance: 3 as const },
+  { dateKST: '2026-09-11', label: 'CPI',  desc: '8월 소비자물가 (美)',    color: '#E07B54', importance: 3 as const },
+  { dateKST: '2026-10-13', label: 'CPI',  desc: '9월 소비자물가 (美)',    color: '#E07B54', importance: 3 as const },
+  { dateKST: '2026-11-12', label: 'CPI',  desc: '10월 소비자물가 (美)',   color: '#E07B54', importance: 3 as const },
+  { dateKST: '2026-12-11', label: 'CPI',  desc: '11월 소비자물가 (美)',   color: '#E07B54', importance: 3 as const },
   // ── NFP (비농업 고용)
-  { dateKST: '2026-01-09', label: 'NFP',  desc: '12월 비농업 고용 (美)',  color: '#7B9FDF' },
-  { dateKST: '2026-02-06', label: 'NFP',  desc: '1월 비농업 고용 (美)',   color: '#7B9FDF' },
-  { dateKST: '2026-03-06', label: 'NFP',  desc: '2월 비농업 고용 (美)',   color: '#7B9FDF' },
-  { dateKST: '2026-04-03', label: 'NFP',  desc: '3월 비농업 고용 (美)',   color: '#7B9FDF' },
-  { dateKST: '2026-05-08', label: 'NFP',  desc: '4월 비농업 고용 (美)',   color: '#7B9FDF' }, // 메이데이 이후 두번째 금요일
-  { dateKST: '2026-06-05', label: 'NFP',  desc: '5월 비농업 고용 (美)',   color: '#7B9FDF' },
-  { dateKST: '2026-07-02', label: 'NFP',  desc: '6월 비농업 고용 (美)',   color: '#7B9FDF' },
-  { dateKST: '2026-08-07', label: 'NFP',  desc: '7월 비농업 고용 (美)',   color: '#7B9FDF' },
-  { dateKST: '2026-09-04', label: 'NFP',  desc: '8월 비농업 고용 (美)',   color: '#7B9FDF' },
-  { dateKST: '2026-10-02', label: 'NFP',  desc: '9월 비농업 고용 (美)',   color: '#7B9FDF' },
-  { dateKST: '2026-11-06', label: 'NFP',  desc: '10월 비농업 고용 (美)',  color: '#7B9FDF' },
-  { dateKST: '2026-12-04', label: 'NFP',  desc: '11월 비농업 고용 (美)',  color: '#7B9FDF' },
+  { dateKST: '2026-01-09', label: 'NFP',  desc: '12월 비농업 고용 (美)',  color: '#7B9FDF', importance: 3 as const },
+  { dateKST: '2026-02-06', label: 'NFP',  desc: '1월 비농업 고용 (美)',   color: '#7B9FDF', importance: 3 as const },
+  { dateKST: '2026-03-06', label: 'NFP',  desc: '2월 비농업 고용 (美)',   color: '#7B9FDF', importance: 3 as const },
+  { dateKST: '2026-04-03', label: 'NFP',  desc: '3월 비농업 고용 (美)',   color: '#7B9FDF', importance: 3 as const },
+  { dateKST: '2026-05-08', label: 'NFP',  desc: '4월 비농업 고용 (美)',   color: '#7B9FDF', importance: 3 as const },
+  { dateKST: '2026-06-05', label: 'NFP',  desc: '5월 비농업 고용 (美)',   color: '#7B9FDF', importance: 3 as const },
+  { dateKST: '2026-07-02', label: 'NFP',  desc: '6월 비농업 고용 (美)',   color: '#7B9FDF', importance: 3 as const },
+  { dateKST: '2026-08-07', label: 'NFP',  desc: '7월 비농업 고용 (美)',   color: '#7B9FDF', importance: 3 as const },
+  { dateKST: '2026-09-04', label: 'NFP',  desc: '8월 비농업 고용 (美)',   color: '#7B9FDF', importance: 3 as const },
+  { dateKST: '2026-10-02', label: 'NFP',  desc: '9월 비농업 고용 (美)',   color: '#7B9FDF', importance: 3 as const },
+  { dateKST: '2026-11-06', label: 'NFP',  desc: '10월 비농업 고용 (美)',  color: '#7B9FDF', importance: 3 as const },
+  { dateKST: '2026-12-04', label: 'NFP',  desc: '11월 비농업 고용 (美)',  color: '#7B9FDF', importance: 3 as const },
   // ── PCE (개인소비지출 물가)
-  { dateKST: '2026-01-30', label: 'PCE',  desc: '12월 PCE 물가 (美)',     color: '#B07AB0' },
-  { dateKST: '2026-02-27', label: 'PCE',  desc: '1월 PCE 물가 (美)',      color: '#B07AB0' },
-  { dateKST: '2026-03-27', label: 'PCE',  desc: '2월 PCE 물가 (美)',      color: '#B07AB0' },
-  { dateKST: '2026-04-30', label: 'PCE',  desc: '3월 PCE 물가 (美)',      color: '#B07AB0' },
-  { dateKST: '2026-05-29', label: 'PCE',  desc: '4월 PCE 물가 (美)',      color: '#B07AB0' },
-  { dateKST: '2026-06-26', label: 'PCE',  desc: '5월 PCE 물가 (美)',      color: '#B07AB0' },
-  { dateKST: '2026-07-31', label: 'PCE',  desc: '6월 PCE 물가 (美)',      color: '#B07AB0' },
-  { dateKST: '2026-08-28', label: 'PCE',  desc: '7월 PCE 물가 (美)',      color: '#B07AB0' },
-  { dateKST: '2026-09-25', label: 'PCE',  desc: '8월 PCE 물가 (美)',      color: '#B07AB0' },
-  { dateKST: '2026-10-30', label: 'PCE',  desc: '9월 PCE 물가 (美)',      color: '#B07AB0' },
-  { dateKST: '2026-11-25', label: 'PCE',  desc: '10월 PCE 물가 (美)',     color: '#B07AB0' },
-  { dateKST: '2026-12-23', label: 'PCE',  desc: '11월 PCE 물가 (美)',     color: '#B07AB0' }, // 크리스마스 전날
+  { dateKST: '2026-01-30', label: 'PCE',  desc: '12월 PCE 물가 (美)',     color: '#B07AB0', importance: 2 as const },
+  { dateKST: '2026-02-27', label: 'PCE',  desc: '1월 PCE 물가 (美)',      color: '#B07AB0', importance: 2 as const },
+  { dateKST: '2026-03-27', label: 'PCE',  desc: '2월 PCE 물가 (美)',      color: '#B07AB0', importance: 2 as const },
+  { dateKST: '2026-04-30', label: 'PCE',  desc: '3월 PCE 물가 (美)',      color: '#B07AB0', importance: 2 as const },
+  { dateKST: '2026-05-29', label: 'PCE',  desc: '4월 PCE 물가 (美)',      color: '#B07AB0', importance: 2 as const },
+  { dateKST: '2026-06-26', label: 'PCE',  desc: '5월 PCE 물가 (美)',      color: '#B07AB0', importance: 2 as const },
+  { dateKST: '2026-07-31', label: 'PCE',  desc: '6월 PCE 물가 (美)',      color: '#B07AB0', importance: 2 as const },
+  { dateKST: '2026-08-28', label: 'PCE',  desc: '7월 PCE 물가 (美)',      color: '#B07AB0', importance: 2 as const },
+  { dateKST: '2026-09-25', label: 'PCE',  desc: '8월 PCE 물가 (美)',      color: '#B07AB0', importance: 2 as const },
+  { dateKST: '2026-10-30', label: 'PCE',  desc: '9월 PCE 물가 (美)',      color: '#B07AB0', importance: 2 as const },
+  { dateKST: '2026-11-25', label: 'PCE',  desc: '10월 PCE 물가 (美)',     color: '#B07AB0', importance: 2 as const },
+  { dateKST: '2026-12-23', label: 'PCE',  desc: '11월 PCE 물가 (美)',     color: '#B07AB0', importance: 2 as const },
   // ── GDP (분기 속보치)
-  { dateKST: '2026-01-29', label: 'GDP',  desc: 'Q4 2025 GDP 속보 (美)',  color: '#5FA8A0' },
-  { dateKST: '2026-04-29', label: 'GDP',  desc: 'Q1 2026 GDP 속보 (美)',  color: '#5FA8A0' },
-  { dateKST: '2026-07-30', label: 'GDP',  desc: 'Q2 2026 GDP 속보 (美)',  color: '#5FA8A0' },
-  { dateKST: '2026-10-29', label: 'GDP',  desc: 'Q3 2026 GDP 속보 (美)',  color: '#5FA8A0' },
+  { dateKST: '2026-01-29', label: 'GDP',  desc: 'Q4 2025 GDP 속보 (美)',  color: '#5FA8A0', importance: 2 as const },
+  { dateKST: '2026-04-29', label: 'GDP',  desc: 'Q1 2026 GDP 속보 (美)',  color: '#5FA8A0', importance: 2 as const },
+  { dateKST: '2026-07-30', label: 'GDP',  desc: 'Q2 2026 GDP 속보 (美)',  color: '#5FA8A0', importance: 2 as const },
+  { dateKST: '2026-10-29', label: 'GDP',  desc: 'Q3 2026 GDP 속보 (美)',  color: '#5FA8A0', importance: 2 as const },
 ];
 
 // ── 코스피200 선물 만기 (분기 둘째 목요일)
@@ -84,6 +84,7 @@ const FUTURES_EVENTS = [3, 6, 9, 12].map(m => ({
   label: 'K200만기',
   desc: `${m}월 선물 최종거래`,
   color: '#8A8A8A',
+  importance: 2 as const,
 }));
 
 function getKSTToday(): string {
@@ -122,9 +123,15 @@ type CalEvent = {
   label: string;
   desc: string;
   color: string;
+  importance?: 1 | 2 | 3; // 1=낮음, 2=보통, 3=높음
   earning?: EarningItem;
   macro?: { actual?: number | null; estimate?: number | null; prev?: number | null; unit?: string };
 };
+
+function importanceDots(n: 1 | 2 | 3 | undefined): string {
+  if (!n) return '';
+  return '●'.repeat(n) + '○'.repeat(3 - n);
+}
 
 function surpriseColor(s: number | null | undefined, accent: string, green: string): string {
   if (s == null) return accent;
@@ -245,6 +252,7 @@ export default function EventsView({ T }: { T?: any }) {
       label: e.symbol,
       desc: e.nameKo + (e.timing && e.timing !== 'unknown' ? ` · ${e.timing}` : ''),
       color: SECTOR_COLOR[e.sector ?? 'Other'] ?? '#C89650',
+      importance: (e.marketCap != null && e.marketCap >= 500 ? 3 : e.marketCap != null && e.marketCap >= 50 ? 2 : 1) as 1 | 2 | 3,
       earning: e,
     }));
 
@@ -548,7 +556,13 @@ export default function EventsView({ T }: { T?: any }) {
                       <div key={i}
                         className={`flex items-center gap-1 px-1 py-0.5 text-[14px] md:text-[14px] truncate rounded-sm${i >= 2 ? ' hidden md:flex' : ''}`}
                         style={{ background: `${ev.color}${evBgAlpha}`, borderLeft: `2px solid ${ev.color}${evBorderAlpha}`, color: ev.color }}>
-                        <span className="truncate font-semibold">{ev.label}</span>
+                        <span className="truncate font-semibold flex-1 min-w-0">{ev.label}</span>
+                        {ev.importance && (
+                          <span className="shrink-0 text-[9px] mono tracking-[-1px] opacity-80"
+                            style={{ fontVariantNumeric: 'tabular-nums' }}>
+                            {importanceDots(ev.importance)}
+                          </span>
+                        )}
                       </div>
                     ))}
                     {/* 모바일: 2개 초과 / 데스크탑: 4개 초과 */}
@@ -635,6 +649,12 @@ export default function EventsView({ T }: { T?: any }) {
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
                               <span className="text-sm font-semibold" style={{ color: ev.color }}>{ev.label}</span>
+                              {ev.importance && (
+                                <span className="text-[10px] mono tracking-[-1px]"
+                                  style={{ color: ev.color, opacity: 0.75, fontVariantNumeric: 'tabular-nums' }}>
+                                  {importanceDots(ev.importance)}
+                                </span>
+                              )}
                               {e && (
                                 <div className="flex gap-1 flex-wrap">
                                   {e.sector && e.sector !== 'Other' && (
@@ -864,6 +884,12 @@ export default function EventsView({ T }: { T?: any }) {
                       <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
                         <span className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ background: ev.color }} />
                         <span className="text-sm font-semibold" style={{ color: theme.textPrimary }}>{ev.label}</span>
+                        {ev.importance && (
+                          <span className="text-[10px] mono tracking-[-1px]"
+                            style={{ color: ev.color, opacity: 0.8, fontVariantNumeric: 'tabular-nums' }}>
+                            {importanceDots(ev.importance)}
+                          </span>
+                        )}
                         {/* 섹터 배지 */}
                         {e?.sector && e.sector !== 'Other' && (
                           <span className="text-[14px] mono px-1 border"
