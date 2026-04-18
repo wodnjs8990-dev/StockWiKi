@@ -245,7 +245,7 @@ export default function EventsView({ T }: { T?: any }) {
       <div className="flex flex-col gap-5">
 
         {/* ── 달력 ── */}
-        <div className="w-full min-w-0 border" style={{ borderColor: theme.border, maxWidth: '720px', margin: '0 auto' }}>
+        <div className="w-full min-w-0 border" style={{ borderColor: theme.border, maxWidth: '1200px', margin: '0 auto' }}>
 
           {/* 월 네비게이션 */}
           <div className="flex items-center justify-between px-4 md:px-6 py-3 border-b"
@@ -350,7 +350,7 @@ export default function EventsView({ T }: { T?: any }) {
                     </span>
                   </div>
                   <div className="flex flex-col gap-0.5">
-                    {evs.slice(0, 3).map((ev, i) => (
+                    {evs.slice(0, 4).map((ev, i) => (
                       <div key={i}
                         className="flex items-center gap-1 px-1 py-0.5 text-[9px] md:text-[10px] truncate"
                         style={{ background: `${ev.color}22`, borderLeft: `2px solid ${ev.color}`, color: ev.color }}>
@@ -388,7 +388,7 @@ export default function EventsView({ T }: { T?: any }) {
         </div>
 
         {/* ── 하단: 선택 날짜 상세 + 다가오는 이벤트 ── */}
-        <div className="grid md:grid-cols-2 gap-5" style={{ maxWidth: '720px', margin: '0 auto', width: '100%' }}>
+        <div className="grid md:grid-cols-2 gap-5" style={{ maxWidth: '1200px', margin: '0 auto', width: '100%' }}>
 
           {/* 선택 날짜 이벤트 */}
           {selectedDate && (
