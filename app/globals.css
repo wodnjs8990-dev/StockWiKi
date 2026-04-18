@@ -262,15 +262,26 @@ html:not(.light) input::placeholder {
   from { opacity: 0; }
   to   { opacity: 1; }
 }
+/* PC: 살짝 위로 올라오며 페이드인 */
 @keyframes modal-panel-in {
-  from { opacity: 0; transform: translateY(12px) scale(0.98); }
+  from { opacity: 0; transform: translateY(16px) scale(0.98); }
   to   { opacity: 1; transform: translateY(0) scale(1); }
 }
+/* 모바일: 하단에서 슬라이드업 */
+@keyframes modal-panel-slide-up {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
 .modal-overlay-in {
-  animation: modal-overlay-in 0.18s ease-out forwards;
+  animation: modal-overlay-in 0.2s ease-out forwards;
 }
 .modal-panel-in {
-  animation: modal-panel-in 0.2s ease-out forwards;
+  animation: modal-panel-in 0.22s cubic-bezier(0.4,0,0.2,1) forwards;
+}
+@media (max-width: 767px) {
+  .modal-panel-in {
+    animation: modal-panel-slide-up 0.30s cubic-bezier(0.32,0.72,0,1) forwards;
+  }
 }
 
 /* ── CommandK 팔레트 애니메이션 ── */

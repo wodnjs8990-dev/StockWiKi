@@ -1080,7 +1080,7 @@ function GlossaryView({ terms, searchQuery, setSearchQuery, searchRef, categorie
           return (
             <div
               key={term.id}
-              className="border-r border-b transition-all group relative"
+              className="border-r border-b transition-all group relative overflow-hidden"
               style={{ borderColor: T.borderSoft, background: T.bgPage }}
               onMouseEnter={e => e.currentTarget.style.background = isDark ? '#202020' : '#ece0d0'}
               onMouseLeave={e => e.currentTarget.style.background = T.bgPage}
@@ -1216,36 +1216,35 @@ function TermModal({ term, termList, onClose, categoryColors, favorites, toggleF
     showToast?.('메모 저장됨');
   };
 
-  // 모바일: 드래그 다운으로 닫기
-  const handleTouchStart = (e: React.TouchEvent) => {
+  // 모바일: 핸들 바에서만 드래그 다운으로 닫기 (내부 스크롤과 완전 분리)
+  const handleHandleTouchStart = (e: React.TouchEvent) => {
     const el = modalRef.current;
     if (!el) return;
-    (el as any)._touchStartY = e.touches[0].clientY;
-    (el as any)._touchStartScrollTop = el.scrollTop;
+    (el as any)._handleDragStartY = e.touches[0].clientY;
+    (el as any)._handleDragging = true;
   };
-  const handleTouchMove = (e: React.TouchEvent) => {
+  const handleHandleTouchMove = (e: React.TouchEvent) => {
     const el = modalRef.current;
-    if (!el) return;
-    const dy = e.touches[0].clientY - ((el as any)._touchStartY ?? 0);
-    const startScroll = (el as any)._touchStartScrollTop ?? 0;
-    // 최상단에서 아래로 드래그할 때만
-    if (dy > 0 && startScroll <= 0) {
-      el.style.transform = `translateY(${Math.min(dy * 0.5, 120)}px)`;
+    if (!el || !(el as any)._handleDragging) return;
+    e.preventDefault(); // 핸들 영역에서만 페이지 스크롤 막기
+    const dy = e.touches[0].clientY - ((el as any)._handleDragStartY ?? 0);
+    if (dy > 0) {
+      el.style.transform = `translateY(${Math.min(dy * 0.6, 140)}px)`;
       el.style.transition = 'none';
     }
   };
-  const handleTouchEnd = (e: React.TouchEvent) => {
+  const handleHandleTouchEnd = (e: React.TouchEvent) => {
     const el = modalRef.current;
     if (!el) return;
-    const dy = e.changedTouches[0].clientY - ((el as any)._touchStartY ?? 0);
-    const startScroll = (el as any)._touchStartScrollTop ?? 0;
-    if (dy > 80 && startScroll <= 0) {
+    (el as any)._handleDragging = false;
+    const dy = e.changedTouches[0].clientY - ((el as any)._handleDragStartY ?? 0);
+    if (dy > 80) {
       el.style.transform = 'translateY(100%)';
-      el.style.transition = 'transform 0.25s ease';
-      setTimeout(() => onClose(), 220);
+      el.style.transition = 'transform 0.28s cubic-bezier(0.4,0,0.2,1)';
+      setTimeout(() => onClose(), 260);
     } else {
       el.style.transform = '';
-      el.style.transition = 'transform 0.2s ease';
+      el.style.transition = 'transform 0.22s cubic-bezier(0.4,0,0.2,1)';
     }
   };
   const relatedTerms = term.related?.map(id => TERMS.find(t => t.id === id)).filter(Boolean) || [];
@@ -1318,13 +1317,16 @@ function TermModal({ term, termList, onClose, categoryColors, favorites, toggleF
           borderRadius: '0',
         }}
         onClick={e => e.stopPropagation()}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
       >
-        {/* 모바일 드래그 핸들 */}
-        <div className="md:hidden flex justify-center pt-3 pb-1" style={{ touchAction: 'none' }}>
-          <div className="w-10 h-1 rounded-full" style={{ background: T.borderMid }} />
+        {/* 모바일 드래그 핸들 — 터치 핸들러는 이 영역에만 */}
+        <div
+          className="md:hidden flex justify-center pt-3 pb-2 cursor-grab active:cursor-grabbing"
+          style={{ touchAction: 'none' }}
+          onTouchStart={handleHandleTouchStart}
+          onTouchMove={handleHandleTouchMove}
+          onTouchEnd={handleHandleTouchEnd}
+        >
+          <div className="w-12 h-1 rounded-full" style={{ background: T.borderMid }} />
         </div>
         <div
           className="px-4 md:px-8 py-4 md:py-5 flex items-center justify-between border-b sticky top-0 z-10"
@@ -1381,7 +1383,7 @@ function TermModal({ term, termList, onClose, categoryColors, favorites, toggleF
         <div className="flex flex-1 min-h-0">
 
           {/* 본문 스크롤 영역 */}
-          <div ref={mainScrollRef} className="flex-1 overflow-y-auto p-6 md:p-10 min-w-0">
+          <div ref={mainScrollRef} className="flex-1 overflow-y-auto p-6 md:p-10 min-w-0" style={{ overscrollBehavior: 'contain', touchAction: 'pan-y' }}>
 
           {/* 비교 모드 */}
           {compareMode && (
