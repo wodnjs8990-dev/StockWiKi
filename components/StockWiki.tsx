@@ -752,7 +752,8 @@ function CommandK({ terms, onClose, onSelect, T }) {
     return terms.filter(t =>
       t.name.toLowerCase().includes(lower) ||
       t.fullName.toLowerCase().includes(lower) ||
-      t.en.toLowerCase().includes(lower)
+      t.en.toLowerCase().includes(lower) ||
+      t.category.toLowerCase().includes(lower)
     ).slice(0, 10);
   }, [q, terms]);
 
@@ -1085,14 +1086,14 @@ function TermModal({ term, termList, onClose, categoryColors, favorites, toggleF
               </span>
             )}
           </div>
-          <div className="flex items-center gap-2 md:gap-3">
+          <div className="flex items-center gap-1.5 md:gap-3">
             <button onClick={() => toggleFav(term.id)} style={{ color: 'inherit' }} title="이 용어 즐겨찾기">
-              <Star size={16} fill={isFav ? 'currentColor' : 'none'} />
+              <Star size={15} fill={isFav ? 'currentColor' : 'none'} />
             </button>
             {/* 비교 버튼 */}
             <button
               onClick={() => { setCompareMode(m => !m); setCompareTerm(null); setCompareSearch(''); }}
-              className="flex items-center gap-1 text-[10px] mono px-2 py-1 border transition-all"
+              className="flex items-center gap-1 text-[10px] mono px-1.5 md:px-2 py-1 border transition-all"
               style={{
                 borderColor: compareMode ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.2)',
                 background: compareMode ? 'rgba(255,255,255,0.15)' : 'transparent',
@@ -1100,7 +1101,8 @@ function TermModal({ term, termList, onClose, categoryColors, favorites, toggleF
               }}
               title="다른 용어와 비교"
             >
-              <span>비교</span>
+              <span className="hidden sm:inline">비교</span>
+              <span className="sm:hidden">≡</span>
             </button>
             <button
               onClick={async (e) => {
@@ -1133,7 +1135,7 @@ function TermModal({ term, termList, onClose, categoryColors, favorites, toggleF
             >
               <ChevronRight size={14} />
             </button>
-            <button onClick={onClose}><X size={18} /></button>
+            <button onClick={onClose} className="flex items-center justify-center w-7 h-7 shrink-0"><X size={18} /></button>
           </div>
         </div>
 
@@ -1688,24 +1690,15 @@ function CalculatorView({ selectedCalc, setSelectedCalc, T, isDark }) {
                           <span className="text-[10px] mono opacity-50 w-4 shrink-0">{calc.num}</span>
                           <span className="font-medium truncate">{calc.name}</span>
                         </button>
-                        {/* 즐겨찾기 별 */}
+                        {/* 즐겨찾기 별 — hover + 이미 즐겨찾기된 경우 항상 표시 */}
                         <button
                           onClick={(e) => toggleFavCalc(calc.id, e)}
-                          className="absolute top-1/2 right-1 -translate-y-1/2 p-1 transition-opacity"
-                          style={{ opacity: isFav ? 1 : 0, color: active ? '#0a0a0a' : T.accent }}
+                          className="absolute top-1/2 right-1 -translate-y-1/2 p-1 transition-opacity group-hover:opacity-100"
+                          style={{ opacity: isFav ? 1 : 0, color: active ? '#0a0a0a' : (isFav ? T.accent : T.textFaint) }}
                           title={isFav ? '즐겨찾기 해제' : '즐겨찾기 추가'}
                         >
                           <Star size={10} fill={isFav ? 'currentColor' : 'none'} />
                         </button>
-                        {!isFav && (
-                          <button
-                            onClick={(e) => toggleFavCalc(calc.id, e)}
-                            className="absolute top-1/2 right-1 -translate-y-1/2 p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                            style={{ color: active ? '#0a0a0a' : T.textFaint }}
-                          >
-                            <Star size={10} />
-                          </button>
-                        )}
                       </div>
                     );
                   })}
@@ -1847,11 +1840,14 @@ function CalculatorView({ selectedCalc, setSelectedCalc, T, isDark }) {
               <X size={14} />
             </button>
           </div>
-          <div className="divide-y" style={{ borderColor: T.border }}>
+          <div style={{ borderColor: T.border }}>
             {calcHistory.map((entry, i) => {
               const calcInfo = allCalcs.find(c => c.id === entry.id);
               return (
-                <div key={i} className="px-5 py-4 hover:bg-white/2 transition-colors" style={{ borderColor: T.border }}>
+                <div key={i} className="px-5 py-4 transition-colors" style={{ borderTop: i > 0 ? `1px solid ${T.border}` : 'none', background: 'transparent' }}
+                  onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = T.bgHover}
+                  onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
+                >
                   <div className="flex items-center gap-3 mb-2">
                     <span className="w-1.5 h-1.5 rounded-full" style={{ background: calcInfo?.color || T.accent }}></span>
                     <span className="text-xs font-medium" style={{ color: T.textPrimary }}>{entry.label}</span>
@@ -1898,8 +1894,6 @@ let _T: any = {
   bgOverlay2:'rgba(0,0,0,0.7)', bgHover:'rgba(255,255,255,0.04)',
 };
 let _BORDER = '#2a2a2a';
-
-const BORDER = '#2a2a2a';
 
 // 숫자를 한국어 단위로 변환 (100000000 → "1억")
 function formatKoreanUnit(value: string | number): string {
