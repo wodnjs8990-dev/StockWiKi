@@ -24,7 +24,7 @@ type Stats = {
   calcGroups: number;
 };
 
-type ServiceStatus = { ok: boolean; latencyMs: number; error?: string; earningsCount?: number };
+type ServiceStatus = { ok: boolean; latencyMs: number; error?: string; earningsCount?: number; earningsDate?: string; todayCount?: number };
 type Metrics = {
   checkedAt: string;
   system: {
@@ -37,6 +37,12 @@ type Metrics = {
     finnhub: ServiceStatus;
     edgeConfig: ServiceStatus;
     eventsApi: ServiceStatus;
+    yahooFinance: ServiceStatus;
+    dart: ServiceStatus;
+  };
+  dart_quota?: {
+    daily_limit: number;
+    note: string;
   };
 } | null;
 
@@ -353,12 +359,22 @@ export default function AdminDashboard({
             <div className="px-5 py-2" style={{ color: '#5a5a5a' }}>
               <span className="text-[9px] mono uppercase tracking-[0.25em]">API Services</span>
             </div>
-            {[
+            {([
               { key: 'finnhub' as const, label: 'Finnhub', desc: '주식 시세 · 어닝 데이터' },
               { key: 'edgeConfig' as const, label: 'Edge Config', desc: 'Vercel 실시간 설정' },
               { key: 'eventsApi' as const, label: 'Events API', desc: '어닝 캘린더 엔드포인트' },
-            ].map((svc, i, arr) => {
+              { key: 'yahooFinance' as const, label: 'Yahoo Finance', desc: '미국 어닝 · EPS 예상' },
+              { key: 'dart' as const, label: 'DART', desc: '국내 공시 · 분기실적' },
+            ] as const).map((svc, i, arr) => {
               const s = services?.[svc.key];
+              const getDetail = () => {
+                if (!s || s.error) return null;
+                if (svc.key === 'eventsApi' && s.earningsCount !== undefined) return `${s.earningsCount}개 종목`;
+                if (svc.key === 'yahooFinance' && s.earningsDate) return `AAPL 다음 어닝: ${s.earningsDate}`;
+                if (svc.key === 'dart' && s.todayCount !== undefined) return `공시 ${s.todayCount.toLocaleString()}건 조회됨`;
+                return null;
+              };
+              const detail = getDetail();
               return (
                 <div
                   key={svc.key}
@@ -372,8 +388,8 @@ export default function AdminDashboard({
                       <div className="text-[10px] mono" style={{ color: '#5a5a5a' }}>
                         {s?.error
                           ? <span style={{ color: '#A63D33' }}>{s.error}</span>
-                          : svc.key === 'eventsApi' && s?.earningsCount !== undefined
-                          ? `${svc.desc} · ${s.earningsCount}개 종목`
+                          : detail
+                          ? <>{svc.desc} · <span style={{ color: '#a8a49a' }}>{detail}</span></>
                           : svc.desc}
                       </div>
                     </div>
@@ -393,6 +409,32 @@ export default function AdminDashboard({
               );
             })}
           </div>
+
+          {/* DART 할당량 표시 */}
+          {metrics?.dart_quota && !metricsLoading && (
+            <div className="px-5 py-3 border-b" style={{ borderColor: '#1a1a1a' }}>
+              <div className="text-[9px] mono uppercase tracking-[0.25em] mb-2" style={{ color: '#5a5a5a' }}>DART 일일 할당량</div>
+              <div className="flex items-center gap-4">
+                <div className="flex-1 h-1.5 rounded-sm overflow-hidden" style={{ background: '#1f1f1f' }}>
+                  {/* 어닝 조회 1회 ≈ 30건, 헬스체크 ≈ 3건 — 실제 소비량은 서버에서 트래킹 불가, 추산치 표시 */}
+                  <div
+                    className="h-full rounded-sm"
+                    style={{
+                      width: '0.1%', // 40,000건 중 아주 소량 사용
+                      background: '#4A7045',
+                      transition: 'width 0.5s ease',
+                    }}
+                  />
+                </div>
+                <span className="text-[10px] mono shrink-0" style={{ color: '#7a7a7a' }}>
+                  한도: {metrics.dart_quota.daily_limit.toLocaleString()}건/일
+                </span>
+              </div>
+              <div className="text-[9px] mono mt-1" style={{ color: '#4a4a4a' }}>
+                {metrics.dart_quota.note}
+              </div>
+            </div>
+          )}
 
           {/* 시스템 정보 */}
           <div className="px-5 py-2 border-b" style={{ borderColor: '#1f1f1f', color: '#5a5a5a' }}>
