@@ -325,56 +325,91 @@ async function fetchUSEarnings(): Promise<EarningItem[]> {
   return Array.from(bySymbol.values());
 }
 
-// ─── DART: 국내 종목 실적 공시 ───────────────────────────
-async function fetchDartEarnings(): Promise<EarningItem[]> {
-  if (!DART_KEY) return [];
-
+// ─── KRX: 국내 종목 실적 발표 일정 ──────────────────────
+// KRX 데이터포털 실적 발표 일정 (날짜 범위로 전체 시장 한번에)
+async function fetchKRXEarnings(): Promise<EarningItem[]> {
   const today = new Date(Date.now() + 9 * 3600 * 1000);
   const currentYear = today.getUTCFullYear();
-  const prevYear = currentYear - 1;
-  // 전년도 10월부터 ~ 올해 말까지 (연간/분기 실적 모두 커버)
-  const bgn = `${prevYear}1001`;
-  const futureDate = new Date(today);
-  futureDate.setMonth(futureDate.getMonth() + 3);
-  const end = futureDate.toISOString().slice(0, 10).replace(/-/g, '');
 
-  const fetchOneCorp = async (corp: typeof KR_CORPS[0]): Promise<EarningItem | null> => {
-    // A003=분기보고서, A002=반기보고서, A001=사업보고서(연간) 순으로 시도
-    // 가장 최근 날짜의 것을 반환
-    const allItems: { date: string; reportType: string }[] = [];
-    for (const pType of ['A003', 'A002', 'A001']) {
-      try {
-        const url = `https://opendart.fss.or.kr/api/list.json?crtfc_key=${DART_KEY}&corp_code=${corp.corpCode}&bgn_de=${bgn}&end_de=${end}&pblntf_ty=A&pblntf_detail_ty=${pType}&page_count=10`;
-        const res = await fetch(url, { next: { revalidate: 3600 } });
-        if (!res.ok) continue;
-        const data = await res.json();
-        if (data.status !== '000') continue;
-        const list: any[] = data.list ?? [];
-        for (const item of list) {
-          allItems.push({ date: item.rcept_dt as string, reportType: pType });
-        }
-      } catch { /* 무시 */ }
+  // 올해 1월 1일 ~ 12월 31일
+  const fromDate = `${currentYear}0101`;
+  const toDate = `${currentYear}1231`;
+
+  // KRX 종목 심볼→이름 맵 (KR_CORPS 기반)
+  const symbolNameMap: Record<string, string> = {};
+  for (const c of KR_CORPS) symbolNameMap[c.symbol] = c.name;
+
+  const fetchRange = async (strtDd: string, endDd: string): Promise<EarningItem[]> => {
+    try {
+      const body = new URLSearchParams({
+        bld: 'dbms/MDC/STAT/standard/MDCSTAT23901',
+        locale: 'ko_KR',
+        strtDd,
+        endDd,
+        share: '1',
+        money: '1',
+        csvxls_isNo: 'false',
+      });
+      const res = await fetch('https://data.krx.co.kr/comm/bldAttendant/getJsonData.cmd', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+          'Referer': 'https://data.krx.co.kr/',
+          'User-Agent': 'Mozilla/5.0',
+        },
+        body: body.toString(),
+        next: { revalidate: 3600 },
+      });
+      if (!res.ok) return [];
+      const data = await res.json();
+      const list: any[] = data.output ?? data.OutBlock_1 ?? [];
+      const results: EarningItem[] = [];
+
+      for (const item of list) {
+        // KRX 필드: ISU_SRT_CD(종목코드), ISU_NM(종목명), ANNC_TM(발표일), EPS, SALES 등
+        const rawCode = (item.ISU_SRT_CD ?? item.shrt_isu_cd ?? '').replace(/^A/, '');
+        const rawName = item.ISU_NM ?? item.isu_nm ?? '';
+        const rawDate = item.ANNC_TM ?? item.annc_tm ?? item.ANN_DT ?? '';
+        if (!rawDate || rawDate.length < 8) continue;
+
+        const dateStr = rawDate.length === 8
+          ? `${rawDate.slice(0,4)}-${rawDate.slice(4,6)}-${rawDate.slice(6,8)}`
+          : rawDate.slice(0, 10);
+
+        const nameKo = symbolNameMap[rawCode] ?? rawName;
+
+        results.push({
+          symbol: rawCode,
+          nameKo,
+          date: dateStr,
+          market: 'KR',
+          timing: undefined,
+          epsEstimate: parseFloat(item.EPS ?? item.eps ?? '') || null,
+          epsActual: parseFloat(item.ADJ_EPS ?? '') || null,
+          revenueEstimate: null,
+          revenueActual: parseFloat(item.SALES ?? item.sales ?? '') || null,
+          surprise: null,
+        });
+      }
+      return results;
+    } catch {
+      return [];
     }
-    if (allItems.length === 0) return null;
-    // 가장 최근 날짜
-    const latest = allItems.reduce((a, b) => a.date > b.date ? a : b);
-    const rdt = latest.date;
-    return {
-      symbol: corp.symbol,
-      nameKo: corp.name,
-      date: `${rdt.slice(0, 4)}-${rdt.slice(4, 6)}-${rdt.slice(6, 8)}`,
-      market: 'KR',
-      timing: undefined,
-      epsEstimate: null, epsActual: null,
-      revenueEstimate: null, revenueActual: null, surprise: null,
-    };
   };
 
-  const settled = await Promise.allSettled(KR_CORPS.map(fetchOneCorp));
-  return settled
-    .filter((r): r is PromiseFulfilledResult<EarningItem> =>
-      r.status === 'fulfilled' && r.value !== null)
-    .map(r => r.value);
+  // 상반기 + 하반기 나눠서 요청 (KRX 한 번에 너무 많으면 짤릴 수 있음)
+  const [h1, h2] = await Promise.all([
+    fetchRange(fromDate, `${currentYear}0630`),
+    fetchRange(`${currentYear}0701`, toDate),
+  ]);
+
+  // symbol 중복 제거 (최신 날짜 우선)
+  const bySymbol = new Map<string, EarningItem>();
+  for (const e of [...h1, ...h2]) {
+    const existing = bySymbol.get(e.symbol);
+    if (!existing || e.date > existing.date) bySymbol.set(e.symbol, e);
+  }
+  return Array.from(bySymbol.values());
 }
 
 // ─── Route Handler ───────────────────────────────────────
@@ -385,7 +420,7 @@ export async function GET(req: Request) {
   try {
     const [usResult, krResult] = await Promise.allSettled([
       market !== 'KR' ? fetchUSEarnings() : Promise.resolve([]),
-      market !== 'US' ? fetchDartEarnings() : Promise.resolve([]),
+      market !== 'US' ? fetchKRXEarnings() : Promise.resolve([]),
     ]);
 
     const us = usResult.status === 'fulfilled' ? usResult.value : [];
