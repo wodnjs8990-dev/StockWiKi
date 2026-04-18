@@ -506,7 +506,7 @@ export default function StockWiki({ features }: { features?: Features }) {
           />
         )}
         {activeTab === 'events' && feat.events !== false && (
-          <EventsView />
+          <EventsView T={T} />
         )}
       </main>
 
