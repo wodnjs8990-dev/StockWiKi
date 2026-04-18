@@ -4,6 +4,56 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 // ─── 타입 ───────────────────────────────────────────────
+// ─── 시가총액 맵 ($B 단위, 2025년 기준 근사치) ─────────────
+// 같은 날짜 내 시총 높은 순 정렬용. 맵에 없으면 0 → 후순위
+export const MARKET_CAP: Record<string, number> = {
+  // Mega-cap
+  'AAPL':3200,'NVDA':2900,'MSFT':2800,'AMZN':2000,'GOOGL':1900,'GOOG':1850,
+  'META':1500,'TSLA':800,'BRK-B':980,'LLY':700,'AVGO':700,'WMT':760,
+  // $300B+
+  'JPM':680,'V':580,'UNH':550,'XOM':540,'MA':480,'COST':420,'HD':390,
+  'PG':380,'NFLX':380,'JNJ':370,'ORCL':360,'BAC':350,'ABBV':340,
+  'CVX':320,'MRK':310,'KO':290,'ASML':260,'TSM':500,'PDD':180,
+  // $100-300B
+  'ADBE':220,'CRM':220,'AMD':220,'BABA':220,'ARM':120,'CRWD':200,
+  'PLTR':150,'PEP':210,'TMO':200,'CSCO':200,'ACN':200,'LIN':195,
+  'INTU':185,'WFC':185,'ABT':180,'GE':180,'IBM':175,'NOW':175,'MS':175,
+  'ISRG':170,'GS':170,'VZ':160,'RTX':165,'QCOM':165,'CAT':160,'TXN':160,
+  'BKNG':155,'SPGI':155,'AXP':155,'PM':155,'C':145,'BLK':145,'UBER':145,
+  'DHR':145,'T':140,'TMUS':200,'BA':135,'HON':130,'AMGN':130,'PFE':125,
+  'AMAT':125,'ETN':125,'NEE':120,'UNP':120,'MCD':120,'TJX':120,
+  'DE':115,'VRTX':115,'UPS':115,'LRCX':110,'LOW':110,'KLAC':110,'REGN':110,
+  'LMT':110,'SHOP':100,'SYK':105,'ADI':105,'PANW':105,'BMY':105,
+  'MU':100,'INTC':100,'GILD':100,'SBUX':100,'NKE':95,'TGT':95,'SO':95,
+  'MMC':95,'CVS':90,'CB':90,'SNPS':90,'CDNS':90,'ITW':90,'BSX':88,
+  'CME':88,'ICE':87,'DUK':85,'PLD':85,'MCO':85,'AMT':85,'MRVL':80,
+  'EOG':82,'AON':82,'HCA':82,'MO':80,'WM':80,'ECL':80,'SPOT':80,
+  'ZTS':80,'MELI':80,'APP':150,'ELV':78,'GD':78,'NOC':78,'CTAS':78,
+  'MDLZ':75,'SHW':75,'MAR':75,'FTNT':75,'WDAY':70,'EQIX':70,'CMG':70,
+  'PYPL':65,'USB':60,'PNC':65,'COIN':60,'SLB':60,'FDX':60,'PH':60,
+  'COP':55,'ORLY':65,'NSC':55,'SRE':45,'MDT':55,'LULU':45,'TFC':55,
+  'EW':55,'APD':55,'FCX':55,'PSX':55,'OXY':55,'SPG':55,'WELL':50,
+  'BK':50,'MMM':50,'GM':50,'F':45,'DDOG':45,'NXPI':45,'AZO':45,
+  'COF':60,'DFS':45,'ROST':45,'PSA':45,'NEM':45,'EXPE':45,'SQ':45,
+  'DLR':45,'TEAM':55,'VEEV':45,'BIIB':35,'NU':60,'MRNA':20,'DIS':165,
+  'CMCSA':145,'CHTR':40,'CI':80,'HUM':45,'CNC':30,'MOH':20,
+  'VLO':45,'MPC':65,'HAL':30,'BKR':28,'DVN':20,'FANG':25,
+  'D':40,'AEP':45,'EXC':40,'YUM':35,'KMB':40,'CL':55,'EL':35,
+  'GIS':30,'HSY':28,'DPZ':15,'BURL':25,'TSCO':25,
+  'EBAY':25,'ETSY':10,'PINS':20,'SNAP':15,'RBLX':20,'MTCH':10,
+  'NET':35,'ZS':35,'OKTA':18,'MDB':25,'SNOW':50,'TTD':35,
+  'SMCI':30,'MPWR':25,'ON':35,'WDC':18,'STX':25,
+  'HOOD':25,'SOFI':12,'AFRM':15,'SE':25,'BIDU':30,'JD':25,
+  'NIO':10,'RIVN':12,'LCID':5,'LYFT':8,'ABNB':80,
+  'CSX':60,'DAL':30,'UAL':25,'AAL':10,'LUV':15,
+  'CCI':40,'O':45,'EQR':25,'SBAC':25,'IRM':25,'CBRE':30,
+  'LYB':15,'DOW':25,'DD':30,'ALB':12,'NUE':18,'PPG':30,
+  'EMR':55,'ROK':25,'GWW':45,'LHX':45,'TXT':20,'HII':15,
+  'IDXX':35,'IQV':35,'VRSK':25,'MSCI':45,'TROW':18,'CBOE':20,
+  'NDAQ':35,'SYF':20,'MTB':30,'CFG':20,'FITB':25,'RF':20,
+  'KEY':18,'HBAN':20,'STT':25,'BEN':12,'MKTX':8,
+};
+
 export type Sector =
   | 'Tech'        // 기술
   | 'Finance'     // 금융
@@ -31,6 +81,7 @@ export type EarningItem = {
   isSP500?: boolean;
   isNDX100?: boolean;
   sector?: Sector;
+  marketCap?: number;  // $B 단위
 };
 
 // ─── 미국 종목 한글명 (S&P500 + 나스닥100 주요 종목) ────
@@ -351,18 +402,24 @@ export async function GET() {
   try {
     const us = await fetchUSEarnings();
 
-    // 각 종목에 index + sector 태그 추가
+    // 각 종목에 index + sector + marketCap 태그 추가
     const tagged = us.map(e => ({
       ...e,
       isSP500: SP500_SYMBOLS.has(e.symbol),
       isNDX100: NDX100_SYMBOLS.has(e.symbol),
       sector: (SECTOR_MAP[e.symbol] ?? 'Other') as Sector,
+      marketCap: MARKET_CAP[e.symbol] ?? 0,
     }));
 
     const sp500Count = tagged.filter(e => e.isSP500).length;
     const ndx100Count = tagged.filter(e => e.isNDX100).length;
 
-    tagged.sort((a, b) => a.date.localeCompare(b.date));
+    // 같은 날짜 내에서 시가총액 높은 순, 날짜는 오름차순
+    tagged.sort((a, b) => {
+      const dateDiff = a.date.localeCompare(b.date);
+      if (dateDiff !== 0) return dateDiff;
+      return (b.marketCap ?? 0) - (a.marketCap ?? 0);
+    });
 
     return NextResponse.json({
       ok: true,
