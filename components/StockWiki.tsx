@@ -6008,28 +6008,36 @@ function HomeView({ T, isDark, totalTerms, recent, favorites, categoryColors, se
 
                   // ── 크립토: 24/7
                   const markets = [
-                    { label: 'KOSPI',    sub: '한국 정규',    open: krOpen,       color: HUE_FAMILIES.fundamental.base },
-                    { label: 'NXT',      sub: '한국 야간주식', open: nxtOpen,      color: HUE_FAMILIES.fundamental.tones[2] },
-                    { label: '야간선물', sub: 'KRX 야간',     open: nightFutOpen, color: HUE_FAMILIES.derivatives.base },
-                    { label: 'NYSE',     sub: '미국',         open: usOpen,       color: HUE_FAMILIES.market.base },
-                    { label: 'Crypto',   sub: '24/7',         open: true,         color: HUE_FAMILIES.trading.base },
+                    { label: 'KOSPI',    sub: '한국 정규',    open: krOpen,       color: HUE_FAMILIES.fundamental.base,   night: false },
+                    { label: 'NXT',      sub: '한국 야간주식', open: nxtOpen,      color: HUE_FAMILIES.fundamental.tones[2], night: true },
+                    { label: '야간선물', sub: 'KRX 야간',     open: nightFutOpen, color: HUE_FAMILIES.derivatives.base,   night: true },
+                    { label: 'NYSE',     sub: '미국',         open: usOpen,       color: HUE_FAMILIES.market.base,        night: false },
+                    { label: 'Crypto',   sub: '24/7',         open: true,         color: HUE_FAMILIES.trading.base,       night: false },
                   ];
-                  return markets.map(m => (
+                  return markets.map(m => {
+                    // 다크모드: 장중 → 초록 glow, 야간세션 장중 → 흰색 테두리
+                    const dotColor  = m.open ? (isDark ? '#22c55e' : m.color) : T.textDimmer;
+                    const dotGlow   = m.open ? (isDark ? '0 0 6px #22c55e, 0 0 14px #22c55e80' : `0 0 5px ${m.color}`) : 'none';
+                    const boxBorder = m.open
+                      ? (isDark && m.night ? 'rgba(255,255,255,0.55)' : `${m.color}60`)
+                      : T.border;
+                    const textColor = m.open ? m.color : T.textDimmer;
+                    return (
                     <div key={m.label} className="flex items-center gap-2 border px-3 py-1"
-                      style={{ borderColor: m.open ? `${m.color}60` : T.border }}>
+                      style={{ borderColor: boxBorder }}>
                       <span className="w-1.5 h-1.5 rounded-full shrink-0"
-                        style={{ background: m.open ? m.color : T.textDimmer,
-                          boxShadow: m.open ? `0 0 5px ${m.color}` : 'none' }} />
+                        style={{ background: dotColor, boxShadow: dotGlow }} />
                       <span className="mono text-[10px] tracking-[0.08em] w-16 shrink-0"
-                        style={{ color: m.open ? m.color : T.textDimmer }}>{m.label}</span>
+                        style={{ color: textColor }}>{m.label}</span>
                       <span className="mono text-[9px] opacity-50 w-14 shrink-0 hidden lg:block"
-                        style={{ color: m.open ? m.color : T.textDimmer }}>{m.sub}</span>
+                        style={{ color: textColor }}>{m.sub}</span>
                       <span className="mono text-[10px] uppercase tracking-[0.15em]"
-                        style={{ color: m.open ? m.color : T.textDimmer }}>
+                        style={{ color: textColor }}>
                         {m.open ? '장중' : '장외'}
                       </span>
                     </div>
-                  ));
+                    );
+                  });
                 })()}
               </div>
             </div>
