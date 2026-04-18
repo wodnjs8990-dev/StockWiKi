@@ -140,63 +140,49 @@ const KR_CORPS: { corpCode: string; name: string; symbol: string }[] = [
   { corpCode: '00251685', name: '카카오뱅크', symbol: '323410' },
 ];
 
-// DART: 보고서유형 3개 병렬 fetch, Vercel Data Cache 활용
-// 1시간 캐시 — URL이 같으면 Vercel이 자동으로 캐싱
+// DART: corp_code 지정 → 기간 제한 없음, 30개 종목 전체 병렬 fetch
 async function fetchDartEarnings(): Promise<EarningItem[]> {
   if (!DART_KEY) return [];
 
   const today = new Date(Date.now() + 9 * 3600 * 1000);
-  const todayStr = today.toISOString().slice(0, 10);
   const currentYear = today.getUTCFullYear();
   const bgn = `${currentYear}0101`;
-  const end = todayStr.replace(/-/g, '');
-  const corpSet = new Set(KR_CORPS.map(c => c.corpCode));
-  const bySymbol = new Map<string, EarningItem>();
+  const end = today.toISOString().slice(0, 10).replace(/-/g, '');
 
-  const fetchPType = async (pType: string): Promise<void> => {
-    try {
-      const url1 = `https://opendart.fss.or.kr/api/list.json?crtfc_key=${DART_KEY}&bgn_de=${bgn}&end_de=${end}&pblntf_ty=A&pblntf_detail_ty=${pType}&page_no=1&page_count=100`;
-      // 1시간 캐시 — Vercel Data Cache에 저장됨
-      const res1 = await fetch(url1, { next: { revalidate: 3600 } });
-      if (!res1.ok) return;
-      const data1 = await res1.json();
-      if (data1.status !== '000' && data1.status !== '013') return;
-
-      const list: any[] = [...(data1.list ?? [])];
-
-      // 100건 초과 시 2페이지 (1시간 캐시)
-      if ((data1.total_count ?? 0) > 100) {
-        try {
-          const url2 = url1.replace('page_no=1', 'page_no=2');
-          const res2 = await fetch(url2, { next: { revalidate: 3600 } });
-          if (res2.ok) {
-            const data2 = await res2.json();
-            if (data2.status === '000') list.push(...(data2.list ?? []));
-          }
-        } catch { /* 2페이지 실패 무시 */ }
-      }
-
-      for (const item of list) {
-        if (!corpSet.has(item.corp_code)) continue;
-        const corp = KR_CORPS.find(c => c.corpCode === item.corp_code)!;
-        const rdt = item.rcept_dt as string;
-        const date = `${rdt.slice(0, 4)}-${rdt.slice(4, 6)}-${rdt.slice(6, 8)}`;
-        const existing = bySymbol.get(corp.symbol);
-        if (!existing || date > existing.date) {
-          bySymbol.set(corp.symbol, {
-            symbol: corp.symbol, nameKo: corp.name, date,
-            market: 'KR', timing: undefined,
-            epsEstimate: null, epsActual: null,
-            revenueEstimate: null, revenueActual: null, surprise: null,
-          });
-        }
-      }
-    } catch { /* 실패 무시 */ }
+  // 종목 1개에 대해 보고서유형 A003→A002→A001 순으로 조회, 첫 히트 반환
+  const fetchOneCorp = async (corp: typeof KR_CORPS[0]): Promise<EarningItem | null> => {
+    for (const pType of ['A003', 'A002', 'A001']) {
+      try {
+        const url = `https://opendart.fss.or.kr/api/list.json?crtfc_key=${DART_KEY}&corp_code=${corp.corpCode}&bgn_de=${bgn}&end_de=${end}&pblntf_ty=A&pblntf_detail_ty=${pType}&page_count=5`;
+        const res = await fetch(url, { next: { revalidate: 3600 } });
+        if (!res.ok) continue;
+        const data = await res.json();
+        if (data.status !== '000') continue;
+        const list: any[] = data.list ?? [];
+        if (list.length === 0) continue;
+        // 가장 최신 공시
+        const latest = list.reduce((a: any, b: any) => a.rcept_dt > b.rcept_dt ? a : b);
+        const rdt = latest.rcept_dt as string;
+        return {
+          symbol: corp.symbol,
+          nameKo: corp.name,
+          date: `${rdt.slice(0, 4)}-${rdt.slice(4, 6)}-${rdt.slice(6, 8)}`,
+          market: 'KR',
+          timing: undefined,
+          epsEstimate: null, epsActual: null,
+          revenueEstimate: null, revenueActual: null, surprise: null,
+        };
+      } catch { /* 무시 */ }
+    }
+    return null;
   };
 
-  // 3개 보고서유형 병렬 fetch
-  await Promise.all(['A003', 'A002', 'A001'].map(fetchPType));
-  return Array.from(bySymbol.values());
+  // 30개 종목 전체 동시 병렬 (각각 독립적으로 캐싱됨)
+  const settled = await Promise.allSettled(KR_CORPS.map(fetchOneCorp));
+  return settled
+    .filter((r): r is PromiseFulfilledResult<EarningItem> =>
+      r.status === 'fulfilled' && r.value !== null)
+    .map(r => r.value);
 }
 
 // ─── Route Handler ───────────────────────────────────────
