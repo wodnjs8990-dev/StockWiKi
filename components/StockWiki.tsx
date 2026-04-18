@@ -523,6 +523,7 @@ function TermModal({ term, onClose, categoryColors, favorites, toggleFav, onNavi
   const hasDetailed = !!term.detailed;
   const hasRelations = term.relations && Object.keys(term.relations).length > 0;
   const hasImpact = !!term.marketImpact;
+  const hasEasy = !!term.easy;
 
   return (
     <div
@@ -558,6 +559,14 @@ function TermModal({ term, onClose, categoryColors, favorites, toggleFav, onNavi
             <div className="text-base md:text-lg" style={{ color: '#a8a49a' }}>{term.fullName}</div>
             <div className="text-sm mono italic mt-1" style={{ color: '#7a7a7a' }}>{term.en}</div>
           </div>
+
+          {/* 한 줄 요약 (easy) */}
+          {hasEasy && (
+            <div className="mb-6 px-5 py-4 border-l-4" style={{ background: '#0d1f0d', borderColor: '#4A7045' }}>
+              <div className="text-[10px] mono uppercase tracking-[0.2em] mb-2" style={{ color: '#4A7045' }}>💡 쉽게 말하면</div>
+              <p className="text-sm md:text-base leading-relaxed" style={{ color: '#c8d4c8' }}>{term.easy}</p>
+            </div>
+          )}
 
           {/* 요약 */}
           <Section label="개요 · Summary" color={categoryColors[term.category]?.bg}>
