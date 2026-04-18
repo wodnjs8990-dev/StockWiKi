@@ -543,7 +543,7 @@ export default function EventsView({ T }: { T?: any }) {
           </div>
 
           <p className="text-[9px] mono text-center mt-1 md:col-span-2" style={{ color: theme.textDimmer }}>
-            모든 날짜·시간 KST 기준 · 미국 어닝: Yahoo Finance · 국내 어닝: DART
+            모든 날짜·시간 KST 기준 · 미국 어닝: Finnhub · 국내 어닝: DART
           </p>
         </div>
       </div>

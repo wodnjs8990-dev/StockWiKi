@@ -34,14 +34,16 @@ const US_NAME_MAP: Record<string, string> = {
 
 const FINNHUB_KEY = process.env.FINNHUB_API_KEY ?? '';
 
-// ─── Finnhub: 미국 어닝 캘린더 (향후 60일) ───────────────
+// ─── Finnhub: 미국 어닝 캘린더 (올해 1월~향후 90일) ──────
 async function fetchFinnhubEarnings(): Promise<EarningItem[]> {
   if (!FINNHUB_KEY) return [];
 
   const todayKST = new Date(Date.now() + 9 * 3600 * 1000);
-  const fromStr = todayKST.toISOString().slice(0, 10);
+  // 올해 1월 1일부터 조회 (연간 어닝 시즌 전체 커버)
+  const currentYear = todayKST.getUTCFullYear();
+  const fromStr = `${currentYear}-01-01`;
   const toDate = new Date(todayKST);
-  toDate.setDate(toDate.getDate() + 60);
+  toDate.setDate(toDate.getDate() + 90);
   const toStr = toDate.toISOString().slice(0, 10);
 
   // Finnhub 어닝 캘린더: 날짜 범위 내 모든 종목 반환
@@ -135,8 +137,9 @@ async function fetchDartEarnings(): Promise<EarningItem[]> {
 
   const results: EarningItem[] = [];
   const today = new Date(Date.now() + 9 * 3600 * 1000);
-  const from = new Date(today); from.setDate(from.getDate() - 30);
-  const to = new Date(today); to.setDate(to.getDate() + 60);
+  // 올해 1월 1일부터 조회
+  const from = new Date(`${today.getUTCFullYear()}-01-01T00:00:00Z`);
+  const to = new Date(today); to.setDate(to.getDate() + 90);
   const fmt = (d: Date) => d.toISOString().slice(0, 10).replace(/-/g, '');
 
   // 분기(A003) → 반기(A002) → 사업(A001) 순으로 조회
