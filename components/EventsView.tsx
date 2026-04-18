@@ -332,7 +332,7 @@ export default function EventsView({ T }: { T?: any }) {
                   onClick={() => { setSelectedDate(isSelected ? null : day); setSelectedEarning(null); }}
                   className="border-r border-b p-1.5 cursor-pointer overflow-hidden"
                   style={{
-                    minHeight: '80px',
+                    minHeight: '120px',
                     borderColor: theme.borderSoft,
                     background: isToday ? `${theme.accent}14` : isSelected ? theme.bgHover : 'transparent',
                     outline: isToday ? `1px solid ${theme.accent}50` : isSelected ? `1px solid ${theme.borderMid}` : 'none',
@@ -352,13 +352,13 @@ export default function EventsView({ T }: { T?: any }) {
                   <div className="flex flex-col gap-0.5">
                     {evs.slice(0, 4).map((ev, i) => (
                       <div key={i}
-                        className="flex items-center gap-1 px-1 py-0.5 text-[9px] md:text-[10px] truncate"
+                        className="flex items-center gap-1 px-1.5 py-0.5 text-[10px] md:text-[11px] truncate rounded-sm"
                         style={{ background: `${ev.color}22`, borderLeft: `2px solid ${ev.color}`, color: ev.color }}>
-                        <span className="truncate font-medium">{ev.label}</span>
+                        <span className="truncate font-semibold">{ev.label}</span>
                       </div>
                     ))}
-                    {evs.length > 3 && (
-                      <div className="text-[9px] mono px-1" style={{ color: theme.textDimmer }}>+{evs.length - 3}개</div>
+                    {evs.length > 4 && (
+                      <div className="text-[9px] mono px-1" style={{ color: theme.textDimmer }}>+{evs.length - 4}개</div>
                     )}
                   </div>
                 </div>
