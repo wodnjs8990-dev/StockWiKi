@@ -983,7 +983,7 @@ function GlossaryView({ terms, searchQuery, setSearchQuery, searchRef, categorie
           onChange={e => setSearchQuery(e.target.value)}
           placeholder="검색 — 용어명 · 영문 · 설명"
           className="flex-1 px-4 md:px-5 py-3.5 md:py-4 bg-transparent text-sm md:text-base"
-          style={{ color: T.textPrimary }}
+          style={{ color: T.textPrimary, fontSize: '16px' }}
         />
         {searchQuery && (
           <button onClick={() => setSearchQuery('')} className="px-4 md:px-5 border-l" style={{ borderColor: T.border, color: T.textMuted }}>
@@ -1281,6 +1281,18 @@ function TermModal({ term, termList, onClose, categoryColors, favorites, toggleF
     return () => window.removeEventListener('keydown', handler);
   }, [hasPrev, hasNext, onPrev, onNext, compareMode]);
 
+  // 모바일 닫기 애니메이션
+  const closeWithAnimation = () => {
+    const el = modalRef.current;
+    if (el && window.innerWidth < 768) {
+      el.style.transform = 'translateY(100%)';
+      el.style.transition = 'transform 0.28s cubic-bezier(0.4,0,0.2,1)';
+      setTimeout(() => onClose(), 260);
+    } else {
+      onClose();
+    }
+  };
+
   // Scrollspy — 본문 섹션 교차 관찰
   const [activeTocId, setActiveTocId] = useState<string>('sec-overview');
   const mainScrollRef = useRef<HTMLDivElement>(null);
@@ -1304,7 +1316,7 @@ function TermModal({ term, termList, onClose, categoryColors, favorites, toggleF
     <div
       className="modal-overlay-in fixed inset-0 z-50 flex md:items-center md:justify-center md:p-4 items-end"
       style={{ background: T.bgOverlay }}
-      onClick={onClose}
+      onClick={closeWithAnimation}
     >
       <div
         ref={modalRef}
@@ -1374,7 +1386,7 @@ function TermModal({ term, termList, onClose, categoryColors, favorites, toggleF
             >
               <Share2 size={15} />
             </button>
-            <button onClick={onClose} className="flex items-center justify-center w-10 h-10 md:w-7 md:h-7 shrink-0"><X size={18} /></button>
+            <button onClick={closeWithAnimation} className="flex items-center justify-center w-10 h-10 md:w-7 md:h-7 shrink-0"><X size={18} /></button>
           </div>
         </div>
 
@@ -6049,18 +6061,15 @@ function HomeView({ T, isDark, totalTerms, recent, favorites, categoryColors, se
         {/* stats rail */}
         <div className="grid border-t" style={{ gridTemplateColumns: 'repeat(4,1fr)', borderColor: T.border }}>
           {[
-            { k: 'Terms',   v: String(totalTerms).padStart(3,'0'), u: '개 용어',    color: HUE_FAMILIES.fundamental.base },
-            { k: 'Calcs',   v: '052',                              u: '개 계산기',  color: HUE_FAMILIES.market.base },
-            { k: 'Families',v: '006',                              u: 'hue family', color: HUE_FAMILIES.macro.base },
-            { k: 'Fav',     v: String(favorites?.size ?? 0).padStart(3,'0'), u: '즐겨찾기', color: T.accent },
+            { k: 'TERMS',    v: String(totalTerms).padStart(3,'0'), color: HUE_FAMILIES.fundamental.base },
+            { k: 'CALCS',    v: '052',                              color: HUE_FAMILIES.market.base },
+            { k: 'FAMILIES', v: '006',                              color: HUE_FAMILIES.macro.base },
+            { k: 'FAV',      v: String(favorites?.size ?? 0).padStart(3,'0'), color: T.accent },
           ].map((s, i, arr) => (
-            <div key={s.k} className="flex flex-col gap-1 px-3 md:px-6 py-3 border-r min-w-0"
+            <div key={s.k} className="flex flex-col gap-1 px-3 md:px-6 py-4 border-r min-w-0"
               style={{ borderColor: i < arr.length - 1 ? T.border : 'transparent' }}>
-              <span className="mono text-[10px] tracking-[0.2em] uppercase truncate" style={{ color: T.textFaint }}>{s.k}</span>
-              <div className="flex items-baseline gap-1 flex-wrap">
-                <span className="mono font-medium whitespace-nowrap" style={{ fontSize: 'clamp(16px,3.5vw,22px)', color: s.color, letterSpacing: '-0.02em' }}>{s.v}</span>
-                <span className="mono text-[10px] whitespace-nowrap" style={{ color: T.textDimmer }}>{s.u}</span>
-              </div>
+              <span className="mono text-[10px] tracking-[0.2em] uppercase" style={{ color: T.textFaint }}>{s.k}</span>
+              <span className="mono font-medium whitespace-nowrap" style={{ fontSize: 'clamp(20px,4vw,28px)', color: s.color, letterSpacing: '-0.02em' }}>{s.v}</span>
             </div>
           ))}
         </div>
