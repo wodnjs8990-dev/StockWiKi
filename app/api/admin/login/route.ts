@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { verifyPassword, createSessionToken, setSessionCookie } from '@/lib/auth';
+import { saveLoginRecord } from '@/app/api/admin/login-history/route';
 
 // 단순 레이트 리미트: IP별 실패 추적 (메모리 기반)
 const failedAttempts = new Map<string, { count: number; resetAt: number }>();
@@ -35,6 +36,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: '비밀번호를 입력하세요' }, { status: 400 });
     }
 
+    const ua = req.headers.get('user-agent') ?? 'unknown';
+    const uaShort = ua.slice(0, 80);
+
     const ok = await verifyPassword(password);
     if (!ok) {
       // 실패 기록
@@ -43,6 +47,9 @@ export async function POST(req: Request) {
         : { count: 1, resetAt: now + WINDOW_MS };
       failedAttempts.set(ip, next);
 
+      // 로그인 이력 기록 (실패)
+      saveLoginRecord({ at: new Date().toISOString(), ip, ua: uaShort, success: false }).catch(() => {});
+
       // 타이밍 공격 방어: 일정 지연
       await new Promise((r) => setTimeout(r, 500 + Math.random() * 500));
       return NextResponse.json({ error: '비밀번호가 올바르지 않습니다' }, { status: 401 });
@@ -50,6 +57,9 @@ export async function POST(req: Request) {
 
     // 성공 시 실패 기록 리셋
     failedAttempts.delete(ip);
+
+    // 로그인 이력 기록 (성공)
+    saveLoginRecord({ at: new Date().toISOString(), ip, ua: uaShort, success: true }).catch(() => {});
 
     // JWT 발급 & 쿠키 저장
     const token = await createSessionToken();
