@@ -2,6 +2,8 @@ import type { Metadata } from 'next';
 import { Noto_Sans_KR, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
 import CookieBanner from '@/components/CookieBanner';
+import { Analytics } from '@vercel/analytics/react';
+import { SpeedInsights } from '@vercel/speed-insights/next';
 
 // Noto Sans KR — OFL 1.1, 상업용 무료
 const notoSansKR = Noto_Sans_KR({
@@ -72,6 +74,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         {children}
         <CookieBanner />
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );
