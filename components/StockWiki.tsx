@@ -5893,6 +5893,7 @@ function HomeView({ T, isDark, totalTerms, recent, favorites, categoryColors, se
   const kstH = parseInt(now.toLocaleTimeString('ko-KR', { hour: '2-digit', hour12: false, timeZone: 'Asia/Seoul' }));
   const kstM = parseInt(now.toLocaleTimeString('ko-KR', { minute: '2-digit', timeZone: 'Asia/Seoul' }));
   const kstD = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Seoul' })).getDay();
+  // isOpen: 하위 호환용 (EventsView 등에서 사용할 수 있음)
   const isOpen = kstD >= 1 && kstD <= 5 && (kstH > 9 || (kstH === 9 && kstM >= 0)) && (kstH < 15 || (kstH === 15 && kstM <= 30));
 
   const FAMILY_LIST = [
@@ -5963,21 +5964,73 @@ function HomeView({ T, isDark, totalTerms, recent, favorites, categoryColors, se
                 </button>
               </div>
             </div>
-            {/* 시계 + 장 상태 */}
-            <div className="shrink-0 hidden md:flex flex-col items-end gap-4">
+            {/* 시계 + 시장 상태 3개 */}
+            <div className="shrink-0 hidden md:flex flex-col items-end gap-3">
               <div className="text-right">
                 <div className="mono text-[10px] uppercase tracking-[0.3em] mb-1" style={{ color: T.textFaint }}>KST</div>
                 <div className="mono font-medium" style={{ fontSize: 32, letterSpacing: '-0.02em', color: T.textPrimary }}>{timeStr}</div>
                 <div className="mono text-[11px] mt-1" style={{ color: T.textDimmer }}>{dateStr}</div>
               </div>
-              <div className="flex items-center gap-2 border px-3 py-1.5"
-                style={{ borderColor: isOpen ? HUE_FAMILIES.risk.base : T.border }}>
-                <span className="w-2 h-2 rounded-full" style={{ background: isOpen ? HUE_FAMILIES.risk.base : T.textDimmer,
-                  boxShadow: isOpen ? `0 0 6px ${HUE_FAMILIES.risk.base}` : 'none' }} />
-                <span className="mono text-[11px] uppercase tracking-[0.15em]"
-                  style={{ color: isOpen ? HUE_FAMILIES.risk.base : T.textDimmer }}>
-                  {isOpen ? 'KOSPI 장중' : '장외'}
-                </span>
+              {/* 시장 상태 5개 세로 */}
+              <div className="flex flex-col gap-1.5 items-end">
+                {(() => {
+                  // ── 한국 KOSPI: KST 평일 09:00–15:30
+                  const krOpen = kstD >= 1 && kstD <= 5
+                    && (kstH > 9 || (kstH === 9 && kstM >= 0))
+                    && (kstH < 15 || (kstH === 15 && kstM <= 30));
+
+                  // ── 한국 NXT (야간 주식): KST 평일 18:00–22:00
+                  // 금요일(5) 18:00–22:00 포함, 토·일 제외
+                  const nxtOpen = kstD >= 1 && kstD <= 5
+                    && kstH >= 18 && kstH < 22;
+
+                  // ── 한국 야간선물: KST 평일 18:00–익일 06:00
+                  // 당일 18:00~23:59 (월~금) OR 익일 00:00~06:00 (화~토, 전날이 월~금)
+                  const nightFutOpen = (() => {
+                    if (kstD === 0) return false; // 일요일 제외 (토→일 새벽은 토 야간 연장이므로 허용 안 함)
+                    // 당일 18:00~23:59: 월~금
+                    if (kstD >= 1 && kstD <= 5 && kstH >= 18) return true;
+                    // 익일 00:00~05:59: 화~토 (전날이 월~금)
+                    if (kstD >= 2 && kstD <= 6 && kstH < 6) return true;
+                    return false;
+                  })();
+
+                  // ── 미국 NYSE: America/New_York 평일 09:30–16:00 (서머타임 자동)
+                  const etParts = new Intl.DateTimeFormat('en-US', {
+                    timeZone: 'America/New_York',
+                    hour: 'numeric', minute: 'numeric', weekday: 'short', hour12: false,
+                  }).formatToParts(now);
+                  const etH = parseInt(etParts.find(p => p.type === 'hour')?.value ?? '0');
+                  const etM = parseInt(etParts.find(p => p.type === 'minute')?.value ?? '0');
+                  const etWd = etParts.find(p => p.type === 'weekday')?.value ?? '';
+                  const etWeekday = ['Mon','Tue','Wed','Thu','Fri'].includes(etWd);
+                  const usOpen = etWeekday && (etH > 9 || (etH === 9 && etM >= 30)) && etH < 16;
+
+                  // ── 크립토: 24/7
+                  const markets = [
+                    { label: 'KOSPI',    sub: '한국 정규',    open: krOpen,       color: HUE_FAMILIES.fundamental.base },
+                    { label: 'NXT',      sub: '한국 야간주식', open: nxtOpen,      color: HUE_FAMILIES.fundamental.tones[2] },
+                    { label: '야간선물', sub: 'KRX 야간',     open: nightFutOpen, color: HUE_FAMILIES.derivatives.base },
+                    { label: 'NYSE',     sub: '미국',         open: usOpen,       color: HUE_FAMILIES.market.base },
+                    { label: 'Crypto',   sub: '24/7',         open: true,         color: HUE_FAMILIES.trading.base },
+                  ];
+                  return markets.map(m => (
+                    <div key={m.label} className="flex items-center gap-2 border px-3 py-1"
+                      style={{ borderColor: m.open ? `${m.color}60` : T.border }}>
+                      <span className="w-1.5 h-1.5 rounded-full shrink-0"
+                        style={{ background: m.open ? m.color : T.textDimmer,
+                          boxShadow: m.open ? `0 0 5px ${m.color}` : 'none' }} />
+                      <span className="mono text-[10px] tracking-[0.08em] w-16 shrink-0"
+                        style={{ color: m.open ? m.color : T.textDimmer }}>{m.label}</span>
+                      <span className="mono text-[9px] opacity-50 w-14 shrink-0 hidden lg:block"
+                        style={{ color: m.open ? m.color : T.textDimmer }}>{m.sub}</span>
+                      <span className="mono text-[10px] uppercase tracking-[0.15em]"
+                        style={{ color: m.open ? m.color : T.textDimmer }}>
+                        {m.open ? '장중' : '장외'}
+                      </span>
+                    </div>
+                  ));
+                })()}
               </div>
             </div>
           </div>
