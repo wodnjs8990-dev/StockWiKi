@@ -371,6 +371,13 @@ export default function StockWiki({ features }: { features?: Features }) {
               <span className="hidden lg:inline-block w-px h-4" style={{ background: T.border }}></span>
               <span className="hidden lg:inline-block text-[10px] tracking-[0.3em] mono uppercase" style={{ color: T.textFaint }}>Terms & Calculators</span>
             </button>
+            {/* 모바일: 현재 탭 표시 */}
+            <div className="flex md:hidden items-center gap-1.5 text-[10px] mono uppercase tracking-wider" style={{ color: T.textFaint }}>
+              <span className="w-px h-3" style={{ background: T.border }}></span>
+              <span>
+                {activeTab === 'glossary' ? '금융 사전' : activeTab === 'calculator' ? '계산기' : activeTab === 'events' ? '이벤트' : ''}
+              </span>
+            </div>
           </div>
           <div className="flex items-center gap-2">
             {feat.commandK && (
@@ -417,7 +424,7 @@ export default function StockWiki({ features }: { features?: Features }) {
           </div>
         </div>
 
-        <div className="max-w-[1400px] mx-auto px-4 md:px-8 flex border-t overflow-x-auto scroll-hide" style={{ borderColor: T.border }}>
+        <div className="max-w-[1400px] mx-auto px-4 md:px-8 hidden md:flex border-t overflow-x-auto scroll-hide" style={{ borderColor: T.border }}>
           {[
             { id: 'glossary', label: '금융 사전', icon: BookOpen, idx: '01', count: TERMS.length },
             { id: 'calculator', label: '계산기', icon: Calculator, idx: '02', count: CALC_CATEGORIES.reduce((s, c) => s + c.calcs.length, 0) },
