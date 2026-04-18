@@ -4,6 +4,7 @@ import './globals.css';
 import CookieBanner from '@/components/CookieBanner';
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/next';
+import { headers } from 'next/headers';
 
 // Noto Sans KR — OFL 1.1, 상업용 무료
 const notoSansKR = Noto_Sans_KR({
@@ -55,29 +56,39 @@ export const metadata: Metadata = {
 
 const GA_ID = 'G-N3N8D9KE10';
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  // 어드민 경로면 GA 완전 제외
+  const headersList = await headers();
+  const pathname = headersList.get('x-invoke-path') ?? headersList.get('x-pathname') ?? '';
+  const isAdmin = pathname.startsWith('/admin-stk-2026');
+
   return (
     <html lang="ko" className={`${notoSansKR.variable} ${jetbrainsMono.variable}`}>
       <head>
         {/* FOUC 방지: hydration 전에 테마 클래스 적용 */}
         <script dangerouslySetInnerHTML={{ __html: `(function(){try{var t=localStorage.getItem('stockwiki_theme');if(t==='light')document.documentElement.classList.add('light');}catch(e){}})();` }} />
-        <script async src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`} />
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              window.dataLayer = window.dataLayer || [];
-              function gtag(){dataLayer.push(arguments);}
-              gtag('js', new Date());
-              gtag('config', '${GA_ID}');
-            `,
-          }}
-        />
+        {/* GA — 어드민 경로 제외 */}
+        {!isAdmin && (
+          <>
+            <script async src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`} />
+            <script
+              dangerouslySetInnerHTML={{
+                __html: `
+                  window.dataLayer = window.dataLayer || [];
+                  function gtag(){dataLayer.push(arguments);}
+                  gtag('js', new Date());
+                  gtag('config', '${GA_ID}');
+                `,
+              }}
+            />
+          </>
+        )}
       </head>
       <body>
         {children}
-        <CookieBanner />
-        <Analytics />
-        <SpeedInsights />
+        {!isAdmin && <CookieBanner />}
+        {!isAdmin && <Analytics />}
+        {!isAdmin && <SpeedInsights />}
       </body>
     </html>
   );
