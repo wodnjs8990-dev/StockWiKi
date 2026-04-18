@@ -4,10 +4,10 @@ import React, { useState, useMemo, useEffect, useRef, createContext, useContext 
 
 // 계산기 세션 key prefix — 비교 모드에서 B 패널이 독립적인 state를 갖도록
 const CalcPrefixContext = createContext<string>('');
-import { Search, Calculator, BookOpen, ChevronRight, ChevronLeft, X, ArrowUpRight, Star, Clock, Menu, Link as LinkIcon, Copy, Check, Share2, CalendarDays, Info, Keyboard } from 'lucide-react';
+import { Search, Calculator, BookOpen, ChevronRight, ChevronLeft, X, ArrowUpRight, Star, Clock, Menu, Link as LinkIcon, Copy, Check, Share2, CalendarDays, Info, Keyboard, LayoutDashboard, TrendingUp } from 'lucide-react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { TERMS, CATEGORIES, CATEGORY_COLORS } from '@/data/terms';
+import { TERMS, CATEGORIES, CATEGORY_COLORS, HUE_FAMILIES, CATEGORY_FAMILY } from '@/data/terms';
 import { CALC_CATEGORIES } from '@/data/calcs';
 import EventsView from '@/components/EventsView';
 
@@ -90,10 +90,10 @@ export default function StockWiki({ features }: { features?: Features }) {
 
   // 접근 가능한 탭 결정 — 활성화된 탭 중 첫 번째를 기본값으로
   const tabFromUrl = searchParams?.get('tab');
-  const validTabs = ['glossary', 'calculator', 'events'] as const;
-  const initialTabFromUrl = validTabs.includes(tabFromUrl as any) ? tabFromUrl : 'glossary';
-  const isRequestedTabAvailable = feat[initialTabFromUrl as keyof Features];
-  const fallbackTab = feat.glossary ? 'glossary' : feat.calculator ? 'calculator' : feat.events ? 'events' : 'none';
+  const validTabs = ['home', 'glossary', 'calculator', 'events'] as const;
+  const initialTabFromUrl = validTabs.includes(tabFromUrl as any) ? tabFromUrl : 'home';
+  const isRequestedTabAvailable = initialTabFromUrl === 'home' ? true : feat[initialTabFromUrl as keyof Features];
+  const fallbackTab = 'home';
   const initialTab = isRequestedTabAvailable ? initialTabFromUrl : fallbackTab;
   const initialCalc = searchParams?.get('calc') || 'per';
   const termFromUrl = searchParams?.get('term');
@@ -474,10 +474,11 @@ export default function StockWiki({ features }: { features?: Features }) {
 
         <div className="max-w-[1400px] mx-auto px-4 md:px-8 hidden md:flex border-t overflow-x-auto scroll-hide" style={{ borderColor: T.border }}>
           {[
-            { id: 'glossary', label: '금융 사전', icon: BookOpen, idx: '01', count: TERMS.length },
-            { id: 'calculator', label: '계산기', icon: Calculator, idx: '02', count: CALC_CATEGORIES.reduce((s, c) => s + c.calcs.length, 0) },
-            { id: 'events', label: '이벤트', icon: CalendarDays, idx: '03', count: null },
-          ].filter(tab => feat[tab.id as keyof Features] !== false).map(tab => {
+            { id: 'home',       label: '홈',       icon: LayoutDashboard, idx: '00', count: null },
+            { id: 'glossary',   label: '금융 사전', icon: BookOpen,        idx: '01', count: TERMS.length },
+            { id: 'calculator', label: '계산기',    icon: Calculator,      idx: '02', count: CALC_CATEGORIES.reduce((s, c) => s + c.calcs.length, 0) },
+            { id: 'events',     label: '이벤트',    icon: CalendarDays,    idx: '03', count: null },
+          ].filter(tab => tab.id === 'home' || feat[tab.id as keyof Features] !== false).map(tab => {
             const active = activeTab === tab.id;
             const Icon = tab.icon;
             return (
@@ -501,7 +502,21 @@ export default function StockWiki({ features }: { features?: Features }) {
       </header>
 
       <main className="max-w-[1400px] mx-auto px-4 md:px-8 pt-5 md:pt-6 pb-24 md:pb-12 min-h-[calc(100vh-180px)]">
-        {activeTab === 'none' && (
+        {activeTab === 'home' && (
+          <HomeView
+            T={T}
+            isDark={isDark}
+            totalTerms={TERMS.length}
+            recent={recent}
+            favorites={favorites}
+            categoryColors={categoryColors}
+            setActiveTab={setActiveTab}
+            setSelectedTerm={setSelectedTerm}
+            setSelectedCalc={setSelectedCalc}
+            setSearchQuery={setSearchQuery}
+            searchRef={searchRef}
+          />
+        )}
           <div className="flex items-center justify-center" style={{ minHeight: '60vh' }}>
             <div className="text-center max-w-md px-6">
               <div className="text-[12px] mono uppercase tracking-[0.3em] mb-3" style={{ color: T.textFaint }}>
@@ -891,10 +906,46 @@ function CommandK({ terms, onClose, onSelect, T }) {
 // 용어 사전 뷰
 // ─────────────────────────────────────────────
 function GlossaryView({ terms, searchQuery, setSearchQuery, searchRef, categories, selectedCategory, setSelectedCategory, selectedTerm, setSelectedTerm, closeTerm, totalCount, categoryColors, favorites, toggleFav, favMemos, updateFavMemo, recent, T, isDark, showToast, setActiveTab }) {
+  // ── 2단 카테고리 필터: family(1단) + sub(2단)
+  const [selectedFamily, setSelectedFamily] = React.useState<string | null>(null);
+
+  const FAMILY_LIST = [
+    { id: 'value',  name: '가치',   en: 'VALUE'  },
+    { id: 'profit', name: '수익',   en: 'PROFIT' },
+    { id: 'risk',   name: '리스크', en: 'RISK'   },
+    { id: 'macro',  name: '거시',   en: 'MACRO'  },
+    { id: 'trade',  name: '실전',   en: 'TRADE'  },
+  ];
+
+  // family 선택 시 sub-category 초기화
+  const handleFamilyClick = (fid: string | null) => {
+    setSelectedFamily(fid);
+    setSelectedCategory('전체');
+  };
+
+  // family 필터링된 terms
+  const familyFilteredTerms = React.useMemo(() => {
+    if (!selectedFamily) return terms;
+    return terms.filter(t => CATEGORY_FAMILY[t.category]?.family === selectedFamily);
+  }, [terms, selectedFamily]);
+
+  // 현재 family의 sub-categories
+  const subCategories = React.useMemo(() => {
+    if (!selectedFamily) return [];
+    return categories.filter(cat =>
+      cat !== '전체' && cat !== '★ 즐겨찾기' &&
+      CATEGORY_FAMILY[cat]?.family === selectedFamily
+    );
+  }, [selectedFamily, categories]);
+
+  // 최종 표시 terms
+  const displayTerms = React.useMemo(() => {
+    if (selectedCategory === '전체' || selectedCategory === '★ 즐겨찾기') return familyFilteredTerms;
+    return familyFilteredTerms.filter(t => t.category === selectedCategory);
+  }, [familyFilteredTerms, selectedCategory]);
 
   return (
     <div>
-      <MarketPulseRail T={T} totalTerms={totalCount} />
       <div className="mb-6 border-y" style={{ borderColor: T.border }}>
         <div className="flex items-center justify-end gap-3 py-2 border-b mono text-[12px] uppercase tracking-[0.2em] whitespace-nowrap" style={{ borderColor: T.border, color: T.textFaint }}>
           <span>§ Glossary</span>
@@ -958,65 +1009,88 @@ function GlossaryView({ terms, searchQuery, setSearchQuery, searchRef, categorie
         )}
       </div>
 
-      {/* 카테고리 */}
+      {/* ── 2단 카테고리 필터 ── */}
       <div className="mb-6 md:mb-10 border-y" style={{ borderColor: T.border }}>
-        {/* 모바일: 가로 스크롤 pill */}
-        <div className="md:hidden flex gap-2 px-4 py-3 overflow-x-auto scroll-smooth" style={{ borderColor: T.border }}>
-          {categories.map((cat) => {
-            const active = selectedCategory === cat;
-            const isFav = cat === '★ 즐겨찾기';
-            const color = categoryColors[cat];
+        {/* 1단: family 5개 */}
+        <div className="flex overflow-x-auto scroll-hide border-b" style={{ borderColor: T.border }}>
+          <button
+            onClick={() => handleFamilyClick(null)}
+            className="shrink-0 px-4 py-2.5 text-xs mono uppercase tracking-[0.18em] border-r transition-all"
+            style={{
+              borderColor: T.border,
+              background: !selectedFamily && selectedCategory === '전체' ? T.bgTabActive : 'transparent',
+              color: !selectedFamily && selectedCategory === '전체' ? T.textTabActive : T.textMuted,
+            }}
+          >전체</button>
+          {FAMILY_LIST.map(fam => {
+            const ft = HUE_FAMILIES[fam.id as keyof typeof HUE_FAMILIES];
+            const active = selectedFamily === fam.id;
             return (
               <button
-                key={cat}
-                onClick={() => setSelectedCategory(cat)}
-                className="shrink-0 flex items-center gap-1.5 px-3 py-2 text-xs border transition-all whitespace-nowrap"
-                style={{
-                  borderColor: active ? 'transparent' : T.border,
-                  background: active ? (isFav ? T.accent : (color?.bg || T.bgTabActive)) : 'transparent',
-                  color: active ? (isFav ? '#0a0a0a' : (color?.text || T.textTabActive)) : T.textMuted,
-                  borderRadius: '2px',
-                }}
-              >
-                {!isFav && cat !== '전체' && (
-                  <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: active ? (color?.text || '#1a1a1a') : (color?.bg || '#8a8a8a') }} />
-                )}
-                <span>{cat}</span>
-              </button>
-            );
-          })}
-        </div>
-        {/* 데스크탑: 기존 그리드 */}
-        <div className="hidden md:grid md:grid-cols-5 lg:grid-cols-8 border-t" style={{ gridAutoRows: '1fr', borderColor: T.border }}>
-          {categories.map((cat, idx) => {
-            const active = selectedCategory === cat;
-            const isFav = cat === '★ 즐겨찾기';
-            const color = categoryColors[cat];
-            return (
-              <button
-                key={cat}
-                onClick={() => setSelectedCategory(cat)}
-                className="px-2 md:px-3 py-2.5 md:py-3 text-xs md:text-sm transition-all flex items-center justify-center gap-1.5 md:gap-2 border-r border-b"
+                key={fam.id}
+                onClick={() => handleFamilyClick(active ? null : fam.id)}
+                className="shrink-0 flex items-center gap-2 px-4 py-2.5 text-xs mono uppercase tracking-[0.18em] border-r transition-all"
                 style={{
                   borderColor: T.border,
-                  background: active ? (isFav ? T.accent : (color?.bg || T.bgTabActive)) : 'transparent',
-                  color: active ? (isFav ? '#0a0a0a' : (color?.text || T.textTabActive)) : T.textMuted,
+                  background: active ? ft.bg : 'transparent',
+                  color: active ? ft.text : T.textMuted,
                 }}
-                title={cat}
               >
-                {!isFav && cat !== '전체' && (
-                  <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: active ? (color?.text || '#1a1a1a') : (color?.bg || '#8a8a8a') }}></span>
-                )}
-                <span className="truncate">{cat}</span>
+                <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: active ? ft.text : ft.base }} />
+                {fam.name}
+                <span className="opacity-50 text-[10px]">{fam.en}</span>
               </button>
             );
           })}
+          {/* 즐겨찾기 */}
+          {categories.includes('★ 즐겨찾기') && (
+            <button
+              onClick={() => { handleFamilyClick(null); setSelectedCategory('★ 즐겨찾기'); }}
+              className="shrink-0 px-4 py-2.5 text-xs mono uppercase tracking-[0.18em] border-r transition-all"
+              style={{
+                borderColor: T.border,
+                background: selectedCategory === '★ 즐겨찾기' ? T.accent : 'transparent',
+                color: selectedCategory === '★ 즐겨찾기' ? '#0a0a0a' : T.textMuted,
+              }}
+            >★ 즐겨찾기</button>
+          )}
         </div>
+
+        {/* 2단: sub-categories (family 선택 시만 노출) */}
+        {selectedFamily && subCategories.length > 0 && (
+          <div className="flex overflow-x-auto scroll-hide" style={{ background: T.bgSurface }}>
+            <button
+              onClick={() => setSelectedCategory('전체')}
+              className="shrink-0 px-4 py-2 text-[11px] mono uppercase tracking-[0.2em] border-r transition-all"
+              style={{
+                borderColor: T.border,
+                color: selectedCategory === '전체' ? HUE_FAMILIES[selectedFamily as keyof typeof HUE_FAMILIES].base : T.textDimmer,
+                borderBottom: selectedCategory === '전체' ? `2px solid ${HUE_FAMILIES[selectedFamily as keyof typeof HUE_FAMILIES].base}` : '2px solid transparent',
+              }}
+            >전체</button>
+            {subCategories.map(cat => {
+              const active = selectedCategory === cat;
+              const ft = HUE_FAMILIES[selectedFamily as keyof typeof HUE_FAMILIES];
+              return (
+                <button
+                  key={cat}
+                  onClick={() => setSelectedCategory(active ? '전체' : cat)}
+                  className="shrink-0 px-4 py-2 text-[11px] mono uppercase tracking-[0.15em] border-r transition-all"
+                  style={{
+                    borderColor: T.border,
+                    color: active ? ft.base : T.textDimmer,
+                    borderBottom: active ? `2px solid ${ft.base}` : '2px solid transparent',
+                  }}
+                >{cat}</button>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* 용어 그리드 */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 border-t border-l" style={{ borderColor: T.borderSoft }}>
-        {terms.map((term) => {
+        {displayTerms.map((term) => {
           const color = categoryColors[term.category];
           const isFav = favorites.has(term.id);
           return (
@@ -1774,6 +1848,45 @@ function CalculatorView({ selectedCalc, setSelectedCalc, T, isDark }) {
   const [compareCalcMode, setCompareCalcMode] = useState(false);
   const [compareCalcId, setCompareCalcId] = useState('');
 
+  // A/B diff — DOM polling
+  const panelARef = React.useRef<HTMLDivElement>(null);
+  const panelBRef = React.useRef<HTMLDivElement>(null);
+  type DiffRow = { label: string; a: string; b: string; unit: string; aNum: number; bNum: number; diff: number; pct: number };
+  const [diffRows, setDiffRows] = useState<DiffRow[]>([]);
+
+  const readPanel = (ref: React.RefObject<HTMLDivElement>) => {
+    if (!ref.current) return [];
+    return Array.from(ref.current.querySelectorAll('[data-result-label]')).map(el => ({
+      label: el.getAttribute('data-result-label') || '',
+      value: el.getAttribute('data-result-value') || '',
+      unit:  el.getAttribute('data-result-unit') || '',
+    }));
+  };
+
+  const refreshDiff = React.useCallback(() => {
+    const a = readPanel(panelARef);
+    const b = readPanel(panelBRef);
+    const rows: DiffRow[] = a.map(ar => {
+      const br = b.find(r => r.label === ar.label);
+      const aNum = parseFloat(ar.value.replace(/[^0-9.-]/g,'')) || 0;
+      const bNum = parseFloat(br?.value?.replace(/[^0-9.-]/g,'') || '0') || 0;
+      const diff = bNum - aNum;
+      const pct  = aNum !== 0 ? (diff / Math.abs(aNum)) * 100 : 0;
+      return { label: ar.label, a: ar.value, b: br?.value || '—', unit: ar.unit, aNum, bNum, diff, pct };
+    });
+    setDiffRows(rows);
+  }, []);
+
+  React.useEffect(() => {
+    if (!compareCalcMode) return;
+    const obs = new MutationObserver(refreshDiff);
+    const cfg = { subtree: true, childList: true, characterData: true };
+    if (panelARef.current) obs.observe(panelARef.current, cfg);
+    if (panelBRef.current) obs.observe(panelBRef.current, cfg);
+    refreshDiff();
+    return () => obs.disconnect();
+  }, [compareCalcMode, selectedCalc, refreshDiff]);
+
   useEffect(() => {
     try {
       const saved = localStorage.getItem('stockwiki_calc_history');
@@ -2161,8 +2274,9 @@ function CalculatorView({ selectedCalc, setSelectedCalc, T, isDark }) {
 
               {/* A/B 비교 모드 */}
               {compareCalcMode ? (
-                <div className="grid grid-cols-2 overflow-y-auto" style={{ borderColor: T.border, maxHeight: 'calc(100vh - 160px)' }}>
-                  <div className="p-5" style={{ borderRight: `1px solid ${T.border}` }}>
+                <div className="grid overflow-y-auto" style={{ gridTemplateColumns: '1fr 180px 1fr', borderColor: T.border, maxHeight: 'calc(100vh - 160px)' }}>
+                  {/* ── 시나리오 A ── */}
+                  <div className="p-5" ref={panelARef} style={{ borderRight: `1px solid ${T.border}` }}>
                     <div className="text-[12px] mono uppercase tracking-[0.2em] mb-4 flex items-center gap-2" style={{ color: T.textFaint }}>
                       <span className="px-1.5 py-0.5 text-[11px]" style={{ background: T.accent, color: '#0a0a0a' }}>A</span>
                       <span>시나리오 A</span>
@@ -2171,7 +2285,58 @@ function CalculatorView({ selectedCalc, setSelectedCalc, T, isDark }) {
                       {renderCalcComponent(selectedCalc)}
                     </CalcPrefixContext.Provider>
                   </div>
-                  <div className="p-5">
+
+                  {/* ── Diff 컬럼 ── */}
+                  <div className="flex flex-col border-r" style={{ borderColor: T.border, background: T.bgWell ?? T.bgCard }}>
+                    <div className="px-3 py-3 border-b text-center" style={{ borderColor: T.border }}>
+                      <span className="mono text-[10px] uppercase tracking-[0.3em]" style={{ color: T.textFaint }}>§ Δ Diff</span>
+                    </div>
+                    <div className="flex-1 overflow-y-auto">
+                      {diffRows.length === 0 ? (
+                        <div className="px-3 py-8 text-center mono text-[10px]" style={{ color: T.textDimmer }}>
+                          입력 후<br/>자동 갱신
+                        </div>
+                      ) : diffRows.map((row, i) => {
+                        const isUp = row.diff > 0;
+                        const isDown = row.diff < 0;
+                        const diffColor = isUp ? '#6f9c6a' : isDown ? '#b94040' : T.textDimmer;
+                        const hasNum = row.aNum !== 0 || row.bNum !== 0;
+                        return (
+                          <div key={i} className="px-3 py-3 border-b" style={{ borderColor: T.border }}>
+                            <div className="mono text-[9px] uppercase tracking-[0.18em] mb-1.5 truncate" style={{ color: T.textFaint }}>{row.label}</div>
+                            {hasNum ? (
+                              <>
+                                <div className="mono font-medium text-center" style={{ fontSize: 15, color: diffColor }}>
+                                  {isUp ? '+' : ''}{row.diff % 1 === 0 ? row.diff.toLocaleString() : row.diff.toFixed(2)}
+                                  {row.unit && <span className="text-[10px] ml-0.5" style={{ color: T.textDimmer }}>{row.unit}</span>}
+                                </div>
+                                {row.aNum !== 0 && (
+                                  <div className="mono text-[10px] text-center mt-0.5" style={{ color: diffColor, opacity: 0.7 }}>
+                                    {isUp ? '▲' : isDown ? '▼' : '—'} {Math.abs(row.pct).toFixed(1)}%
+                                  </div>
+                                )}
+                                {/* 미니 게이지 */}
+                                <div className="mt-2 h-0.5 rounded-full overflow-hidden" style={{ background: T.border }}>
+                                  <div style={{
+                                    height: '100%',
+                                    width: `${Math.min(Math.abs(row.pct), 100)}%`,
+                                    background: diffColor,
+                                    marginLeft: isDown ? `${100 - Math.min(Math.abs(row.pct), 100)}%` : 0,
+                                    transition: 'width 0.3s ease',
+                                  }} />
+                                </div>
+                              </>
+                            ) : (
+                              <div className="mono text-[10px] text-center" style={{ color: T.textDimmer }}>—</div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* ── 시나리오 B ── */}
+                  <div className="p-5" ref={panelBRef}>
                     <div className="text-[12px] mono uppercase tracking-[0.2em] mb-4 flex items-center gap-2" style={{ color: T.textFaint }}>
                       <span className="px-1.5 py-0.5 text-[11px]" style={{ background: T.accentGreen, color: '#fff' }}>B</span>
                       <span>시나리오 B</span>
@@ -5719,6 +5884,239 @@ function DerivTaxCalc() {
         example={['총이익 1,000만, 총손실 300만, 이월결손 0', '순손익 700만 − 250만(공제) = 과세표준 450만원', '세금 = 450만 × 22% = 99만원']}
         tip={['파생상품(선물·옵션): 세율 20% + 지방세 2% = 22%', '기본공제 250만원: 매년 리셋', '손실 이월: 5년간 이월공제 가능 (법정 요건 충족 시)', '해외선물도 동일 세율 적용, 환산 손익으로 계산', '5월 종합소득세 신고 시 함께 신고', '※ 정확한 납세액은 세무사 확인을 권장합니다.']}
       />
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// Home View — 대시보드 탭
+// ─────────────────────────────────────────────
+function HomeView({ T, isDark, totalTerms, recent, favorites, categoryColors, setActiveTab, setSelectedTerm, setSelectedCalc, setSearchQuery, searchRef }: any) {
+  const [now, setNow] = React.useState(() => new Date());
+  React.useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(id);
+  }, []);
+  const timeStr = now.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false, timeZone: 'Asia/Seoul' });
+  const dateStr = now.toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit', weekday: 'short', timeZone: 'Asia/Seoul' });
+  const kstH = parseInt(now.toLocaleTimeString('ko-KR', { hour: '2-digit', hour12: false, timeZone: 'Asia/Seoul' }));
+  const kstM = parseInt(now.toLocaleTimeString('ko-KR', { minute: '2-digit', timeZone: 'Asia/Seoul' }));
+  const kstD = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Seoul' })).getDay();
+  const isOpen = kstD >= 1 && kstD <= 5 && (kstH > 9 || (kstH === 9 && kstM >= 0)) && (kstH < 15 || (kstH === 15 && kstM <= 30));
+
+  const FAMILY_LIST = [
+    { id: 'value',  name: '가치',   color: HUE_FAMILIES.value.base,  cats: ['밸류에이션','기업재무','회계심화'] },
+    { id: 'profit', name: '수익',   color: HUE_FAMILIES.profit.base, cats: ['수익성','배당','한국시장'] },
+    { id: 'risk',   name: '리스크', color: HUE_FAMILIES.risk.base,   cats: ['포트폴리오','퀀트통계','재무안정성'] },
+    { id: 'macro',  name: '거시',   color: HUE_FAMILIES.macro.base,  cats: ['거시경제','미시경제','해외주식ETF'] },
+    { id: 'trade',  name: '실전',   color: HUE_FAMILIES.trade.base,  cats: ['선물옵션','파생헤지','기술적지표','시장거래','차트심리'] },
+  ];
+
+  const QUICK_CALCS = [
+    { id: 'per',    name: 'PER 계산기',    desc: '주가수익비율' },
+    { id: 'pbr',    name: 'PBR 계산기',    desc: '주가순자산비율' },
+    { id: 'roe',    name: 'ROE 계산기',    desc: '자기자본이익률' },
+    { id: 'dcf',    name: 'DCF 계산기',    desc: '내재가치 산출' },
+    { id: 'kelly',  name: '켈리 기준',     desc: '최적 베팅 비율' },
+    { id: 'var',    name: 'VaR 계산기',    desc: '포트폴리오 위험' },
+  ];
+
+  return (
+    <div>
+      {/* ── 에디토리얼 히어로 ── */}
+      <div className="border mb-8 relative overflow-hidden" style={{ borderColor: T.border, background: T.bgCard }}>
+        {/* 그리드 배경 */}
+        <div className="absolute inset-0 pointer-events-none" style={{
+          opacity: 0.03,
+          backgroundImage: `repeating-linear-gradient(0deg, ${T.textPrimary} 0 1px, transparent 1px 40px), repeating-linear-gradient(90deg, ${T.textPrimary} 0 1px, transparent 1px 40px)`
+        }} />
+        {/* ball joint 코너 */}
+        {['top-0 left-0 -translate-x-1/2 -translate-y-1/2','top-0 right-0 translate-x-1/2 -translate-y-1/2','bottom-0 left-0 -translate-x-1/2 translate-y-1/2','bottom-0 right-0 translate-x-1/2 translate-y-1/2'].map((pos, i) => (
+          <span key={i} className={`absolute w-3 h-3 rounded-full border-2 z-10 ${pos}`}
+            style={{ borderColor: T.borderMid, background: T.bgPage }} />
+        ))}
+        <div className="relative px-6 md:px-10 py-8 md:py-10">
+          <div className="flex items-start justify-between gap-8">
+            <div className="flex-1 min-w-0">
+              <div className="mono text-[10px] uppercase tracking-[0.4em] mb-4" style={{ color: T.textFaint }}>
+                § stockwiki · kr — 주식 투자자를 위한 책상
+              </div>
+              <h1 className="font-light leading-[0.92] tracking-[-0.03em] mb-5"
+                style={{ fontSize: 'clamp(32px, 5vw, 64px)', color: T.textPrimary }}>
+                사전 · 계산기 ·<br />
+                <span style={{ color: T.accent }}>한 벌의 책상.</span>
+              </h1>
+              <p className="text-sm leading-relaxed mb-6 max-w-sm" style={{ color: T.textMuted }}>
+                재무지표 {totalTerms}개 용어, 52개 계산기, 어닝·거시 이벤트 캘린더를 한 곳에.
+              </p>
+              <div className="flex flex-wrap gap-3">
+                <button onClick={() => { setActiveTab('glossary'); setTimeout(() => searchRef.current?.focus(), 100); }}
+                  className="flex items-center gap-2 px-4 py-2.5 text-sm border transition-all hover:opacity-80"
+                  style={{ borderColor: T.accent, background: T.accent, color: '#0a0a0a' }}>
+                  <Search size={13} />
+                  <span className="font-medium">용어 검색</span>
+                  <span className="mono text-[11px] opacity-60 ml-1">⌘K</span>
+                </button>
+                <button onClick={() => setActiveTab('calculator')}
+                  className="flex items-center gap-2 px-4 py-2.5 text-sm border transition-all hover:opacity-80"
+                  style={{ borderColor: T.border, color: T.textSecondary }}>
+                  <Calculator size={13} />
+                  <span>계산기</span>
+                </button>
+                <button onClick={() => setActiveTab('events')}
+                  className="flex items-center gap-2 px-4 py-2.5 text-sm border transition-all hover:opacity-80"
+                  style={{ borderColor: T.border, color: T.textSecondary }}>
+                  <CalendarDays size={13} />
+                  <span>이벤트 캘린더</span>
+                </button>
+              </div>
+            </div>
+            {/* 시계 + 장 상태 */}
+            <div className="shrink-0 hidden md:flex flex-col items-end gap-4">
+              <div className="text-right">
+                <div className="mono text-[10px] uppercase tracking-[0.3em] mb-1" style={{ color: T.textFaint }}>KST</div>
+                <div className="mono font-medium" style={{ fontSize: 32, letterSpacing: '-0.02em', color: T.textPrimary }}>{timeStr}</div>
+                <div className="mono text-[11px] mt-1" style={{ color: T.textDimmer }}>{dateStr}</div>
+              </div>
+              <div className="flex items-center gap-2 border px-3 py-1.5"
+                style={{ borderColor: isOpen ? HUE_FAMILIES.risk.base : T.border }}>
+                <span className="w-2 h-2 rounded-full" style={{ background: isOpen ? HUE_FAMILIES.risk.base : T.textDimmer,
+                  boxShadow: isOpen ? `0 0 6px ${HUE_FAMILIES.risk.base}` : 'none' }} />
+                <span className="mono text-[11px] uppercase tracking-[0.15em]"
+                  style={{ color: isOpen ? HUE_FAMILIES.risk.base : T.textDimmer }}>
+                  {isOpen ? 'KOSPI 장중' : '장외'}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* stats rail */}
+        <div className="grid border-t" style={{ gridTemplateColumns: 'repeat(4,1fr)', borderColor: T.border }}>
+          {[
+            { k: 'Terms',   v: String(totalTerms).padStart(3,'0'), u: '개 용어',    color: HUE_FAMILIES.value.base },
+            { k: 'Calcs',   v: '052',                              u: '개 계산기',  color: HUE_FAMILIES.profit.base },
+            { k: 'Families',v: '005',                              u: 'hue family', color: HUE_FAMILIES.macro.base },
+            { k: 'Fav',     v: String(favorites?.size ?? 0).padStart(3,'0'), u: '즐겨찾기', color: T.accent },
+          ].map((s, i, arr) => (
+            <div key={s.k} className="flex flex-col gap-1 px-4 md:px-6 py-3 border-r"
+              style={{ borderColor: i < arr.length - 1 ? T.border : 'transparent' }}>
+              <span className="mono text-[10px] tracking-[0.28em] uppercase" style={{ color: T.textFaint }}>{s.k}</span>
+              <div className="flex items-baseline gap-1.5">
+                <span className="mono font-medium" style={{ fontSize: 22, color: s.color, letterSpacing: '-0.02em' }}>{s.v}</span>
+                <span className="mono text-[10px]" style={{ color: T.textDimmer }}>{s.u}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ── 대시보드 2단 그리드 ── */}
+      <div className="grid md:grid-cols-[1fr_320px] gap-6">
+        {/* 왼쪽: 카테고리 패밀리 맵 + 최근 본 용어 */}
+        <div className="flex flex-col gap-6">
+
+          {/* 5 hue family 맵 */}
+          <div className="border" style={{ borderColor: T.border }}>
+            <div className="px-5 py-3 border-b flex items-center justify-between" style={{ borderColor: T.border }}>
+              <span className="mono text-[11px] uppercase tracking-[0.25em]" style={{ color: T.textFaint }}>§ 카테고리 · 5 Groups</span>
+              <button onClick={() => setActiveTab('glossary')} className="mono text-[11px] uppercase tracking-[0.15em] flex items-center gap-1" style={{ color: T.textDimmer }}>
+                전체 사전 <ArrowUpRight size={11} />
+              </button>
+            </div>
+            <div className="divide-y" style={{ borderColor: T.border }}>
+              {FAMILY_LIST.map(fam => (
+                <div key={fam.id} className="flex items-center gap-0 group"
+                  style={{ borderColor: T.border }}>
+                  <div className="w-1 self-stretch shrink-0" style={{ background: fam.color }} />
+                  <div className="px-4 py-3 flex-1 flex items-center gap-4 min-w-0">
+                    <div className="flex flex-col gap-0.5 w-14 shrink-0">
+                      <span className="mono text-[10px] uppercase tracking-[0.2em]" style={{ color: fam.color }}>
+                        {fam.id.toUpperCase()}
+                      </span>
+                      <span className="text-sm font-medium" style={{ color: T.textPrimary }}>{fam.name}</span>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5 min-w-0">
+                      {fam.cats.map(cat => (
+                        <button key={cat}
+                          onClick={() => setActiveTab('glossary')}
+                          className="mono text-[10px] px-2 py-0.5 border transition-all hover:opacity-80"
+                          style={{ borderColor: `${fam.color}50`, color: T.textMuted, background: `${fam.color}10` }}>
+                          {cat}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* 최근 본 용어 */}
+          {recent?.length > 0 && (
+            <div className="border" style={{ borderColor: T.border }}>
+              <div className="px-5 py-3 border-b flex items-center gap-2" style={{ borderColor: T.border }}>
+                <Clock size={12} style={{ color: T.textFaint }} />
+                <span className="mono text-[11px] uppercase tracking-[0.25em]" style={{ color: T.textFaint }}>최근 본 용어</span>
+              </div>
+              <div className="flex flex-col divide-y" style={{ borderColor: T.border }}>
+                {recent.slice(0, 5).map(t => {
+                  const color = categoryColors?.[t.category];
+                  return (
+                    <button key={t.id}
+                      onClick={() => { setActiveTab('glossary'); setTimeout(() => setSelectedTerm(t), 50); }}
+                      className="flex items-center gap-3 px-5 py-3 text-left hover:opacity-80 transition-opacity">
+                      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: color?.bg }} />
+                      <span className="font-medium text-sm" style={{ color: T.textPrimary }}>{t.name}</span>
+                      <span className="text-xs" style={{ color: T.textFaint }}>{t.fullName}</span>
+                      <span className="ml-auto mono text-[10px] px-1.5 py-0.5" style={{ background: `${color?.bg}20`, color: color?.bg }}>{t.category}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* 오른쪽: 빠른 계산기 */}
+        <div className="border self-start" style={{ borderColor: T.border }}>
+          <div className="px-5 py-3 border-b flex items-center justify-between" style={{ borderColor: T.border }}>
+            <span className="mono text-[11px] uppercase tracking-[0.25em]" style={{ color: T.textFaint }}>§ 빠른 계산기</span>
+            <button onClick={() => setActiveTab('calculator')} className="mono text-[11px] uppercase tracking-[0.15em] flex items-center gap-1" style={{ color: T.textDimmer }}>
+              전체 <ArrowUpRight size={11} />
+            </button>
+          </div>
+          <div className="flex flex-col divide-y" style={{ borderColor: T.border }}>
+            {QUICK_CALCS.map((c, i) => (
+              <button key={c.id}
+                onClick={() => { setSelectedCalc(c.id); setActiveTab('calculator'); }}
+                className="flex items-center gap-3 px-5 py-3.5 text-left transition-all hover:opacity-80">
+                <span className="mono text-[10px] w-5 shrink-0" style={{ color: T.textDimmer }}>
+                  {String(i + 1).padStart(2,'0')}
+                </span>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium truncate" style={{ color: T.textPrimary }}>{c.name}</div>
+                  <div className="mono text-[10px]" style={{ color: T.textFaint }}>{c.desc}</div>
+                </div>
+                <ChevronRight size={13} style={{ color: T.textDimmer }} />
+              </button>
+            ))}
+          </div>
+          {/* 이벤트 캘린더 쇼트컷 */}
+          <button onClick={() => setActiveTab('events')}
+            className="w-full flex items-center justify-between px-5 py-4 border-t transition-all hover:opacity-80"
+            style={{ borderColor: T.border, background: T.bgSurface }}>
+            <div className="flex items-center gap-3">
+              <CalendarDays size={14} style={{ color: HUE_FAMILIES.macro.base }} />
+              <div>
+                <div className="text-sm font-medium" style={{ color: T.textPrimary }}>이벤트 캘린더</div>
+                <div className="mono text-[10px]" style={{ color: T.textFaint }}>FOMC · CPI · 어닝시즌</div>
+              </div>
+            </div>
+            <ArrowUpRight size={13} style={{ color: T.textDimmer }} />
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

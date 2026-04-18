@@ -22,49 +22,49 @@ const FOMC_2026 = [
 // PCE: BEA 마지막 금요일 근처 (12월 크리스마스 → 12/23로 조정)
 const MACRO_2026 = [
   // ── CPI (소비자물가)
-  { dateKST: '2026-01-14', label: 'CPI',  desc: '12월 소비자물가 (美)',   color: '#E07B54', importance: 3 as const },
-  { dateKST: '2026-02-13', label: 'CPI',  desc: '1월 소비자물가 (美)',    color: '#E07B54', importance: 3 as const },
-  { dateKST: '2026-03-11', label: 'CPI',  desc: '2월 소비자물가 (美)',    color: '#E07B54', importance: 3 as const },
-  { dateKST: '2026-04-10', label: 'CPI',  desc: '3월 소비자물가 (美)',    color: '#E07B54', importance: 3 as const },
-  { dateKST: '2026-05-12', label: 'CPI',  desc: '4월 소비자물가 (美)',    color: '#E07B54', importance: 3 as const },
-  { dateKST: '2026-06-10', label: 'CPI',  desc: '5월 소비자물가 (美)',    color: '#E07B54', importance: 3 as const },
-  { dateKST: '2026-07-14', label: 'CPI',  desc: '6월 소비자물가 (美)',    color: '#E07B54', importance: 3 as const },
-  { dateKST: '2026-08-12', label: 'CPI',  desc: '7월 소비자물가 (美)',    color: '#E07B54', importance: 3 as const },
-  { dateKST: '2026-09-11', label: 'CPI',  desc: '8월 소비자물가 (美)',    color: '#E07B54', importance: 3 as const },
-  { dateKST: '2026-10-13', label: 'CPI',  desc: '9월 소비자물가 (美)',    color: '#E07B54', importance: 3 as const },
-  { dateKST: '2026-11-12', label: 'CPI',  desc: '10월 소비자물가 (美)',   color: '#E07B54', importance: 3 as const },
-  { dateKST: '2026-12-11', label: 'CPI',  desc: '11월 소비자물가 (美)',   color: '#E07B54', importance: 3 as const },
+  { dateKST: '2026-01-14', label: 'CPI',  desc: '12월 소비자물가 (美)',   color: '#9C8BBD', importance: 3 as const },
+  { dateKST: '2026-02-13', label: 'CPI',  desc: '1월 소비자물가 (美)',    color: '#9C8BBD', importance: 3 as const },
+  { dateKST: '2026-03-11', label: 'CPI',  desc: '2월 소비자물가 (美)',    color: '#9C8BBD', importance: 3 as const },
+  { dateKST: '2026-04-10', label: 'CPI',  desc: '3월 소비자물가 (美)',    color: '#9C8BBD', importance: 3 as const },
+  { dateKST: '2026-05-12', label: 'CPI',  desc: '4월 소비자물가 (美)',    color: '#9C8BBD', importance: 3 as const },
+  { dateKST: '2026-06-10', label: 'CPI',  desc: '5월 소비자물가 (美)',    color: '#9C8BBD', importance: 3 as const },
+  { dateKST: '2026-07-14', label: 'CPI',  desc: '6월 소비자물가 (美)',    color: '#9C8BBD', importance: 3 as const },
+  { dateKST: '2026-08-12', label: 'CPI',  desc: '7월 소비자물가 (美)',    color: '#9C8BBD', importance: 3 as const },
+  { dateKST: '2026-09-11', label: 'CPI',  desc: '8월 소비자물가 (美)',    color: '#9C8BBD', importance: 3 as const },
+  { dateKST: '2026-10-13', label: 'CPI',  desc: '9월 소비자물가 (美)',    color: '#9C8BBD', importance: 3 as const },
+  { dateKST: '2026-11-12', label: 'CPI',  desc: '10월 소비자물가 (美)',   color: '#9C8BBD', importance: 3 as const },
+  { dateKST: '2026-12-11', label: 'CPI',  desc: '11월 소비자물가 (美)',   color: '#9C8BBD', importance: 3 as const },
   // ── NFP (비농업 고용)
-  { dateKST: '2026-01-09', label: 'NFP',  desc: '12월 비농업 고용 (美)',  color: '#7B9FDF', importance: 3 as const },
-  { dateKST: '2026-02-06', label: 'NFP',  desc: '1월 비농업 고용 (美)',   color: '#7B9FDF', importance: 3 as const },
-  { dateKST: '2026-03-06', label: 'NFP',  desc: '2월 비농업 고용 (美)',   color: '#7B9FDF', importance: 3 as const },
-  { dateKST: '2026-04-03', label: 'NFP',  desc: '3월 비농업 고용 (美)',   color: '#7B9FDF', importance: 3 as const },
-  { dateKST: '2026-05-08', label: 'NFP',  desc: '4월 비농업 고용 (美)',   color: '#7B9FDF', importance: 3 as const },
-  { dateKST: '2026-06-05', label: 'NFP',  desc: '5월 비농업 고용 (美)',   color: '#7B9FDF', importance: 3 as const },
-  { dateKST: '2026-07-02', label: 'NFP',  desc: '6월 비농업 고용 (美)',   color: '#7B9FDF', importance: 3 as const },
-  { dateKST: '2026-08-07', label: 'NFP',  desc: '7월 비농업 고용 (美)',   color: '#7B9FDF', importance: 3 as const },
-  { dateKST: '2026-09-04', label: 'NFP',  desc: '8월 비농업 고용 (美)',   color: '#7B9FDF', importance: 3 as const },
-  { dateKST: '2026-10-02', label: 'NFP',  desc: '9월 비농업 고용 (美)',   color: '#7B9FDF', importance: 3 as const },
-  { dateKST: '2026-11-06', label: 'NFP',  desc: '10월 비농업 고용 (美)',  color: '#7B9FDF', importance: 3 as const },
-  { dateKST: '2026-12-04', label: 'NFP',  desc: '11월 비농업 고용 (美)',  color: '#7B9FDF', importance: 3 as const },
+  { dateKST: '2026-01-09', label: 'NFP',  desc: '12월 비농업 고용 (美)',  color: '#7C6A9B', importance: 3 as const },
+  { dateKST: '2026-02-06', label: 'NFP',  desc: '1월 비농업 고용 (美)',   color: '#7C6A9B', importance: 3 as const },
+  { dateKST: '2026-03-06', label: 'NFP',  desc: '2월 비농업 고용 (美)',   color: '#7C6A9B', importance: 3 as const },
+  { dateKST: '2026-04-03', label: 'NFP',  desc: '3월 비농업 고용 (美)',   color: '#7C6A9B', importance: 3 as const },
+  { dateKST: '2026-05-08', label: 'NFP',  desc: '4월 비농업 고용 (美)',   color: '#7C6A9B', importance: 3 as const },
+  { dateKST: '2026-06-05', label: 'NFP',  desc: '5월 비농업 고용 (美)',   color: '#7C6A9B', importance: 3 as const },
+  { dateKST: '2026-07-02', label: 'NFP',  desc: '6월 비농업 고용 (美)',   color: '#7C6A9B', importance: 3 as const },
+  { dateKST: '2026-08-07', label: 'NFP',  desc: '7월 비농업 고용 (美)',   color: '#7C6A9B', importance: 3 as const },
+  { dateKST: '2026-09-04', label: 'NFP',  desc: '8월 비농업 고용 (美)',   color: '#7C6A9B', importance: 3 as const },
+  { dateKST: '2026-10-02', label: 'NFP',  desc: '9월 비농업 고용 (美)',   color: '#7C6A9B', importance: 3 as const },
+  { dateKST: '2026-11-06', label: 'NFP',  desc: '10월 비농업 고용 (美)',  color: '#7C6A9B', importance: 3 as const },
+  { dateKST: '2026-12-04', label: 'NFP',  desc: '11월 비농업 고용 (美)',  color: '#7C6A9B', importance: 3 as const },
   // ── PCE (개인소비지출 물가)
-  { dateKST: '2026-01-30', label: 'PCE',  desc: '12월 PCE 물가 (美)',     color: '#B07AB0', importance: 2 as const },
-  { dateKST: '2026-02-27', label: 'PCE',  desc: '1월 PCE 물가 (美)',      color: '#B07AB0', importance: 2 as const },
-  { dateKST: '2026-03-27', label: 'PCE',  desc: '2월 PCE 물가 (美)',      color: '#B07AB0', importance: 2 as const },
-  { dateKST: '2026-04-30', label: 'PCE',  desc: '3월 PCE 물가 (美)',      color: '#B07AB0', importance: 2 as const },
-  { dateKST: '2026-05-29', label: 'PCE',  desc: '4월 PCE 물가 (美)',      color: '#B07AB0', importance: 2 as const },
-  { dateKST: '2026-06-26', label: 'PCE',  desc: '5월 PCE 물가 (美)',      color: '#B07AB0', importance: 2 as const },
-  { dateKST: '2026-07-31', label: 'PCE',  desc: '6월 PCE 물가 (美)',      color: '#B07AB0', importance: 2 as const },
-  { dateKST: '2026-08-28', label: 'PCE',  desc: '7월 PCE 물가 (美)',      color: '#B07AB0', importance: 2 as const },
-  { dateKST: '2026-09-25', label: 'PCE',  desc: '8월 PCE 물가 (美)',      color: '#B07AB0', importance: 2 as const },
-  { dateKST: '2026-10-30', label: 'PCE',  desc: '9월 PCE 물가 (美)',      color: '#B07AB0', importance: 2 as const },
-  { dateKST: '2026-11-25', label: 'PCE',  desc: '10월 PCE 물가 (美)',     color: '#B07AB0', importance: 2 as const },
-  { dateKST: '2026-12-23', label: 'PCE',  desc: '11월 PCE 물가 (美)',     color: '#B07AB0', importance: 2 as const },
+  { dateKST: '2026-01-30', label: 'PCE',  desc: '12월 PCE 물가 (美)',     color: '#5E4F7A', importance: 2 as const },
+  { dateKST: '2026-02-27', label: 'PCE',  desc: '1월 PCE 물가 (美)',      color: '#5E4F7A', importance: 2 as const },
+  { dateKST: '2026-03-27', label: 'PCE',  desc: '2월 PCE 물가 (美)',      color: '#5E4F7A', importance: 2 as const },
+  { dateKST: '2026-04-30', label: 'PCE',  desc: '3월 PCE 물가 (美)',      color: '#5E4F7A', importance: 2 as const },
+  { dateKST: '2026-05-29', label: 'PCE',  desc: '4월 PCE 물가 (美)',      color: '#5E4F7A', importance: 2 as const },
+  { dateKST: '2026-06-26', label: 'PCE',  desc: '5월 PCE 물가 (美)',      color: '#5E4F7A', importance: 2 as const },
+  { dateKST: '2026-07-31', label: 'PCE',  desc: '6월 PCE 물가 (美)',      color: '#5E4F7A', importance: 2 as const },
+  { dateKST: '2026-08-28', label: 'PCE',  desc: '7월 PCE 물가 (美)',      color: '#5E4F7A', importance: 2 as const },
+  { dateKST: '2026-09-25', label: 'PCE',  desc: '8월 PCE 물가 (美)',      color: '#5E4F7A', importance: 2 as const },
+  { dateKST: '2026-10-30', label: 'PCE',  desc: '9월 PCE 물가 (美)',      color: '#5E4F7A', importance: 2 as const },
+  { dateKST: '2026-11-25', label: 'PCE',  desc: '10월 PCE 물가 (美)',     color: '#5E4F7A', importance: 2 as const },
+  { dateKST: '2026-12-23', label: 'PCE',  desc: '11월 PCE 물가 (美)',     color: '#5E4F7A', importance: 2 as const },
   // ── GDP (분기 속보치)
-  { dateKST: '2026-01-29', label: 'GDP',  desc: 'Q4 2025 GDP 속보 (美)',  color: '#5FA8A0', importance: 2 as const },
-  { dateKST: '2026-04-29', label: 'GDP',  desc: 'Q1 2026 GDP 속보 (美)',  color: '#5FA8A0', importance: 2 as const },
-  { dateKST: '2026-07-30', label: 'GDP',  desc: 'Q2 2026 GDP 속보 (美)',  color: '#5FA8A0', importance: 2 as const },
-  { dateKST: '2026-10-29', label: 'GDP',  desc: 'Q3 2026 GDP 속보 (美)',  color: '#5FA8A0', importance: 2 as const },
+  { dateKST: '2026-01-29', label: 'GDP',  desc: 'Q4 2025 GDP 속보 (美)',  color: '#6FA09E', importance: 2 as const },
+  { dateKST: '2026-04-29', label: 'GDP',  desc: 'Q1 2026 GDP 속보 (美)',  color: '#6FA09E', importance: 2 as const },
+  { dateKST: '2026-07-30', label: 'GDP',  desc: 'Q2 2026 GDP 속보 (美)',  color: '#6FA09E', importance: 2 as const },
+  { dateKST: '2026-10-29', label: 'GDP',  desc: 'Q3 2026 GDP 속보 (美)',  color: '#6FA09E', importance: 2 as const },
 ];
 
 // ── 코스피200 선물 만기 (분기 둘째 목요일)
@@ -226,7 +226,7 @@ export default function EventsView({ T }: { T?: any }) {
   const SECTOR_COLOR: Record<string, string> = {
     Tech: '#7B9FDF', Finance: '#C89650', Healthcare: '#7BAF7A',
     Consumer: '#D4956A', Energy: '#C4A84F', Industrial: '#8A8A8A',
-    Telecom: '#9B7FD4', Utility: '#5FA8A0', Material: '#B07A5A',
+    Telecom: '#9B7FD4', Utility: '#6FA09E', Material: '#B07A5A',
     RealEstate: '#7A9FA0', Other: '#6A6A6A',
   };
   const SECTOR_LABEL: Record<string, string> = {
@@ -260,9 +260,9 @@ export default function EventsView({ T }: { T?: any }) {
   const MACRO_CATEGORIES: { key: string; label: string; color: string; labels: string[] }[] = [
     { key: 'ALL',     label: 'ALL',     color: '#C89650', labels: [] },
     { key: 'FOMC',    label: '연준',    color: '#4F7E7C', labels: ['FOMC', 'FOMC의사록', '연준대차대조표'] },
-    { key: 'PRICE',   label: '물가',    color: '#E07B54', labels: ['CPI', 'Core CPI', 'PPI', 'Core PPI', 'PCE', 'Core PCE'] },
-    { key: 'EMPLOY',  label: '고용',    color: '#7B9FDF', labels: ['NFP', 'ADP', '실업청구', '실업률'] },
-    { key: 'GROWTH',  label: '성장',    color: '#5FA8A0', labels: ['GDP', 'GDP 속보', 'GDP속보', '산업생산', '내구재'] },
+    { key: 'PRICE',   label: '물가',    color: '#9C8BBD', labels: ['CPI', 'Core CPI', 'PPI', 'Core PPI', 'PCE', 'Core PCE'] },
+    { key: 'EMPLOY',  label: '고용',    color: '#7C6A9B', labels: ['NFP', 'ADP', '실업청구', '실업률'] },
+    { key: 'GROWTH',  label: '성장',    color: '#6FA09E', labels: ['GDP', 'GDP 속보', 'GDP속보', '산업생산', '내구재'] },
     { key: 'CONSUME', label: '소비',    color: '#C89650', labels: ['소매판매', 'Core 소매', '소비자신뢰', 'UMich신뢰'] },
     { key: 'PMI',     label: 'PMI',     color: '#7BAF7A', labels: ['ISM제조', 'ISM서비스', 'PMI제조', 'PMI서비스', 'PMI제조F', 'PMI서비스F'] },
     { key: 'HOUSING', label: '주택',    color: '#9B7FD4', labels: ['기존주택', '신규주택', '주택착공', '주택대기', 'MBA모기지'] },
@@ -462,9 +462,9 @@ export default function EventsView({ T }: { T?: any }) {
                 onClick={() => setShowMacro(v => !v)}
                 className="text-[15px] mono px-2 py-0.5 border transition-all"
                 style={{
-                  borderColor: showMacro ? '#5FA8A0' : theme.borderSoft,
+                  borderColor: showMacro ? '#6FA09E' : theme.borderSoft,
                   background: showMacro ? '#5FA8A020' : 'transparent',
-                  color: showMacro ? '#5FA8A0' : theme.textDimmer,
+                  color: showMacro ? '#6FA09E' : theme.textDimmer,
                 }}>
                 지표
               </button>
@@ -583,10 +583,10 @@ export default function EventsView({ T }: { T?: any }) {
             style={{ borderColor: theme.border, background: theme.bgCard }}>
             {[
               { color: '#4F7E7C', label: 'FOMC' },
-              { color: '#E07B54', label: 'CPI' },
-              { color: '#7B9FDF', label: 'NFP' },
-              { color: '#B07AB0', label: 'PCE' },
-              { color: '#5FA8A0', label: 'GDP' },
+              { color: '#9C8BBD', label: 'CPI' },
+              { color: '#7C6A9B', label: 'NFP' },
+              { color: '#5E4F7A', label: 'PCE' },
+              { color: '#6FA09E', label: 'GDP' },
               { color: '#7BAF7A', label: 'Healthcare' },
               { color: '#C89650', label: 'Finance' },
               { color: '#8A8A8A', label: 'K200만기' },
@@ -669,7 +669,7 @@ export default function EventsView({ T }: { T?: any }) {
                                   )}
                                   {e.isNDX100 && (
                                     <span className="text-[15px] mono px-1 border"
-                                      style={{ color: '#7B9FDF', borderColor: '#7B9FDF50' }}>NDX</span>
+                                      style={{ color: '#7C6A9B', borderColor: '#7B9FDF50' }}>NDX</span>
                                   )}
                                 </div>
                               )}
@@ -903,7 +903,7 @@ export default function EventsView({ T }: { T?: any }) {
                         )}
                         {e?.isNDX100 && (
                           <span className="text-[14px] mono px-1 border"
-                            style={{ color: '#7B9FDF', borderColor: '#7B9FDF40' }}>NDX</span>
+                            style={{ color: '#7C6A9B', borderColor: '#7B9FDF40' }}>NDX</span>
                         )}
                         {/* EPS 예상 */}
                         {e?.epsEstimate != null && (
