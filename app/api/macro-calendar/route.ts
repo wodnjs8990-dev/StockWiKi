@@ -6,8 +6,8 @@ export const revalidate = 86400;
 
 const FINNHUB_KEY = process.env.FINNHUB_API_KEY ?? '';
 
-// 중요도 필터: high 이상만 (medium은 너무 많음)
-const IMPACT_WHITELIST = ['high'];
+// 중요도 필터: high 이상만 (Finnhub은 "high" 또는 숫자 "1"/"3" 등 혼용)
+const IMPACT_WHITELIST = ['high', '1', '3'];
 
 // 표시할 지표명 → 한글 이름 매핑 (Finnhub event 명칭 기반)
 const EVENT_LABEL: Record<string, { label: string; color: string }> = {
@@ -92,8 +92,10 @@ async function fetchRange(from: string, to: string): Promise<MacroEvent[]> {
 
   const results: MacroEvent[] = [];
   for (const item of items) {
-    // impact 필터: high만
-    if (!IMPACT_WHITELIST.includes(item.impact?.toLowerCase())) continue;
+    // impact 필터: high만 (값이 없으면 매핑 기반으로 허용)
+    const impactVal = String(item.impact ?? '').toLowerCase();
+    const hasImpact = impactVal !== '' && impactVal !== 'undefined' && impactVal !== 'null';
+    if (hasImpact && !IMPACT_WHITELIST.includes(impactVal)) continue;
     // country 필터: US만
     if (item.country && item.country.toUpperCase() !== 'US') continue;
 

@@ -173,7 +173,7 @@ export default function EventsView({ T }: { T?: any }) {
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
   const [macroEvents, setMacroEvents] = useState<CalEvent[]>([]);
   const [selectedMacroDesc, setSelectedMacroDesc] = useState<string | null>(null);
-  const [macroFilter, setMacroFilter] = useState<string>('ALL');
+  const [macroFilters, setMacroFilters] = useState<Set<string>>(new Set(['ALL']));
   const [showEarnings, setShowEarnings] = useState(true);
   const [showMacro, setShowMacro] = useState(true);
 
@@ -263,18 +263,55 @@ export default function EventsView({ T }: { T?: any }) {
     { key: 'K200',    label: 'K200',    color: '#8A8A8A', labels: ['K200만기'] },
   ];
 
+  // 지표 카테고리 다중 선택 토글
+  const toggleMacroFilter = (key: string) => {
+    setMacroFilters(prev => {
+      const next = new Set(prev);
+      if (key === 'ALL') {
+        // ALL 클릭: 모두 해제하고 ALL만
+        return new Set(['ALL']);
+      }
+      // 특정 카테고리 클릭: ALL 해제 후 토글
+      next.delete('ALL');
+      if (next.has(key)) {
+        next.delete(key);
+        if (next.size === 0) next.add('ALL'); // 모두 해제되면 ALL로 돌아감
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
+  };
+
+  const isAllMacro = macroFilters.has('ALL');
+
   // macroEvents(Finnhub API)가 있으면 우선 사용, 없으면 MACRO_2026 fallback
   const macroToUse = macroEvents.length > 0 ? macroEvents : (MACRO_2026 as CalEvent[]);
 
-  // 지표 카테고리 필터 적용
+  // 지표 카테고리 필터 적용 (다중 선택)
   const filteredSpecial: CalEvent[] = (() => {
-    const cat = MACRO_CATEGORIES.find(c => c.key === macroFilter);
-    const fomcFiltered = (macroFilter === 'ALL' || macroFilter === 'FOMC') ? FOMC_2026 : [];
-    const futuresFiltered = (macroFilter === 'ALL' || macroFilter === 'K200') ? FUTURES_EVENTS : [];
+    // 활성화된 카테고리 객체들
+    const activeCats = isAllMacro
+      ? MACRO_CATEGORIES
+      : MACRO_CATEGORIES.filter(c => macroFilters.has(c.key));
+
+    const wantFomc = isAllMacro || macroFilters.has('FOMC');
+    const wantK200 = isAllMacro || macroFilters.has('K200');
+
+    // FOMC (하드코딩)
+    const fomcFiltered = wantFomc ? FOMC_2026 : [];
+    // 선물 만기
+    const futuresFiltered = wantK200 ? FUTURES_EVENTS : [];
+    // API / fallback 지표
+    const allowedLabels = isAllMacro
+      ? null // null → 전체 허용
+      : new Set(activeCats.flatMap(c => c.labels));
+
     const macroFiltered = macroToUse.filter(ev => {
-      if (macroFilter === 'ALL') return true;
-      return cat?.labels.includes(ev.label) ?? false;
+      if (allowedLabels === null) return true;
+      return allowedLabels.has(ev.label);
     });
+
     return [...fomcFiltered, ...futuresFiltered, ...macroFiltered];
   })();
 
@@ -441,13 +478,13 @@ export default function EventsView({ T }: { T?: any }) {
                 );
               })}
             </div>
-            {/* 지표 카테고리 필터 */}
+            {/* 지표 카테고리 필터 (다중 선택) */}
             {showMacro && (
               <div className="px-3 pb-2 flex flex-wrap gap-1">
                 {MACRO_CATEGORIES.map(cat => {
-                  const isActive = macroFilter === cat.key;
+                  const isActive = macroFilters.has(cat.key);
                   return (
-                    <button key={cat.key} onClick={() => setMacroFilter(cat.key)}
+                    <button key={cat.key} onClick={() => toggleMacroFilter(cat.key)}
                       className="text-[15px] mono px-2 py-0.5 border transition-all"
                       style={{
                         borderColor: isActive ? cat.color : theme.borderSoft,
@@ -745,7 +782,7 @@ export default function EventsView({ T }: { T?: any }) {
                   다가오는 이벤트
                 </span>
                 {/* 활성 필터 표시 */}
-                {(indexFilter !== 'ALL' || sectorFilter !== 'ALL' || macroFilter !== 'ALL' || !showEarnings || !showMacro) && (
+                {(indexFilter !== 'ALL' || sectorFilter !== 'ALL' || !isAllMacro || !showEarnings || !showMacro) && (
                   <div className="flex gap-1 flex-wrap">
                     {!showEarnings && <span className="text-[15px] mono px-1 border" style={{ color: theme.textDimmer, borderColor: theme.borderSoft }}>어닝숨김</span>}
                     {!showMacro && <span className="text-[15px] mono px-1 border" style={{ color: theme.textDimmer, borderColor: theme.borderSoft }}>지표숨김</span>}
@@ -761,10 +798,10 @@ export default function EventsView({ T }: { T?: any }) {
                         {SECTOR_LABEL[sectorFilter]}
                       </span>
                     )}
-                    {macroFilter !== 'ALL' && (() => {
-                      const cat = MACRO_CATEGORIES.find(c => c.key === macroFilter);
-                      return cat ? <span className="text-[15px] mono px-1 border" style={{ color: cat.color, borderColor: `${cat.color}50` }}>{cat.label}</span> : null;
-                    })()}
+                    {!isAllMacro && [...macroFilters].map(key => {
+                      const cat = MACRO_CATEGORIES.find(c => c.key === key);
+                      return cat ? <span key={key} className="text-[15px] mono px-1 border" style={{ color: cat.color, borderColor: `${cat.color}50` }}>{cat.label}</span> : null;
+                    })}
                   </div>
                 )}
               </div>
@@ -772,8 +809,8 @@ export default function EventsView({ T }: { T?: any }) {
                 <span className="text-[15px] mono" style={{ color: theme.textDimmer }}>
                   {loading ? '로딩 중...' : `${[...FOMC_2026, ...FUTURES_EVENTS, ...macroToUse, ...earningEvents].filter(e => e.dateKST >= today).length}건`}
                 </span>
-                {(indexFilter !== 'ALL' || sectorFilter !== 'ALL' || macroFilter !== 'ALL' || !showEarnings || !showMacro) && (
-                  <button onClick={() => { setIndexFilter('ALL'); setSectorFilter('ALL'); setMacroFilter('ALL'); setShowEarnings(true); setShowMacro(true); }}
+                {(indexFilter !== 'ALL' || sectorFilter !== 'ALL' || !isAllMacro || !showEarnings || !showMacro) && (
+                  <button onClick={() => { setIndexFilter('ALL'); setSectorFilter('ALL'); setMacroFilters(new Set(['ALL'])); setShowEarnings(true); setShowMacro(true); }}
                     className="text-[15px] mono px-1.5 border hover:opacity-70 transition-opacity"
                     style={{ color: theme.textDimmer, borderColor: theme.borderSoft }}>
                     초기화
