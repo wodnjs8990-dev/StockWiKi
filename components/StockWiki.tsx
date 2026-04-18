@@ -1745,11 +1745,11 @@ function CalculatorView({ selectedCalc, setSelectedCalc, T, isDark }) {
         </div>
       </div>
 
-      {/* PC: 좌측 목록 + 우측 계산기 패널 / 모바일: 기존 인라인 */}
-      <div className="flex gap-0 lg:gap-6 items-start">
+      {/* PC: 좌측 목록 + 우측 계산기 패널 / 모바일: 세로 스택 */}
+      <div className="flex flex-col lg:flex-row gap-0 lg:gap-6 lg:items-start">
 
         {/* ── 좌측: 항목 목록 ── */}
-        <div className="w-full lg:w-[320px] xl:w-[360px] shrink-0">
+        <div className="w-full lg:w-[320px] xl:w-[360px] lg:shrink-0">
 
           {/* 즐겨찾기 섹션 */}
           {favCalcList.length > 0 && (
