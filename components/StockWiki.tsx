@@ -507,6 +507,7 @@ export default function StockWiki({ features, customEvents }: { features?: Featu
           <HomeView
             T={T}
             isDark={isDark}
+            feat={feat}
             totalTerms={TERMS.length}
             recent={recent}
             favorites={favorites}
@@ -5895,7 +5896,7 @@ function DerivTaxCalc() {
 // ─────────────────────────────────────────────
 // Home View — 대시보드 탭
 // ─────────────────────────────────────────────
-function HomeView({ T, isDark, totalTerms, recent, favorites, categoryColors, setActiveTab, setSelectedTerm, setSelectedCalc, setSearchQuery, searchRef }: any) {
+function HomeView({ T, isDark, feat, totalTerms, recent, favorites, categoryColors, setActiveTab, setSelectedTerm, setSelectedCalc, setSearchQuery, searchRef }: any) {
   const [now, setNow] = React.useState(() => new Date());
   React.useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 1000);
@@ -5957,25 +5958,31 @@ function HomeView({ T, isDark, totalTerms, recent, favorites, categoryColors, se
                 전업투자자를 위한 한 벌의 책상.
               </p>
               <div className="flex flex-wrap gap-3">
-                <button onClick={() => { setActiveTab('glossary'); setTimeout(() => searchRef.current?.focus(), 100); }}
-                  className="flex items-center gap-2 px-4 py-2.5 text-sm border transition-all hover:opacity-80"
-                  style={{ borderColor: T.accent, background: T.accent, color: '#0a0a0a' }}>
-                  <Search size={13} />
-                  <span className="font-medium">용어 검색</span>
-                  <span className="mono text-[11px] opacity-60 ml-1">⌘K</span>
-                </button>
-                <button onClick={() => setActiveTab('calculator')}
-                  className="flex items-center gap-2 px-4 py-2.5 text-sm border transition-all hover:opacity-80"
-                  style={{ borderColor: T.border, color: T.textSecondary }}>
-                  <Calculator size={13} />
-                  <span>계산기</span>
-                </button>
-                <button onClick={() => setActiveTab('events')}
-                  className="flex items-center gap-2 px-4 py-2.5 text-sm border transition-all hover:opacity-80"
-                  style={{ borderColor: T.border, color: T.textSecondary }}>
-                  <CalendarDays size={13} />
-                  <span>이벤트 캘린더</span>
-                </button>
+                {feat?.glossary !== false && (
+                  <button onClick={() => { setActiveTab('glossary'); setTimeout(() => searchRef.current?.focus(), 100); }}
+                    className="flex items-center gap-2 px-4 py-2.5 text-sm border transition-all hover:opacity-80"
+                    style={{ borderColor: T.accent, background: T.accent, color: '#0a0a0a' }}>
+                    <Search size={13} />
+                    <span className="font-medium">용어 검색</span>
+                    <span className="mono text-[11px] opacity-60 ml-1">⌘K</span>
+                  </button>
+                )}
+                {feat?.calculator !== false && (
+                  <button onClick={() => setActiveTab('calculator')}
+                    className="flex items-center gap-2 px-4 py-2.5 text-sm border transition-all hover:opacity-80"
+                    style={{ borderColor: T.border, color: T.textSecondary }}>
+                    <Calculator size={13} />
+                    <span>계산기</span>
+                  </button>
+                )}
+                {feat?.events !== false && (
+                  <button onClick={() => setActiveTab('events')}
+                    className="flex items-center gap-2 px-4 py-2.5 text-sm border transition-all hover:opacity-80"
+                    style={{ borderColor: T.border, color: T.textSecondary }}>
+                    <CalendarDays size={13} />
+                    <span>이벤트 캘린더</span>
+                  </button>
+                )}
               </div>
             </div>
             {/* 시계 + 시장 상태 3개 */}
@@ -6167,18 +6174,20 @@ function HomeView({ T, isDark, totalTerms, recent, favorites, categoryColors, se
             ))}
           </div>
           {/* 이벤트 캘린더 쇼트컷 */}
-          <button onClick={() => setActiveTab('events')}
-            className="w-full flex items-center justify-between px-5 py-4 border-t transition-all hover:opacity-80"
-            style={{ borderColor: T.border, background: T.bgSurface }}>
-            <div className="flex items-center gap-3">
-              <CalendarDays size={14} style={{ color: HUE_FAMILIES.macro.base }} />
-              <div>
-                <div className="text-sm font-medium" style={{ color: T.textPrimary }}>이벤트 캘린더</div>
-                <div className="mono text-[10px]" style={{ color: T.textFaint }}>FOMC · CPI · 어닝시즌</div>
+          {feat?.events !== false && (
+            <button onClick={() => setActiveTab('events')}
+              className="w-full flex items-center justify-between px-5 py-4 border-t transition-all hover:opacity-80"
+              style={{ borderColor: T.border, background: T.bgSurface }}>
+              <div className="flex items-center gap-3">
+                <CalendarDays size={14} style={{ color: HUE_FAMILIES.macro.base }} />
+                <div>
+                  <div className="text-sm font-medium" style={{ color: T.textPrimary }}>이벤트 캘린더</div>
+                  <div className="mono text-[10px]" style={{ color: T.textFaint }}>FOMC · CPI · 어닝시즌</div>
+                </div>
               </div>
-            </div>
-            <ArrowUpRight size={13} style={{ color: T.textDimmer }} />
-          </button>
+              <ArrowUpRight size={13} style={{ color: T.textDimmer }} />
+            </button>
+          )}
         </div>
       </div>
     </div>
