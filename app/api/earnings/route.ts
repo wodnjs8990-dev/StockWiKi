@@ -3,23 +3,6 @@ import { NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-// ─── In-memory 캐시 ──────────────────────────────────────
-// 과거 데이터: 24시간 TTL (변하지 않음)
-// 미래 데이터: 1시간 TTL
-type CacheEntry = { data: EarningItem[]; expiresAt: number };
-const cache: Record<string, CacheEntry> = {};
-
-function getCached(key: string): EarningItem[] | null {
-  const entry = cache[key];
-  if (!entry) return null;
-  if (Date.now() > entry.expiresAt) { delete cache[key]; return null; }
-  return entry.data;
-}
-
-function setCached(key: string, data: EarningItem[], ttlMs: number) {
-  cache[key] = { data, expiresAt: Date.now() + ttlMs };
-}
-
 // ─── 타입 ───────────────────────────────────────────────
 export type EarningItem = {
   symbol: string;
@@ -71,7 +54,6 @@ async function fetchFinnhubEarnings(): Promise<EarningItem[]> {
   // 미래 90일 (현재 분기 이후 구간 보완)
   const futureEnd = new Date(todayKST);
   futureEnd.setDate(futureEnd.getDate() + 90);
-  const futureKey = `finnhub-future-${todayStr}`;
 
   const allResults: EarningItem[] = [];
 
@@ -109,10 +91,13 @@ async function fetchFinnhubEarnings(): Promise<EarningItem[]> {
       });
   };
 
-  const fetchRange = async (from: string, to: string): Promise<EarningItem[]> => {
+  // 과거 분기: 7일 캐시, 현재/미래: 1시간 캐시 — Vercel Data Cache에 저장됨
+  const fetchRange = async (from: string, to: string, isPast: boolean): Promise<EarningItem[]> => {
     try {
       const url = `https://finnhub.io/api/v1/calendar/earnings?from=${from}&to=${to}&token=${FINNHUB_KEY}`;
-      const res = await fetch(url, { cache: 'no-store' });
+      const res = await fetch(url, {
+        next: { revalidate: isPast ? 7 * 24 * 3600 : 3600 },
+      });
       if (!res.ok) return [];
       const data = await res.json();
       return parseItems(data?.earningsCalendar ?? []);
@@ -121,32 +106,21 @@ async function fetchFinnhubEarnings(): Promise<EarningItem[]> {
     }
   };
 
-  // 분기별 캐시 조회 / fetch
-  for (const q of quarters) {
-    const isPastQuarter = q.to < todayStr;
-    const cached = getCached(q.key);
-    if (cached) {
-      allResults.push(...cached);
-      continue;
-    }
-    const items = await fetchRange(q.from, q.to);
-    if (items.length > 0 || isPastQuarter) {
-      // 과거 분기: 24시간, 현재/미래 분기: 1시간
-      const ttl = isPastQuarter ? 24 * 3600 * 1000 : 3600 * 1000;
-      setCached(q.key, items, ttl);
-      allResults.push(...items);
-    }
-  }
+  // 분기별 병렬 fetch (Vercel이 캐시된 건 바로 반환, 미스만 실제 요청)
+  const quarterResults = await Promise.all(
+    quarters.map(q => fetchRange(q.from, q.to, q.to < todayStr))
+  );
+  for (const items of quarterResults) allResults.push(...items);
 
-  // 미래 90일 추가 fetch (분기 경계 넘는 구간 보완, 1시간 캐시)
-  const futureCached = getCached(futureKey);
-  if (futureCached) {
-    allResults.push(...futureCached);
-  } else {
-    const futureItems = await fetchRange(todayStr, futureEnd.toISOString().slice(0, 10));
-    setCached(futureKey, futureItems, 3600 * 1000);
-    allResults.push(...futureItems);
-  }
+  // 미래 90일 (1시간 캐시)
+  try {
+    const url = `https://finnhub.io/api/v1/calendar/earnings?from=${todayStr}&to=${futureEnd.toISOString().slice(0, 10)}&token=${FINNHUB_KEY}`;
+    const res = await fetch(url, { next: { revalidate: 3600 } });
+    if (res.ok) {
+      const data = await res.json();
+      allResults.push(...parseItems(data?.earningsCalendar ?? []));
+    }
+  } catch { /* 무시 */ }
 
   // 중복 제거 (symbol+date 기준)
   const seen = new Set<string>();
@@ -194,102 +168,62 @@ const KR_CORPS: { corpCode: string; name: string; symbol: string }[] = [
   { corpCode: '00251685', name: '카카오뱅크', symbol: '323410' },
 ];
 
-// 종목별로 corp_code를 지정해서 직접 조회 — page_count 한계로 누락되는 문제 해결
+// DART: 보고서유형 3개 병렬 fetch, Vercel Data Cache 활용
+// 1시간 캐시 — URL이 같으면 Vercel이 자동으로 캐싱
 async function fetchDartEarnings(): Promise<EarningItem[]> {
   if (!DART_KEY) return [];
 
   const today = new Date(Date.now() + 9 * 3600 * 1000);
   const todayStr = today.toISOString().slice(0, 10);
   const currentYear = today.getUTCFullYear();
-  const fromStr = `${currentYear}0101`;
-  const toStr = todayStr.replace(/-/g, '');
+  const bgn = `${currentYear}0101`;
+  const end = todayStr.replace(/-/g, '');
+  const corpSet = new Set(KR_CORPS.map(c => c.corpCode));
+  const bySymbol = new Map<string, EarningItem>();
 
-  // 분기별 캐시 키 — 과거 분기는 한번만 fetch
-  const quarters = [
-    { key: `dart-${currentYear}-Q1`, from: `${currentYear}0101`, to: `${currentYear}0331` },
-    { key: `dart-${currentYear}-Q2`, from: `${currentYear}0401`, to: `${currentYear}0630` },
-    { key: `dart-${currentYear}-Q3`, from: `${currentYear}0701`, to: `${currentYear}0930` },
-    { key: `dart-${currentYear}-Q4`, from: `${currentYear}1001`, to: `${currentYear}1231` },
-  ];
+  const fetchPType = async (pType: string): Promise<void> => {
+    try {
+      const url1 = `https://opendart.fss.or.kr/api/list.json?crtfc_key=${DART_KEY}&bgn_de=${bgn}&end_de=${end}&pblntf_ty=A&pblntf_detail_ty=${pType}&page_no=1&page_count=100`;
+      // 1시간 캐시 — Vercel Data Cache에 저장됨
+      const res1 = await fetch(url1, { next: { revalidate: 3600 } });
+      if (!res1.ok) return;
+      const data1 = await res1.json();
+      if (data1.status !== '000' && data1.status !== '013') return;
 
-  // 종목별로 corp_code 지정해서 직접 조회하는 함수
-  // DART list API: corp_code 파라미터로 특정 회사만 조회 가능
-  const fetchCorpEarnings = async (
-    corp: typeof KR_CORPS[0],
-    bgn: string,
-    end: string
-  ): Promise<{ date: string } | null> => {
-    // 분기(A003) 우선, 없으면 반기(A002), 없으면 사업(A001)
-    for (const pType of ['A003', 'A002', 'A001']) {
-      try {
-        const url = `https://opendart.fss.or.kr/api/list.json?crtfc_key=${DART_KEY}&corp_code=${corp.corpCode}&bgn_de=${bgn}&end_de=${end}&pblntf_ty=A&pblntf_detail_ty=${pType}&page_count=10`;
-        const res = await fetch(url, { cache: 'no-store' });
-        if (!res.ok) continue;
-        const data = await res.json();
-        if (data.status !== '000' && data.status !== '013') continue;
-        const list: any[] = data.list ?? [];
-        if (list.length === 0) continue;
-        // 가장 최신 공시일
-        const latest = list.reduce((a: any, b: any) => a.rcept_dt > b.rcept_dt ? a : b);
-        const rdt = latest.rcept_dt as string;
-        return { date: `${rdt.slice(0, 4)}-${rdt.slice(4, 6)}-${rdt.slice(6, 8)}` };
-      } catch { /* 개별 실패 무시 */ }
-    }
-    return null;
-  };
+      const list: any[] = [...(data1.list ?? [])];
 
-  const allResults: EarningItem[] = [];
+      // 100건 초과 시 2페이지 (1시간 캐시)
+      if ((data1.total_count ?? 0) > 100) {
+        try {
+          const url2 = url1.replace('page_no=1', 'page_no=2');
+          const res2 = await fetch(url2, { next: { revalidate: 3600 } });
+          if (res2.ok) {
+            const data2 = await res2.json();
+            if (data2.status === '000') list.push(...(data2.list ?? []));
+          }
+        } catch { /* 2페이지 실패 무시 */ }
+      }
 
-  for (const q of quarters) {
-    // 아직 시작 안 한 분기는 스킵
-    if (q.from > toStr) continue;
-
-    const isPastQuarter = q.to < todayStr.replace(/-/g, '');
-    const cached = getCached(q.key);
-    if (cached) {
-      allResults.push(...cached);
-      continue;
-    }
-
-    // 이 분기의 실제 조회 범위 (오늘 이후는 오늘까지만)
-    const effectiveTo = q.to > toStr ? toStr : q.to;
-
-    // 30개 종목을 5개씩 병렬로 (DART API 부하 제한)
-    const quarterResults: EarningItem[] = [];
-    const BATCH = 5;
-    for (let i = 0; i < KR_CORPS.length; i += BATCH) {
-      const batch = KR_CORPS.slice(i, i + BATCH);
-      const settled = await Promise.allSettled(
-        batch.map(corp => fetchCorpEarnings(corp, q.from, effectiveTo))
-      );
-      for (let j = 0; j < batch.length; j++) {
-        const result = settled[j];
-        if (result.status === 'fulfilled' && result.value) {
-          quarterResults.push({
-            symbol: batch[j].symbol,
-            nameKo: batch[j].name,
-            date: result.value.date,
-            market: 'KR',
-            timing: undefined,
+      for (const item of list) {
+        if (!corpSet.has(item.corp_code)) continue;
+        const corp = KR_CORPS.find(c => c.corpCode === item.corp_code)!;
+        const rdt = item.rcept_dt as string;
+        const date = `${rdt.slice(0, 4)}-${rdt.slice(4, 6)}-${rdt.slice(6, 8)}`;
+        const existing = bySymbol.get(corp.symbol);
+        if (!existing || date > existing.date) {
+          bySymbol.set(corp.symbol, {
+            symbol: corp.symbol, nameKo: corp.name, date,
+            market: 'KR', timing: undefined,
             epsEstimate: null, epsActual: null,
             revenueEstimate: null, revenueActual: null, surprise: null,
           });
         }
       }
-    }
+    } catch { /* 실패 무시 */ }
+  };
 
-    // 과거 분기: 24h TTL, 현재 분기: 1h TTL
-    const ttl = isPastQuarter ? 24 * 3600 * 1000 : 3600 * 1000;
-    setCached(q.key, quarterResults, ttl);
-    allResults.push(...quarterResults);
-  }
-
-  // symbol 중복 제거 (여러 분기에 같은 종목이 있으면 최신 날짜 우선)
-  const bySymbol = new Map<string, EarningItem>();
-  for (const e of allResults) {
-    const existing = bySymbol.get(e.symbol);
-    if (!existing || e.date > existing.date) bySymbol.set(e.symbol, e);
-  }
+  // 3개 보고서유형 병렬 fetch
+  await Promise.all(['A003', 'A002', 'A001'].map(fetchPType));
   return Array.from(bySymbol.values());
 }
 
