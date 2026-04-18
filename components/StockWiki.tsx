@@ -1896,20 +1896,19 @@ function CalculatorView({ selectedCalc, setSelectedCalc, T, isDark }) {
     return () => window.removeEventListener(CALC_HISTORY_EVENT, handler as EventListener);
   }, []);
 
-  // 선택된 계산기 패널로 자동 스크롤 (id 기반 — 루프 내 ref 중복 문제 해결)
+  // 선택된 계산기 버튼 기준 스크롤: 버튼이 헤더 바로 아래로 오도록
   useEffect(() => {
     if (!selectedCalc) return;
-    // 두 프레임 대기: 패널 렌더 완료 후 정확한 위치 계산
     const raf1 = requestAnimationFrame(() => {
       requestAnimationFrame(() => {
-        // 모바일: 하단 모바일 패널로 스크롤, PC: 우측 패널로 스크롤
         const isMobile = window.innerWidth < 1024;
-        const panelId = isMobile
-          ? `calc-panel-mobile-${selectedCalc}`
+        // 모바일: 버튼 id로 버튼을 화면 상단 가까이 스크롤
+        const btnId = isMobile
+          ? `calc-btn-${selectedCalc}`
           : `calc-panel-${selectedCalc}`;
-        const el = document.getElementById(panelId);
+        const el = document.getElementById(btnId);
         if (!el) return;
-        const headerOffset = isMobile ? 70 : 90;
+        const headerOffset = isMobile ? 64 : 90;
         const rect = el.getBoundingClientRect();
         const targetY = window.scrollY + rect.top - headerOffset;
         window.scrollTo({ top: targetY, behavior: 'smooth' });
@@ -2099,99 +2098,98 @@ function CalculatorView({ selectedCalc, setSelectedCalc, T, isDark }) {
 
           {/* 카테고리별 계산기 목록 */}
           <div className="border" style={{ borderColor: T.border }}>
-            {CALC_CATEGORIES.map((cat, ci) => (
-              <div key={cat.name} className={ci !== CALC_CATEGORIES.length - 1 ? 'border-b' : ''} style={{ borderColor: T.border }}>
-                {/* 카테고리 헤더 */}
-                <div className="px-4 py-2.5 flex items-center gap-2.5" style={{ background: T.bgCard }}>
-                  <span className="w-1.5 h-1.5 rounded-full" style={{ background: cat.color }}></span>
-                  <span className="text-[13px] mono uppercase tracking-[0.2em]" style={{ color: T.textMuted }}>{cat.name}</span>
-                  <span className="ml-auto text-[12px] mono" style={{ color: T.textDimmer }}>{String(cat.calcs.length).padStart(2, '0')}</span>
-                </div>
-                {/* 계산기 버튼 — 2열 */}
-                <div className="grid grid-cols-2 border-t" style={{ borderColor: T.border }}>
-                  {cat.calcs.map((calc) => {
-                    const active = selectedCalc === calc.id;
-                    const isFav = favCalcs.has(calc.id);
-                    return (
-                      <div key={calc.id} className="relative group flex items-stretch border-r border-b" style={{ borderColor: T.commandKSelected }}>
+            {CALC_CATEGORIES.map((cat, ci) => {
+              // 이 카테고리에 선택된 계산기가 있는지
+              const activeCatCalc = cat.calcs.find(c => c.id === selectedCalc);
+              return (
+                <div key={cat.name} className={ci !== CALC_CATEGORIES.length - 1 ? 'border-b' : ''} style={{ borderColor: T.border }}>
+                  {/* 카테고리 헤더 */}
+                  <div className="px-4 py-2.5 flex items-center gap-2.5" style={{ background: T.bgCard }}>
+                    <span className="w-1.5 h-1.5 rounded-full" style={{ background: cat.color }}></span>
+                    <span className="text-[13px] mono uppercase tracking-[0.2em]" style={{ color: T.textMuted }}>{cat.name}</span>
+                    <span className="ml-auto text-[12px] mono" style={{ color: T.textDimmer }}>{String(cat.calcs.length).padStart(2, '0')}</span>
+                  </div>
+                  {/* 계산기 버튼 — 2열 */}
+                  <div className="grid grid-cols-2 border-t" style={{ borderColor: T.border }}>
+                    {cat.calcs.map((calc) => {
+                      const active = selectedCalc === calc.id;
+                      const isFav = favCalcs.has(calc.id);
+                      return (
+                        <div key={calc.id} id={`calc-btn-${calc.id}`} className="relative group flex items-stretch border-r border-b" style={{ borderColor: T.commandKSelected }}>
+                          <button
+                            onClick={() => setSelectedCalc(active ? '' : calc.id)}
+                            className="flex-1 flex items-center gap-2 px-3 py-2.5 text-xs transition-all text-left"
+                            style={{
+                              background: active ? cat.color : 'transparent',
+                              color: active ? '#0a0a0a' : T.textSecondary,
+                            }}
+                          >
+                            <span className="text-[12px] mono opacity-50 w-4 shrink-0">{calc.num}</span>
+                            <span className="font-medium truncate">{calc.name}</span>
+                          </button>
+                          {/* 즐겨찾기 별 */}
+                          <button
+                            onClick={(e) => toggleFavCalc(calc.id, e)}
+                            className="absolute top-1/2 right-1 -translate-y-1/2 p-1 transition-opacity group-hover:opacity-100"
+                            style={{ opacity: isFav ? 1 : 0, color: active ? '#0a0a0a' : (isFav ? T.accent : T.textFaint) }}
+                            title={isFav ? '즐겨찾기 해제' : '즐겨찾기 추가'}
+                          >
+                            <Star size={10} fill={isFav ? 'currentColor' : 'none'} />
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* ── 모바일: 선택된 계산기가 이 카테고리에 속하면 바로 아래 인라인 패널 ── */}
+                  {activeCatCalc && (
+                    <div className="lg:hidden border-t" style={{ borderColor: T.border, background: T.bgSurface }}>
+                      {/* 패널 헤더 */}
+                      <div className="px-4 py-3 border-b flex items-center gap-2 sticky top-[56px] z-10"
+                        style={{ borderColor: T.border, background: T.bgCard }}>
+                        <span className="w-2 h-2 rounded-full shrink-0" style={{ background: cat.color }}></span>
+                        <span className="text-[11px] mono uppercase tracking-[0.2em]" style={{ color: cat.color }}>
+                          {activeCatCalc.num}
+                        </span>
+                        <span className="text-sm font-medium flex-1 truncate" style={{ color: T.textPrimary }}>{activeCatCalc.name}</span>
+                        {/* 결과 저장 */}
                         <button
-                          onClick={() => setSelectedCalc(active ? '' : calc.id)}
-                          className="flex-1 flex items-center gap-2 px-3 py-2.5 text-xs transition-all text-left"
-                          style={{
-                            background: active ? cat.color : 'transparent',
-                            color: active ? '#0a0a0a' : T.textSecondary,
+                          onClick={() => {
+                            const panel = document.getElementById(`calc-panel-mobile-${selectedCalc}`);
+                            if (!panel) return;
+                            const boxes = panel.querySelectorAll('[data-result-label]');
+                            const results: { label: string; value: string; unit?: string }[] = [];
+                            boxes.forEach(box => {
+                              const label = box.getAttribute('data-result-label') || '';
+                              const value = box.getAttribute('data-result-value') || '';
+                              const unit = box.getAttribute('data-result-unit') || undefined;
+                              if (value && value !== '—' && value !== '') results.push({ label, value, unit });
+                            });
+                            if (results.length > 0) {
+                              dispatchCalcHistory(selectedCalc, activeCatCalc.name, results);
+                              setShowHistory(true);
+                            }
                           }}
+                          className="flex items-center gap-1 text-[11px] mono px-2 py-1 border"
+                          style={{ borderColor: T.border, color: T.textFaint }}
                         >
-                          <span className="text-[12px] mono opacity-50 w-4 shrink-0">{calc.num}</span>
-                          <span className="font-medium truncate">{calc.name}</span>
+                          <Clock size={10} />
+                          <span>저장</span>
                         </button>
-                        {/* 즐겨찾기 별 — hover + 이미 즐겨찾기된 경우 항상 표시 */}
-                        <button
-                          onClick={(e) => toggleFavCalc(calc.id, e)}
-                          className="absolute top-1/2 right-1 -translate-y-1/2 p-1 transition-opacity group-hover:opacity-100"
-                          style={{ opacity: isFav ? 1 : 0, color: active ? '#0a0a0a' : (isFav ? T.accent : T.textFaint) }}
-                          title={isFav ? '즐겨찾기 해제' : '즐겨찾기 추가'}
-                        >
-                          <Star size={10} fill={isFav ? 'currentColor' : 'none'} />
+                        <button onClick={() => setSelectedCalc('')} className="p-1.5" style={{ color: T.textDimmer }}>
+                          <X size={14} />
                         </button>
                       </div>
-                    );
-                  })}
+                      <div id={`calc-panel-mobile-${selectedCalc}`} className="p-5">
+                        {renderCalcComponent(selectedCalc)}
+                      </div>
+                    </div>
+                  )}
                 </div>
-
-                {/* 모바일 인라인 패널은 목록 아래로 이동됨 */}
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
-
-        {/* ── 모바일: 계산기 패널 (항목 목록 아래) ── */}
-        {selectedCalc && currentCalc && (
-          <div className="lg:hidden mt-4 border" style={{ borderColor: T.border, background: T.bgSurface }}>
-            {/* 패널 헤더 */}
-            <div className="px-4 py-3 border-b flex items-center gap-3 sticky top-[56px] z-10"
-              style={{ borderColor: T.border, background: T.bgCard }}>
-              <span className="text-[11px] mono uppercase tracking-[0.2em]" style={{ color: currentCalc.color }}>
-                M—{currentCalc.num}
-              </span>
-              <span className="text-sm font-medium flex-1 truncate" style={{ color: T.textPrimary }}>{currentCalc.name}</span>
-              {/* 결과 저장 버튼 */}
-              <button
-                onClick={() => {
-                  const panel = document.getElementById(`calc-panel-mobile-${selectedCalc}`);
-                  if (!panel) return;
-                  const boxes = panel.querySelectorAll('[data-result-label]');
-                  const results: { label: string; value: string; unit?: string }[] = [];
-                  boxes.forEach(box => {
-                    const label = box.getAttribute('data-result-label') || '';
-                    const value = box.getAttribute('data-result-value') || '';
-                    const unit = box.getAttribute('data-result-unit') || undefined;
-                    if (value && value !== '—' && value !== '') results.push({ label, value, unit });
-                  });
-                  if (results.length > 0) {
-                    dispatchCalcHistory(selectedCalc, currentCalc.name, results);
-                    setShowHistory(true);
-                  }
-                }}
-                className="flex items-center gap-1 text-[11px] mono px-2 py-1 border"
-                style={{ borderColor: T.border, color: T.textFaint }}
-              >
-                <Clock size={10} />
-                <span>저장</span>
-              </button>
-              <button
-                onClick={() => setSelectedCalc('')}
-                className="p-1.5"
-                style={{ color: T.textDimmer }}
-              >
-                <X size={14} />
-              </button>
-            </div>
-            <div id={`calc-panel-mobile-${selectedCalc}`} className="p-5">
-              {renderCalcComponent(selectedCalc)}
-            </div>
-          </div>
-        )}
 
         {/* ── 우측: 계산기 패널 (PC 전용 sticky) ── */}
         <div className="hidden lg:block flex-1 min-w-0 sticky top-[90px] self-start">
@@ -6057,12 +6055,12 @@ function HomeView({ T, isDark, totalTerms, recent, favorites, categoryColors, se
             { k: 'Families',v: '006',                              u: 'hue family', color: HUE_FAMILIES.macro.base },
             { k: 'Fav',     v: String(favorites?.size ?? 0).padStart(3,'0'), u: '즐겨찾기', color: T.accent },
           ].map((s, i, arr) => (
-            <div key={s.k} className="flex flex-col gap-1 px-4 md:px-6 py-3 border-r"
+            <div key={s.k} className="flex flex-col gap-1 px-3 md:px-6 py-3 border-r min-w-0"
               style={{ borderColor: i < arr.length - 1 ? T.border : 'transparent' }}>
-              <span className="mono text-[10px] tracking-[0.28em] uppercase" style={{ color: T.textFaint }}>{s.k}</span>
-              <div className="flex items-baseline gap-1.5">
-                <span className="mono font-medium" style={{ fontSize: 22, color: s.color, letterSpacing: '-0.02em' }}>{s.v}</span>
-                <span className="mono text-[10px]" style={{ color: T.textDimmer }}>{s.u}</span>
+              <span className="mono text-[10px] tracking-[0.2em] uppercase truncate" style={{ color: T.textFaint }}>{s.k}</span>
+              <div className="flex items-baseline gap-1 flex-wrap">
+                <span className="mono font-medium whitespace-nowrap" style={{ fontSize: 'clamp(16px,3.5vw,22px)', color: s.color, letterSpacing: '-0.02em' }}>{s.v}</span>
+                <span className="mono text-[10px] whitespace-nowrap" style={{ color: T.textDimmer }}>{s.u}</span>
               </div>
             </div>
           ))}
