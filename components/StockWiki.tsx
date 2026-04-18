@@ -374,13 +374,6 @@ export default function StockWiki({ features }: { features?: Features }) {
               <span className="hidden lg:inline-block w-px h-4" style={{ background: T.border }}></span>
               <span className="hidden lg:inline-block text-[12px] tracking-[0.3em] mono uppercase" style={{ color: T.textFaint }}>Terms & Calculators</span>
             </button>
-            {/* 모바일: 현재 탭 표시 */}
-            <div className="flex md:hidden items-center gap-1.5 text-[12px] mono uppercase tracking-wider" style={{ color: T.textFaint }}>
-              <span className="w-px h-3" style={{ background: T.border }}></span>
-              <span>
-                {activeTab === 'glossary' ? '금융 사전' : activeTab === 'calculator' ? '계산기' : activeTab === 'events' ? '이벤트' : ''}
-              </span>
-            </div>
           </div>
           <div className="flex items-center gap-2">
             {feat.commandK && (
@@ -423,6 +416,17 @@ export default function StockWiki({ features }: { features?: Features }) {
                 <span>GUIDE</span>
               </button>
             </div>
+            {/* 모바일: 검색 버튼 */}
+            {feat.commandK && (
+              <button
+                onClick={() => setShowCommandK(true)}
+                className="flex md:hidden items-center justify-center w-8 h-8 border"
+                style={{ borderColor: T.border, color: T.textFaint }}
+                aria-label="검색"
+              >
+                <Search size={15} />
+              </button>
+            )}
             {/* 모바일 메뉴 버튼 */}
             <button
               onClick={() => setSidebarOpen(true)}
@@ -464,7 +468,7 @@ export default function StockWiki({ features }: { features?: Features }) {
         </div>
       </header>
 
-      <main className="max-w-[1400px] mx-auto px-4 md:px-8 pt-5 md:pt-6 pb-12 min-h-[calc(100vh-180px)]">
+      <main className="max-w-[1400px] mx-auto px-4 md:px-8 pt-5 md:pt-6 pb-24 md:pb-12 min-h-[calc(100vh-180px)]">
         {activeTab === 'none' && (
           <div className="flex items-center justify-center" style={{ minHeight: '60vh' }}>
             <div className="text-center max-w-md px-6">
@@ -693,6 +697,38 @@ export default function StockWiki({ features }: { features?: Features }) {
       {showGuide && (
         <GuideDrawer onClose={() => setShowGuide(false)} T={T} isDark={isDark} />
       )}
+
+      {/* 모바일 하단 탭바 */}
+      <nav
+        className="md:hidden fixed bottom-0 inset-x-0 z-40 flex border-t"
+        style={{ background: T.bgHeader, borderColor: T.border, backdropFilter: 'blur(12px)' }}
+      >
+        {[
+          { id: 'glossary', label: '금융 사전', icon: BookOpen },
+          { id: 'calculator', label: '계산기', icon: Calculator },
+          { id: 'events', label: '이벤트', icon: CalendarDays },
+        ].filter(tab => feat[tab.id as keyof Features] !== false).map(tab => {
+          const active = activeTab === tab.id;
+          const Icon = tab.icon;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className="relative flex-1 flex flex-col items-center justify-center gap-1 py-3 transition-all"
+              style={{ color: active ? T.accent : T.textFaint }}
+            >
+              <Icon size={20} strokeWidth={active ? 2 : 1.5} />
+              <span className="text-[10px] mono tracking-wide">{tab.label}</span>
+              {active && (
+                <span
+                  className="absolute top-0 inset-x-4 h-0.5"
+                  style={{ background: T.accent }}
+                />
+              )}
+            </button>
+          );
+        })}
+      </nav>
 
       {showCommandK && feat.commandK && (
         <CommandK
