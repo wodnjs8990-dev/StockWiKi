@@ -3633,17 +3633,59 @@ function BondPriceCalc() {
 // ─────────────────────────────────────────────
 const GUIDE_SECTIONS = [
   {
+    id: 'about',
+    icon: '◈',
+    title: '소개',
+    color: '#C89650',
+    items: [
+      {
+        label: '만든 이유',
+        desc: '유튜브나 강의, 재무제표를 보다 보면 처음 보는 용어가 툭 튀어나와 흐름이 끊기는 순간이 있습니다. 그럴 때마다 검색창을 열고, 여러 사이트를 돌아다니며 파편화된 정보를 찾아야 하는 게 불편했습니다. StockWiki는 그 불편함에서 출발했습니다. 투자·경제 관련 용어, 계산기, 일정 정보를 한 곳에 모아 — 흐름을 끊지 않고 바로 찾고, 바로 이해할 수 있도록.',
+      },
+      {
+        label: '어떤 분께 유용한가요',
+        desc: '주식이나 경제 공부를 막 시작한 분, 재무제표를 처음 접하는 분, 유튜브나 뉴스에서 낯선 용어가 나올 때마다 매번 따로 검색하는 분들에게 특히 도움이 됩니다. 전문 투자자보다는 "공부하는 투자자"를 위한 사전입니다.',
+      },
+      {
+        label: '수록 범위',
+        desc: '주식 기본 용어부터 파생상품, 채권, 거시경제 지표, 회계·재무제표 용어까지 약 500종 이상을 수록하고 있으며 계속 추가됩니다. 미국·한국 시장 모두를 커버합니다.',
+      },
+      {
+        label: '정보 활용 안내',
+        desc: '이 사이트의 모든 정보는 학습과 이해를 돕기 위한 것입니다. 특정 종목이나 상품에 대한 투자를 권유하지 않으며, 투자 결정과 그에 따른 책임은 전적으로 이용자 본인에게 있습니다.',
+      },
+    ],
+  },
+  {
     id: 'glossary',
     icon: '中',
     title: '금융 사전',
-    color: '#C89650',
+    color: '#7B9FDF',
     items: [
-      { label: '용어 검색', desc: '상단 검색창에 한글/영문/약어 입력. 실시간으로 필터링됩니다.' },
-      { label: '카테고리 필터', desc: '좌측(데스크탑) 또는 상단(모바일) 카테고리 탭으로 주제별 탐색.' },
-      { label: '즐겨찾기 ★', desc: '용어 상세 화면 우측 ★ 버튼으로 추가. 즐겨찾기 카테고리에서 모아 볼 수 있습니다.' },
-      { label: '메모 기능', desc: '즐겨찾기된 용어에 개인 메모 작성 가능. 즐겨찾기 목록에서 바로 편집.' },
-      { label: '용어 비교', desc: '용어 상세 → "비교" 버튼으로 두 용어를 나란히 비교. 유사 개념 파악에 유용.' },
-      { label: '공유 링크', desc: '용어 상세 → 공유 아이콘으로 해당 용어의 직접 링크 복사.' },
+      {
+        label: '용어 찾기',
+        desc: '화면 위 검색창에 찾고 싶은 단어를 입력하면 됩니다. 한글로 입력해도 되고, 영문 약어 (예: PER, ROE)로 입력해도 됩니다. 입력하는 즉시 결과가 바뀝니다.',
+      },
+      {
+        label: '카테고리로 탐색',
+        desc: '왼쪽 (데스크탑) 또는 상단 탭 (모바일) 에서 주식 기초 · 재무제표 · 파생상품 등 주제별로 묶인 용어를 볼 수 있습니다. "지금 공부하는 분야"의 용어를 한눈에 훑기 좋습니다.',
+      },
+      {
+        label: '즐겨찾기 (★)',
+        desc: '용어를 클릭해 상세 내용을 열면 오른쪽 위에 ★ 버튼이 있습니다. 누르면 즐겨찾기에 저장되고, 카테고리 탭에서 "★ 즐겨찾기" 항목을 누르면 저장한 용어만 모아 볼 수 있습니다. 자주 헷갈리는 용어를 따로 모아두기 좋습니다.',
+      },
+      {
+        label: '나만의 메모 남기기',
+        desc: '즐겨찾기한 용어에는 짧은 메모를 직접 달 수 있습니다. 예를 들어 "이 용어 처음 나온 강의: OO강의 3편" 같이 나만의 문맥을 적어두면, 나중에 다시 찾을 때 훨씬 빠르게 떠오릅니다.',
+      },
+      {
+        label: '두 용어 나란히 비교',
+        desc: '비슷해 보이는 두 용어 (예: 영업이익 vs 순이익) 가 헷갈릴 때 유용합니다. 용어 상세 화면에서 "비교" 버튼을 누르면 두 화면이 나란히 열려 차이를 한눈에 확인할 수 있습니다.',
+      },
+      {
+        label: '이 용어 링크 공유',
+        desc: '용어 상세 화면의 공유 아이콘을 누르면 해당 용어로 바로 연결되는 링크가 복사됩니다. 스터디 모임이나 단체방에서 특정 용어를 빠르게 공유할 때 사용하세요.',
+      },
     ],
   },
   {
@@ -3652,10 +3694,18 @@ const GUIDE_SECTIONS = [
     title: '계산기',
     color: '#5FA8A0',
     items: [
-      { label: '계산기 선택', desc: '좌측(데스크탑) 리스트 또는 상단 드롭다운으로 카테고리별 계산기 선택.' },
-      { label: '비교 모드', desc: '우측 상단 "비교 모드" 버튼으로 두 시나리오를 나란히 계산. A/B 조건 비교에 활용.' },
-      { label: '계산 히스토리', desc: '계산 실행 시 자동 기록. 히스토리 패널에서 이전 결과 재확인 가능.' },
-      { label: '포함 항목', desc: 'PER/PBR/ROE · 배당수익률 · DCF · CAGR · 손익분기점 · 레버리지 · 채권 · 연금 등 29종+.' },
+      {
+        label: '어떤 계산기가 있나요',
+        desc: '주가 관련 (PER, PBR, ROE 등), 배당 수익률, 기업 가치 추정 (DCF), 연평균 성장률 (CAGR), 손익분기점, 채권 수익률, 레버리지 효과, 연금·복리 계산 등 총 29종 이상이 있습니다. 왼쪽 목록 (데스크탑) 또는 상단 드롭다운 (모바일) 에서 원하는 항목을 고르면 됩니다.',
+      },
+      {
+        label: '"만약 이랬다면?" 비교 모드',
+        desc: '화면 오른쪽 위의 "비교 모드" 버튼을 켜면 두 개의 계산기가 나란히 열립니다. "지금 조건"과 "다른 조건"을 동시에 넣고 결과를 비교할 수 있어서, 이율이 1% 달라지면 최종 금액이 얼마나 차이 나는지 같은 상황에 유용합니다.',
+      },
+      {
+        label: '계산 기록 저장',
+        desc: '계산을 실행할 때마다 자동으로 기록이 쌓입니다. 화면 아래쪽 히스토리 패널을 열면 직전 계산 결과들을 다시 확인할 수 있습니다. 새로 고침해도 기록은 남아 있습니다.',
+      },
     ],
   },
   {
@@ -3664,37 +3714,66 @@ const GUIDE_SECTIONS = [
     title: '이벤트 캘린더',
     color: '#9B7FD4',
     items: [
-      { label: '어닝 / 지표 토글', desc: '필터 바 상단 "어닝" / "지표" 버튼으로 실적 발표와 경제지표를 개별 ON/OFF.' },
-      { label: '섹터 필터', desc: '어닝 활성화 시 Technology, Finance 등 섹터별 필터로 관심 종목만 표시.' },
-      { label: '경제지표 카테고리', desc: '지표 활성화 시 연준/물가/고용/성장/소비/PMI/주택/에너지/국채 카테고리로 필터링.' },
-      { label: '날짜 클릭', desc: '캘린더 날짜 클릭 → 하단 상세 패널에 해당일 이벤트 목록과 지표 발표치/예상치 표시.' },
-      { label: '지표 데이터', desc: 'Finnhub API 연동. 발표 후에는 실제 수치, 사전에는 예상치(컨센서스)가 표시됩니다.' },
+      {
+        label: '캘린더에 표시되는 것',
+        desc: '두 가지 정보가 날짜에 표시됩니다. 하나는 미국 주요 기업들의 실적 발표일 (어닝), 다른 하나는 CPI·고용·금리 결정 같은 주요 경제 지표 발표일 (지표) 입니다. 위쪽 "어닝" / "지표" 버튼으로 각각 켜고 끌 수 있습니다.',
+      },
+      {
+        label: '실적 발표 (어닝) 필터',
+        desc: '"어닝"을 켜면 애플, 엔비디아 같은 미국 주요 기업의 실적 발표 예정일이 캘린더에 표시됩니다. 기술 · 금융 · 소비재 등 업종별로 추려볼 수도 있습니다.',
+      },
+      {
+        label: '경제 지표 필터',
+        desc: '"지표"를 켜면 물가 (CPI, PPI), 고용 (비농업 고용, 실업률), 성장 (GDP), 금리 결정 (FOMC), 에너지 재고 (EIA) 등 시장에 영향을 주는 주요 발표일이 표시됩니다. 카테고리 버튼으로 관심 있는 항목만 골라볼 수 있습니다.',
+      },
+      {
+        label: '날짜를 누르면',
+        desc: '날짜 칸을 클릭하면 화면 아래에 그날의 상세 일정이 펼쳐집니다. 지표 발표의 경우 발표 이후라면 실제 수치가, 아직 발표 전이라면 시장 예상치가 함께 표시됩니다.',
+      },
+      {
+        label: '데이터 출처',
+        desc: '경제 지표 일정은 Finnhub 금융 데이터 서비스를 통해 가져옵니다. 실적 발표 일정도 외부 API와 연동되어 있어, 별도 업데이트 없이 항상 최신 정보를 반영합니다.',
+      },
     ],
   },
   {
     id: 'shortcuts',
     icon: '⌘',
-    title: '단축키',
-    color: '#7B9FDF',
+    title: '단축키 · 기타',
+    color: '#8A9A7A',
     items: [
-      { label: '⌘K / Ctrl+K', desc: '빠른 검색 팔레트 열기. 용어명, 영문명으로 즉시 검색.' },
-      { label: '/ (슬래시)', desc: '본문에서 슬래시 입력 시 검색창에 자동 포커스.' },
-      { label: 'Esc', desc: '현재 열린 모달 / 드로어 / 팔레트 닫기.' },
-      { label: '테마 토글', desc: '헤더 우측 달/해 아이콘으로 다크 ↔ 라이트 전환. 설정이 저장됩니다.' },
+      {
+        label: '빠른 검색 (⌘K)',
+        desc: '키보드에서 Command + K (Mac) 또는 Ctrl + K (Windows) 를 누르면 검색창이 화면 중앙에 뜹니다. 마우스 없이 키보드만으로 바로 용어를 검색할 수 있습니다.',
+      },
+      {
+        label: '/ 키로 검색창 포커스',
+        desc: '화면 어디서든 키보드의 / (슬래시) 키를 누르면 금융 사전 검색창으로 커서가 이동합니다.',
+      },
+      {
+        label: 'Esc 키로 닫기',
+        desc: '열려 있는 용어 창, 가이드, 검색 팔레트 등을 모두 Esc 키로 닫을 수 있습니다.',
+      },
+      {
+        label: '다크 / 라이트 모드',
+        desc: '헤더 오른쪽의 달 / 해 아이콘을 누르면 화면 색상 테마가 바뀝니다. 선택한 테마는 다음 방문 때도 유지됩니다.',
+      },
+      {
+        label: '모바일에서 사용하기',
+        desc: '모바일에서는 화면 오른쪽 위 메뉴 버튼 (☰) 을 누르면 카테고리 탐색, 최근 본 용어, 검색 등을 빠르게 접근할 수 있습니다.',
+      },
     ],
   },
 ];
 
 function GuideDrawer({ onClose, T, isDark }: { onClose: () => void; T: any; isDark: boolean }) {
-  const [activeSection, setActiveSection] = useState('glossary');
+  const [activeSection, setActiveSection] = useState('about');
   const drawerRef = useRef<HTMLDivElement>(null);
 
-  // 포커스 트랩
   useEffect(() => {
     drawerRef.current?.focus();
   }, []);
 
-  // 배경 스크롤 막기
   useEffect(() => {
     document.body.style.overflow = 'hidden';
     return () => { document.body.style.overflow = ''; };
@@ -3714,23 +3793,23 @@ function GuideDrawer({ onClose, T, isDark }: { onClose: () => void; T: any; isDa
         tabIndex={-1}
         className="hidden md:flex ml-auto h-full flex-col outline-none"
         style={{
-          width: '420px',
+          width: '560px',
           background: T.bgSurface,
           borderLeft: `1px solid ${T.border}`,
         }}
         onClick={e => e.stopPropagation()}
       >
         {/* 헤더 */}
-        <div className="flex items-center justify-between px-6 py-5 border-b shrink-0" style={{ borderColor: T.border }}>
+        <div className="flex items-center justify-between px-7 py-5 border-b shrink-0" style={{ borderColor: T.border }}>
           <div>
-            <div className="text-[11px] mono uppercase tracking-[0.3em] mb-1" style={{ color: T.textFaint }}>§ HOW TO USE</div>
-            <div className="text-lg font-light tracking-tight" style={{ color: T.textPrimary }}>
+            <div className="text-[11px] mono uppercase tracking-[0.3em] mb-1.5" style={{ color: T.textFaint }}>§ HOW TO USE</div>
+            <div className="text-xl font-light tracking-tight" style={{ color: T.textPrimary }}>
               사이트 사용 가이드
             </div>
           </div>
           <button
             onClick={onClose}
-            className="flex items-center justify-center w-8 h-8 border transition-all hover:opacity-70"
+            className="flex items-center justify-center w-9 h-9 border transition-all hover:opacity-70"
             style={{ borderColor: T.border, color: T.textFaint }}
           >
             <X size={16} />
@@ -3743,59 +3822,67 @@ function GuideDrawer({ onClose, T, isDark }: { onClose: () => void; T: any; isDa
             <button
               key={s.id}
               onClick={() => setActiveSection(s.id)}
-              className="flex items-center gap-2 px-4 py-3 text-[12px] whitespace-nowrap transition-all border-b-2"
+              className="flex items-center gap-2 px-5 py-3.5 text-[12px] whitespace-nowrap transition-all border-b-2"
               style={{
                 borderBottomColor: activeSection === s.id ? s.color : 'transparent',
                 color: activeSection === s.id ? s.color : T.textMuted,
                 background: 'transparent',
               }}
             >
-              <span className="font-mono text-[13px]">{s.icon}</span>
-              <span>{s.title}</span>
+              <span className="font-mono text-[14px]">{s.icon}</span>
+              <span className="font-medium">{s.title}</span>
             </button>
           ))}
         </div>
 
         {/* 내용 */}
-        <div className="flex-1 overflow-y-auto px-6 py-5 scroll-hide">
-          <div className="flex items-center gap-2 mb-5">
-            <span className="w-2 h-2 rounded-full" style={{ background: section.color }}></span>
-            <span className="text-[13px] font-medium" style={{ color: section.color }}>{section.title}</span>
+        <div className="flex-1 overflow-y-auto px-7 py-6 scroll-hide">
+          {/* 섹션 타이틀 */}
+          <div className="flex items-center gap-2.5 mb-6">
+            <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: section.color }}></span>
+            <span className="text-[15px] font-medium" style={{ color: section.color }}>{section.title}</span>
           </div>
-          <div className="flex flex-col gap-4">
+
+          <div className="flex flex-col gap-0">
             {section.items.map((item, i) => (
-              <div key={i} className="flex flex-col gap-1.5">
-                <div className="flex items-center gap-2">
+              <div
+                key={i}
+                className="py-5"
+                style={{ borderBottom: i < section.items.length - 1 ? `1px solid ${T.borderSoft}` : 'none' }}
+              >
+                <div className="mb-2.5">
                   <span
-                    className="text-[11px] mono px-2 py-0.5 shrink-0"
-                    style={{ background: section.color + '18', color: section.color, border: `1px solid ${section.color}40` }}
+                    className="text-[11px] mono px-2.5 py-1 inline-block"
+                    style={{
+                      background: section.color + '18',
+                      color: section.color,
+                      border: `1px solid ${section.color}40`,
+                    }}
                   >
                     {item.label}
                   </span>
                 </div>
-                <p className="text-[13px] leading-relaxed pl-1" style={{ color: T.textMuted }}>
+                <p className="text-[14px] leading-[1.8] pl-0.5" style={{ color: T.textMuted }}>
                   {item.desc}
                 </p>
-                {i < section.items.length - 1 && (
-                  <div className="mt-1 border-b" style={{ borderColor: T.borderSoft }}></div>
-                )}
               </div>
             ))}
           </div>
 
           {/* 하단 노트 */}
-          <div className="mt-8 p-4 border" style={{ borderColor: T.border, background: T.bgCard }}>
-            <div className="text-[11px] mono uppercase tracking-[0.2em] mb-2" style={{ color: T.textFaint }}>NOTE</div>
-            <p className="text-[12px] leading-relaxed" style={{ color: T.textMuted }}>
-              본 사이트는 투자 정보 제공 목적으로 운영됩니다. 제공되는 모든 정보는 투자 권유가 아니며, 투자 판단 및 책임은 이용자 본인에게 있습니다.
+          <div className="mt-8 p-5 border" style={{ borderColor: T.border, background: T.bgCard }}>
+            <div className="text-[11px] mono uppercase tracking-[0.25em] mb-3" style={{ color: T.textFaint }}>DISCLAIMER</div>
+            <p className="text-[13px] leading-[1.8]" style={{ color: T.textMuted }}>
+              이 사이트의 모든 정보는 학습과 이해를 돕기 위한 것으로, 특정 종목이나 상품에 대한 투자 권유가 아닙니다. 투자 결정과 그에 따른 결과의 책임은 전적으로 이용자 본인에게 있습니다.
             </p>
           </div>
+          <div className="h-6"></div>
         </div>
 
-        {/* 하단 */}
-        <div className="shrink-0 px-6 py-4 border-t flex items-center justify-between" style={{ borderColor: T.border }}>
-          <span className="text-[12px] mono" style={{ color: T.textFaint }}>
-            Stock<span style={{ color: T.accent }}>WiKi</span>.kr
+        {/* 하단 바 */}
+        <div className="shrink-0 px-7 py-4 border-t flex items-center justify-between" style={{ borderColor: T.border }}>
+          <span className="text-[13px] mono" style={{ color: T.textMuted }}>
+            Stock<span style={{ color: T.accent }}>WiKi</span><span style={{ color: T.textFaint }}>.kr</span>
           </span>
           <span className="text-[11px] mono uppercase tracking-wider" style={{ color: T.textDimmer }}>
             ESC to close
@@ -3807,7 +3894,7 @@ function GuideDrawer({ onClose, T, isDark }: { onClose: () => void; T: any; isDa
       <div
         className="md:hidden absolute inset-x-0 bottom-0 flex flex-col outline-none"
         style={{
-          maxHeight: '85vh',
+          maxHeight: '90vh',
           background: T.bgSurface,
           borderTop: `1px solid ${T.border}`,
           borderRadius: '16px 16px 0 0',
@@ -3822,7 +3909,7 @@ function GuideDrawer({ onClose, T, isDark }: { onClose: () => void; T: any; isDa
         {/* 모바일 헤더 */}
         <div className="flex items-center justify-between px-5 py-3 border-b shrink-0" style={{ borderColor: T.border }}>
           <div>
-            <div className="text-[10px] mono uppercase tracking-[0.3em]" style={{ color: T.textFaint }}>HOW TO USE</div>
+            <div className="text-[10px] mono uppercase tracking-[0.3em] mb-0.5" style={{ color: T.textFaint }}>HOW TO USE</div>
             <div className="text-base font-light tracking-tight" style={{ color: T.textPrimary }}>사용 가이드</div>
           </div>
           <button onClick={onClose} className="w-8 h-8 flex items-center justify-center" style={{ color: T.textFaint }}>
@@ -3836,7 +3923,7 @@ function GuideDrawer({ onClose, T, isDark }: { onClose: () => void; T: any; isDa
             <button
               key={s.id}
               onClick={() => setActiveSection(s.id)}
-              className="flex items-center gap-1.5 px-4 py-2.5 text-[11px] whitespace-nowrap transition-all border-b-2"
+              className="flex items-center gap-1.5 px-4 py-3 text-[12px] whitespace-nowrap transition-all border-b-2"
               style={{
                 borderBottomColor: activeSection === s.id ? s.color : 'transparent',
                 color: activeSection === s.id ? s.color : T.textMuted,
@@ -3851,33 +3938,38 @@ function GuideDrawer({ onClose, T, isDark }: { onClose: () => void; T: any; isDa
 
         {/* 모바일 내용 */}
         <div className="flex-1 overflow-y-auto px-5 py-4 scroll-hide">
-          <div className="flex flex-col gap-4">
+          <div className="flex items-center gap-2 mb-4">
+            <span className="w-2 h-2 rounded-full shrink-0" style={{ background: section.color }}></span>
+            <span className="text-[13px] font-medium" style={{ color: section.color }}>{section.title}</span>
+          </div>
+          <div className="flex flex-col gap-0">
             {section.items.map((item, i) => (
-              <div key={i} className="flex flex-col gap-1.5">
-                <div>
+              <div
+                key={i}
+                className="py-4"
+                style={{ borderBottom: i < section.items.length - 1 ? `1px solid ${T.borderSoft}` : 'none' }}
+              >
+                <div className="mb-2">
                   <span
-                    className="text-[11px] mono px-2 py-0.5"
+                    className="text-[11px] mono px-2 py-0.5 inline-block"
                     style={{ background: section.color + '18', color: section.color, border: `1px solid ${section.color}40` }}
                   >
                     {item.label}
                   </span>
                 </div>
-                <p className="text-[13px] leading-relaxed" style={{ color: T.textMuted }}>
+                <p className="text-[13px] leading-[1.8]" style={{ color: T.textMuted }}>
                   {item.desc}
                 </p>
-                {i < section.items.length - 1 && (
-                  <div className="mt-1 border-b" style={{ borderColor: T.borderSoft }}></div>
-                )}
               </div>
             ))}
           </div>
           <div className="mt-6 p-4 border" style={{ borderColor: T.border, background: T.bgCard }}>
-            <div className="text-[10px] mono uppercase tracking-[0.2em] mb-1.5" style={{ color: T.textFaint }}>NOTE</div>
-            <p className="text-[12px] leading-relaxed" style={{ color: T.textMuted }}>
-              본 사이트는 투자 정보 제공 목적으로 운영됩니다. 제공되는 모든 정보는 투자 권유가 아니며, 투자 판단 및 책임은 이용자 본인에게 있습니다.
+            <div className="text-[10px] mono uppercase tracking-[0.2em] mb-2" style={{ color: T.textFaint }}>DISCLAIMER</div>
+            <p className="text-[13px] leading-[1.8]" style={{ color: T.textMuted }}>
+              이 사이트의 모든 정보는 학습과 이해를 돕기 위한 것으로, 투자 권유가 아닙니다. 투자 결정과 그에 따른 책임은 이용자 본인에게 있습니다.
             </p>
           </div>
-          <div className="h-6"></div>
+          <div className="h-8"></div>
         </div>
       </div>
     </div>
