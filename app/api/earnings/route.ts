@@ -32,104 +32,76 @@ const US_NAME_MAP: Record<string, string> = {
   'ORCL': '오라클', 'CRM': '세일즈포스', 'ADBE': '어도비',
 };
 
-const FINNHUB_KEY = process.env.FINNHUB_API_KEY ?? '';
+const AV_KEY = process.env.ALPHA_VANTAGE_API_KEY ?? '';
 
-// ─── Finnhub: 미국 어닝 캘린더 ──────────────────────────
-// 분기별로 쪼개서 캐싱: 과거 분기는 24h TTL, 현재/미래는 1h TTL
-async function fetchFinnhubEarnings(): Promise<EarningItem[]> {
-  if (!FINNHUB_KEY) return [];
+// ─── Alpha Vantage: 미국 어닝 캘린더 ────────────────────
+// EARNINGS_CALENDAR: CSV로 수백 개 종목 한번에, 3개월치 제공
+// 무료 25회/일 — 1시간 캐시로 충분
+async function fetchUSEarnings(): Promise<EarningItem[]> {
+  if (!AV_KEY) return [];
 
-  const todayKST = new Date(Date.now() + 9 * 3600 * 1000);
-  const currentYear = todayKST.getUTCFullYear();
-  const todayStr = todayKST.toISOString().slice(0, 10);
+  const watchSymbols = new Set(Object.keys(US_NAME_MAP));
 
-  // 분기 구간 정의: Q1~Q4 + 미래(현재분기 이후 90일)
-  const quarters = [
-    { key: `finnhub-${currentYear}-Q1`, from: `${currentYear}-01-01`, to: `${currentYear}-03-31` },
-    { key: `finnhub-${currentYear}-Q2`, from: `${currentYear}-04-01`, to: `${currentYear}-06-30` },
-    { key: `finnhub-${currentYear}-Q3`, from: `${currentYear}-07-01`, to: `${currentYear}-09-30` },
-    { key: `finnhub-${currentYear}-Q4`, from: `${currentYear}-10-01`, to: `${currentYear}-12-31` },
-  ];
-
-  // 미래 90일 (현재 분기 이후 구간 보완)
-  const futureEnd = new Date(todayKST);
-  futureEnd.setDate(futureEnd.getDate() + 90);
-
-  const allResults: EarningItem[] = [];
-
-  const parseItems = (earningsArr: any[]): EarningItem[] => {
-    const watchSymbols = new Set(Object.keys(US_NAME_MAP));
-    return earningsArr
-      .filter((e: any) => watchSymbols.has(e.symbol))
-      .map((e: any) => {
-        const epsEstimate = typeof e.epsEstimate === 'number' ? e.epsEstimate : null;
-        const epsActual = typeof e.epsActual === 'number' ? e.epsActual : null;
-        const surprise = epsActual != null && epsEstimate != null && epsEstimate !== 0
-          ? ((epsActual - epsEstimate) / Math.abs(epsEstimate)) * 100
-          : null;
-        const hour = (e.hour ?? '').toLowerCase();
-        const timing: 'BMO' | 'AMC' | 'unknown' =
-          hour === 'bmo' ? 'BMO' : hour === 'amc' ? 'AMC' : 'unknown';
-        let dateKST = e.date ?? '';
-        if (timing === 'AMC' && dateKST) {
-          const d = new Date(dateKST + 'T00:00:00-05:00');
-          d.setDate(d.getDate() + 1);
-          dateKST = new Date(d.getTime() + 9 * 3600 * 1000).toISOString().slice(0, 10);
-        }
-        return {
-          symbol: e.symbol,
-          nameKo: US_NAME_MAP[e.symbol] ?? e.symbol,
-          date: dateKST,
-          market: 'US' as const,
-          timing,
-          epsEstimate,
-          epsActual,
-          revenueEstimate: typeof e.revenueEstimate === 'number' ? e.revenueEstimate / 1_000_000 : null,
-          revenueActual: typeof e.revenueActual === 'number' ? e.revenueActual / 1_000_000 : null,
-          surprise,
-        };
-      });
-  };
-
-  // 과거 분기: 7일 캐시, 현재/미래: 1시간 캐시 — Vercel Data Cache에 저장됨
-  const fetchRange = async (from: string, to: string, isPast: boolean): Promise<EarningItem[]> => {
+  // horizon=3month: 향후 3개월치
+  // horizon=12month: 향후 12개월치 (과거는 별도 호출)
+  const fetchHorizon = async (horizon: '3month' | '12month'): Promise<EarningItem[]> => {
     try {
-      const url = `https://finnhub.io/api/v1/calendar/earnings?from=${from}&to=${to}&token=${FINNHUB_KEY}`;
+      const url = `https://www.alphavantage.co/query?function=EARNINGS_CALENDAR&horizon=${horizon}&apikey=${AV_KEY}`;
+      // 과거(12month)는 7일 캐시, 미래(3month)는 1시간 캐시
       const res = await fetch(url, {
-        next: { revalidate: isPast ? 7 * 24 * 3600 : 3600 },
+        next: { revalidate: horizon === '12month' ? 7 * 24 * 3600 : 3600 },
       });
       if (!res.ok) return [];
-      const data = await res.json();
-      return parseItems(data?.earningsCalendar ?? []);
+      const csv = await res.text();
+
+      // CSV 파싱: symbol,name,reportDate,fiscalDateEnding,estimate,currency
+      const lines = csv.trim().split('\n');
+      const results: EarningItem[] = [];
+
+      for (let i = 1; i < lines.length; i++) {
+        const cols = lines[i].split(',');
+        if (cols.length < 4) continue;
+        const symbol = cols[0]?.trim();
+        const reportDate = cols[2]?.trim(); // YYYY-MM-DD (ET 기준)
+        const estimate = parseFloat(cols[4]?.trim() ?? '');
+
+        if (!symbol || !reportDate || !watchSymbols.has(symbol)) continue;
+
+        // ET → KST 변환 (+14시간, 보수적으로 +1일 처리)
+        // Alpha Vantage는 발표 시간 정보 없으므로 date만 사용
+        const epsEstimate = isNaN(estimate) ? null : estimate;
+
+        results.push({
+          symbol,
+          nameKo: US_NAME_MAP[symbol] ?? symbol,
+          date: reportDate,
+          market: 'US' as const,
+          timing: 'unknown',
+          epsEstimate,
+          epsActual: null,
+          revenueEstimate: null,
+          revenueActual: null,
+          surprise: null,
+        });
+      }
+      return results;
     } catch {
       return [];
     }
   };
 
-  // 분기별 병렬 fetch (Vercel이 캐시된 건 바로 반환, 미스만 실제 요청)
-  const quarterResults = await Promise.all(
-    quarters.map(q => fetchRange(q.from, q.to, q.to < todayStr))
-  );
-  for (const items of quarterResults) allResults.push(...items);
+  // 3month(미래) + 12month(올해 전체) 병렬 fetch
+  const [future, full] = await Promise.all([
+    fetchHorizon('3month'),
+    fetchHorizon('12month'),
+  ]);
 
-  // 미래 90일 (1시간 캐시)
-  try {
-    const url = `https://finnhub.io/api/v1/calendar/earnings?from=${todayStr}&to=${futureEnd.toISOString().slice(0, 10)}&token=${FINNHUB_KEY}`;
-    const res = await fetch(url, { next: { revalidate: 3600 } });
-    if (res.ok) {
-      const data = await res.json();
-      allResults.push(...parseItems(data?.earningsCalendar ?? []));
-    }
-  } catch { /* 무시 */ }
-
-  // 중복 제거 (symbol+date 기준)
-  const seen = new Set<string>();
-  return allResults.filter(e => {
-    const k = `${e.symbol}-${e.date}`;
-    if (seen.has(k)) return false;
-    seen.add(k);
-    return true;
-  });
+  // 중복 제거: symbol 기준, 날짜가 더 정확한 쪽(3month) 우선
+  const bySymbol = new Map<string, EarningItem>();
+  for (const e of [...full, ...future]) {
+    bySymbol.set(e.symbol, e); // future가 나중에 덮어써서 우선됨
+  }
+  return Array.from(bySymbol.values());
 }
 
 // ─── DART: 한국 주요 종목 실적 공시 ────────────────────────
@@ -234,7 +206,7 @@ export async function GET(req: Request) {
 
   try {
     const [usResult, krResult] = await Promise.allSettled([
-      market !== 'KR' ? fetchFinnhubEarnings() : Promise.resolve([]),
+      market !== 'KR' ? fetchUSEarnings() : Promise.resolve([]),
       market !== 'US' ? fetchDartEarnings() : Promise.resolve([]),
     ]);
 
