@@ -6138,65 +6138,7 @@ function MarketPulseRail({ T, totalTerms }: { T: any; totalTerms: number }) {
 
   return (
     <div className="mb-6 border" style={{ borderColor: T.border }}>
-      {/* ── 에디토리얼 히어로 (PC 전용) ── */}
-      <div className="hidden md:block relative overflow-hidden border-b" style={{ borderColor: T.border, background: T.bgCard }}>
-        {/* 볼 조인트 코너 장식 */}
-        {[['top-0 left-0', 'translate(-50%,-50%)'], ['top-0 right-0', 'translate(50%,-50%)'], ['bottom-0 left-0', 'translate(-50%,50%)'], ['bottom-0 right-0', 'translate(50%,50%)']].map(([pos], ci) => (
-          <span key={ci} className={`absolute ${pos} w-3 h-3 rounded-full border-2 z-10`}
-            style={{ borderColor: T.border, background: T.bgPage }} />
-        ))}
-        {/* 배경 그리드 패턴 */}
-        <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: `repeating-linear-gradient(0deg, ${T.textPrimary} 0 1px, transparent 1px 40px), repeating-linear-gradient(90deg, ${T.textPrimary} 0 1px, transparent 1px 40px)` }} />
-        <div className="relative px-8 py-8">
-          <div className="flex items-start justify-between gap-6">
-            {/* 왼쪽: 타이포그래피 */}
-            <div className="flex-1 min-w-0">
-              <div className="mono text-[10px] uppercase tracking-[0.4em] mb-3" style={{ color: T.textFaint }}>
-                § stockwiki · kr — 주식 투자자를 위한 책상
-              </div>
-              <h1 className="font-light tracking-[-0.04em] leading-[0.92] mb-4" style={{ fontSize: 'clamp(28px, 4vw, 52px)', color: T.textPrimary }}>
-                사전 · 계산기 ·<br />
-                <span style={{ color: T.accent }}>한 벌의 책상.</span>
-              </h1>
-              <p className="text-sm leading-relaxed max-w-xs" style={{ color: T.textMuted }}>
-                주요 재무지표 {totalTerms}개 용어 사전,<br />
-                52개 전문 계산기, 어닝·지표 이벤트 캘린더.
-              </p>
-              {/* CTA 단축키 */}
-              <div className="flex items-center gap-3 mt-5 flex-wrap">
-                {[
-                  { key: 'G', desc: '사전 바로가기' },
-                  { key: '⌘K', desc: '빠른 검색' },
-                  { key: 'C', desc: '계산기' },
-                ].map(({ key, desc }) => (
-                  <div key={key} className="flex items-center gap-1.5">
-                    <span className="mono text-[11px] px-1.5 py-0.5 border" style={{ borderColor: T.borderMid, color: T.textSecondary, background: T.bgPage }}>
-                      {key}
-                    </span>
-                    <span className="mono text-[10px]" style={{ color: T.textDimmer }}>{desc}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-            {/* 오른쪽: 시계 + 시장 상태 */}
-            <div className="shrink-0 text-right flex flex-col items-end gap-3">
-              <div>
-                <div className="mono text-[10px] uppercase tracking-[0.3em] mb-1" style={{ color: T.textFaint }}>KST</div>
-                <div className="mono font-medium tracking-[-0.02em]" style={{ fontSize: 28, color: T.textPrimary }}>{timeStr}</div>
-                <div className="mono text-[11px] mt-0.5" style={{ color: T.textDimmer }}>{dateStr}</div>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full animate-pulse" style={{ background: isMarketOpen ? '#4A7045' : T.textDimmer }} />
-                <span className="mono text-[11px] uppercase tracking-[0.15em]" style={{ color: isMarketOpen ? '#4A7045' : T.textDimmer }}>
-                  {isMarketOpen ? '장중' : '장외'}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ── 하단 stats rail ── */}
+      {/* ── stats rail ── */}
       <div className="grid border-b" style={{ gridTemplateColumns: `repeat(${stats.length + 1},1fr)`, borderColor: T.border }}>
         <div className="flex items-center px-4 py-3 border-r" style={{ borderColor: T.border }}>
           <span className="mono text-[10px] tracking-[0.3em] uppercase" style={{ color: T.textDimmer }}>§ Desk</span>
