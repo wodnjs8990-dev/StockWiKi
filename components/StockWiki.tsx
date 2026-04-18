@@ -5928,12 +5928,12 @@ function HomeView({ T, isDark, totalTerms, recent, favorites, categoryColors, se
         <div className="relative px-6 md:px-10 py-8 md:py-10">
           <div className="flex items-start justify-between gap-8">
             <div className="flex-1 min-w-0">
-              <div className="mono text-[10px] uppercase tracking-[0.4em] mb-4" style={{ color: T.textFaint }}>
-                § stockwiki · kr — 주식 투자자를 위한 책상
+              <div className="mono text-[11px] uppercase tracking-[0.2em] mb-3" style={{ color: T.textFaint }}>
+                § stockwiki · kr
               </div>
-              <h1 className="font-light leading-[0.92] tracking-[-0.03em] mb-5"
-                style={{ fontSize: 'clamp(32px, 5vw, 64px)', color: T.textPrimary }}>
-                사전 · 계산기 ·<br />
+              <h1 className="font-light leading-tight tracking-tight mb-4"
+                style={{ fontSize: 'clamp(22px, 2.8vw, 36px)', color: T.textPrimary }}>
+                사전 · 계산기 ·{' '}
                 <span style={{ color: T.accent }}>한 벌의 책상.</span>
               </h1>
               <p className="text-sm leading-relaxed mb-6 max-w-sm" style={{ color: T.textMuted }}>
@@ -6136,25 +6136,7 @@ function MarketPulseRail({ T, totalTerms }: { T: any; totalTerms: number }) {
     { k: 'Events', v: '008',                               u: '이번달 이벤트' },
   ];
 
-  return (
-    <div className="mb-6 border" style={{ borderColor: T.border }}>
-      {/* ── stats rail ── */}
-      <div className="grid border-b" style={{ gridTemplateColumns: `repeat(${stats.length + 1},1fr)`, borderColor: T.border }}>
-        <div className="flex items-center px-4 py-3 border-r" style={{ borderColor: T.border }}>
-          <span className="mono text-[10px] tracking-[0.3em] uppercase" style={{ color: T.textDimmer }}>§ Desk</span>
-        </div>
-        {stats.map((s, i) => (
-          <div key={s.k} className="flex flex-col gap-1 px-4 py-3 border-r" style={{ borderColor: i < stats.length - 1 ? T.border : 'transparent' }}>
-            <span className="mono text-[10px] tracking-[0.25em] uppercase" style={{ color: T.textFaint }}>{s.k}</span>
-            <div className="flex items-baseline gap-1">
-              <span className="mono font-medium" style={{ fontSize: 20, color: T.textPrimary, letterSpacing: '-0.02em' }}>{s.v}</span>
-              <span className="mono text-[10px]" style={{ color: T.textDimmer }}>{s.u}</span>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
+  return null;
 }
 
 function GuideDrawer({ onClose, T, isDark }: { onClose: () => void; T: any; isDark: boolean }) {
