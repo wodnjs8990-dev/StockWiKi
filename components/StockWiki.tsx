@@ -5180,7 +5180,7 @@ function TaxAccountCalc() {
     priorities.push({
       rank: 1,
       name: 'IRP + 연금저축',
-      reason: `세액공제 ${(creditRate * 100).toFixed(1)}% — 납입 즉시 ${fmt(maxCredit / 10000, 0)}만원 환급`,
+      reason: `세액공제 ${(creditRate * 100).toFixed(1)}% — 연말정산 시 최대 ${fmt(maxCredit / 10000, 0)}만원 환급`,
       limit: `연 최대 900만원 (연금저축 단독 600만)`,
       effect: `최대 세액공제 ${fmt(maxCredit, 0)}원/년`,
     });
@@ -5261,10 +5261,19 @@ function TaxAccountCalc() {
         <div className="text-[12px] mono uppercase tracking-[0.15em] mb-2" style={{ color: _T.textFaint }}>성향별 운용 전략</div>
         <p className="text-sm leading-relaxed" style={{ color: _T.textMuted }}>{styleAdvice[investStyle]}</p>
       </div>
+      {/* 유의 문구 */}
+      <div className="border-l-2 px-4 py-3 mb-4 text-[13px] leading-relaxed space-y-2" style={{ borderColor: _T.accent, background: `${_T.accent}10`, color: _T.textMuted }}>
+        <span className="mono text-[11px] uppercase tracking-[0.2em] block mb-2" style={{ color: _T.accent }}>유의사항</span>
+        <p>① <strong style={{ color: _T.textSecondary }}>환급 시점:</strong> 세액공제 환급은 납입 연도 다음 해 연말정산(2~3월) 또는 종합소득세 신고(5월) 시점에 반영됩니다. 납입 즉시 현금 환급이 아닙니다.</p>
+        <p>② <strong style={{ color: _T.textSecondary }}>IRP 위험자산 한도:</strong> IRP 단독으로 연 900만원 세액공제가 가능하나, 위험자산(주식형 ETF 등) 편입 비율이 70%로 제한됩니다. ETF 100% 운용을 원한다면 <strong style={{ color: _T.textSecondary }}>연금저축펀드(증권사 개설)</strong>와 병행하는 것이 유리합니다. 연금저축보험(보험사)은 ETF 운용 불가.</p>
+        <p>③ <strong style={{ color: _T.textSecondary }}>IRP 중도 인출:</strong> 본인이 직접 납입한 개인부담금은 55세 이후에만 연금 수령 가능하며, 55세 이전 해지 시 기타소득세 16.5% 추징됩니다. 단, <strong style={{ color: _T.textSecondary }}>퇴직급여가 IRP로 이전된 경우</strong>에는 55세 미만이어도 퇴직 후 연금 수령 신청이 가능합니다. 이 경우 퇴직급여를 일시금으로 받으면 퇴직소득세 전액 납부이나, <strong style={{ color: _T.textSecondary }}>연금으로 수령하면 퇴직소득세의 30% 감면</strong>(10년 초과 수령 시 40% 감면)을 받을 수 있어 퇴직급여가 클수록 절세 효과가 큽니다.</p>
+        <p>④ <strong style={{ color: _T.textSecondary }}>연금 수령 시 과세:</strong> IRP·연금저축을 연금으로 수령할 때는 연금소득세가 부과됩니다. 수령 나이에 따라 <strong style={{ color: _T.textSecondary }}>55~69세 5.5%, 70~79세 4.4%, 80세 이상 3.3%</strong> 적용됩니다(분리과세 선택 가능, 연 1,500만원 초과 시 종합과세 또는 16.5% 분리과세 선택).</p>
+        <p>⑤ 개인 소득·자산 상황에 따라 최적 전략이 달라질 수 있습니다. 정확한 절세 계획은 <strong style={{ color: _T.textSecondary }}>세무사 또는 금융기관 전문가</strong>에게 문의하시기 바랍니다.</p>
+      </div>
       <CalcNote
         how={['연소득 입력 → 세액공제율 자동 판정 (5,500만 이하 16.5%, 초과 13.2%)', '가입 가능 계좌 선택 → 우선순위 자동 생성', '투자 성향 선택 → 맞춤 운용 전략 제공']}
-        example={['연소득 6,000만, IRP+연금저축+ISA 모두 가능, 혼합형', '1순위: IRP+연금저축 (세액공제 13.2%, 최대 118.8만원 환급)', '2순위: ISA (배당·이자 비과세)', '3순위: 일반계좌 (잔여 투자금)']}
-        tip={['IRP는 55세 이전 중도해지 시 기타소득세 16.5% 추징 — 확실한 장기 자금만', 'ISA는 3년 의무 가입, 중도 해지 시 세제 혜택 반납', '연금저축은 IRP보다 유연 (중도 인출 가능하나 세제 혜택 환수)', '배당소득이 많다면 ISA 활용 우선, 근로소득이 크다면 IRP 우선', '※ 세법은 변경될 수 있으며, 정확한 납세액은 세무사 확인을 권장합니다.']}
+        example={['연소득 6,000만, IRP+연금저축+ISA 모두 가능, 혼합형', '1순위: IRP+연금저축 (세액공제 13.2%, 최대 118.8만원 — 다음 해 연말정산 시 환급)', '2순위: ISA (배당·이자 비과세)', '3순위: 일반계좌 (잔여 투자금)']}
+        tip={['IRP 개인납입분은 55세 이전 중도해지 시 기타소득세 16.5% 추징 — 확실한 장기 자금만', '단, 퇴직급여가 IRP로 이전 후 연금 수령 시 퇴직소득세 30% 감면 (10년 초과 수령 시 40%) — 일시금 수령 대비 핵심 절세', '연금 수령 시 연금소득세 부과: 55~69세 5.5% / 70~79세 4.4% / 80세 이상 3.3%', '연 연금소득 1,500만원 초과 시 종합과세 또는 16.5% 분리과세 중 선택', 'ISA는 3년 의무 가입, 중도 해지 시 세제 혜택 반납', '연금저축펀드(증권사)는 ETF 100% 운용 가능 / 연금저축보험(보험사)은 ETF 불가', 'IRP 단독 900만원도 가능하나 위험자산 70% 한도 — ETF 비중 높이려면 연금저축펀드 병행', '배당소득이 많다면 ISA 활용 우선, 근로소득이 크다면 IRP/연금저축 우선', '※ 세법은 변경될 수 있으며, 정확한 절세 계획은 세무사 또는 금융기관 전문가에게 문의하세요.']}
       />
     </div>
   );
