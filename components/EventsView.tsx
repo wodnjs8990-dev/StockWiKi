@@ -547,32 +547,70 @@ export default function EventsView({ T }: { T?: any }) {
             </div>
           )}
 
-          {/* 다가오는 이벤트 */}
+          {/* 다가오는 이벤트 — 필터 적용 */}
           <div className="border" style={{ borderColor: theme.border }}>
             <div className="px-4 py-3 border-b flex items-center justify-between"
               style={{ borderColor: theme.border, background: theme.bgCard }}>
-              <span className="text-[11px] mono uppercase tracking-[0.2em]" style={{ color: theme.textMuted }}>
-                다가오는 이벤트
-              </span>
-              <span className="text-[9px] mono" style={{ color: theme.textDimmer }}>
-                {loading ? '로딩 중...' : `${allEvents.filter(e => e.dateKST >= today).length}건`}
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] mono uppercase tracking-[0.2em]" style={{ color: theme.textMuted }}>
+                  다가오는 이벤트
+                </span>
+                {/* 활성 필터 표시 */}
+                {(indexFilter !== 'ALL' || sectorFilter !== 'ALL') && (
+                  <div className="flex gap-1">
+                    {indexFilter !== 'ALL' && (
+                      <span className="text-[9px] mono px-1 border"
+                        style={{ color: theme.accent, borderColor: `${theme.accent}50` }}>
+                        {indexFilter === 'SP500' ? 'S&P' : 'NDX'}
+                      </span>
+                    )}
+                    {sectorFilter !== 'ALL' && (
+                      <span className="text-[9px] mono px-1 border"
+                        style={{ color: SECTOR_COLOR[sectorFilter], borderColor: `${SECTOR_COLOR[sectorFilter]}50` }}>
+                        {SECTOR_LABEL[sectorFilter]}
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-[9px] mono" style={{ color: theme.textDimmer }}>
+                  {loading ? '로딩 중...' : `${[...FOMC_2026, ...FUTURES_EVENTS, ...earningEvents].filter(e => e.dateKST >= today).length}건`}
+                </span>
+                {(indexFilter !== 'ALL' || sectorFilter !== 'ALL') && (
+                  <button onClick={() => { setIndexFilter('ALL'); setSectorFilter('ALL'); }}
+                    className="text-[9px] mono px-1.5 border hover:opacity-70 transition-opacity"
+                    style={{ color: theme.textDimmer, borderColor: theme.borderSoft }}>
+                    초기화
+                  </button>
+                )}
+              </div>
             </div>
-            {allEvents
+            {([...FOMC_2026, ...FUTURES_EVENTS, ...earningEvents] as CalEvent[])
               .filter(ev => ev.dateKST >= today)
-              .sort((a, b) => a.dateKST.localeCompare(b.dateKST))
-              .slice(0, 12)
+              .sort((a, b) => {
+                const d = a.dateKST.localeCompare(b.dateKST);
+                if (d !== 0) return d;
+                // 같은 날 내: FOMC/만기 먼저, 그 다음 시총 순
+                const aIsSpecial = !a.earning;
+                const bIsSpecial = !b.earning;
+                if (aIsSpecial && !bIsSpecial) return -1;
+                if (!aIsSpecial && bIsSpecial) return 1;
+                return (b.earning?.marketCap ?? 0) - (a.earning?.marketCap ?? 0);
+              })
+              .slice(0, 15)
               .map((ev, i) => {
                 const diff = Math.round(
                   (new Date(ev.dateKST + 'T00:00:00+09:00').getTime() - new Date(today + 'T00:00:00+09:00').getTime()) / 86400000
                 );
+                const e = ev.earning;
                 return (
                   <div
                     key={i}
                     className="px-4 py-2.5 border-b flex items-start gap-3 cursor-pointer"
                     style={{ borderColor: theme.borderSoft }}
-                    onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = theme.bgHover}
-                    onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
+                    onMouseEnter={el => (el.currentTarget as HTMLElement).style.background = theme.bgHover}
+                    onMouseLeave={el => (el.currentTarget as HTMLElement).style.background = 'transparent'}
                     onClick={() => {
                       setYear(parseInt(ev.dateKST.slice(0, 4)));
                       setMonth(parseInt(ev.dateKST.slice(5, 7)));
@@ -580,27 +618,64 @@ export default function EventsView({ T }: { T?: any }) {
                       setSelectedEarning(null);
                     }}
                   >
-                    <span
-                      className="text-[10px] mono w-10 shrink-0 text-center py-0.5 mt-0.5 border"
+                    {/* D-Day 배지 */}
+                    <span className="text-[10px] mono w-10 shrink-0 text-center py-0.5 mt-0.5 border"
                       style={{
                         color: diff === 0 ? ev.color : theme.textDimmer,
                         borderColor: diff === 0 ? ev.color : theme.border,
                       }}>
                       {diff === 0 ? 'D-Day' : `D-${diff}`}
                     </span>
+
                     <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-1.5 mb-0.5">
+                      {/* 종목명 + 배지 행 */}
+                      <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
                         <span className="w-1.5 h-1.5 rounded-sm shrink-0" style={{ background: ev.color }} />
-                        <span className="text-xs font-medium truncate" style={{ color: theme.textPrimary }}>{ev.label}</span>
-                        {ev.earning?.surprise != null && (
+                        <span className="text-xs font-semibold" style={{ color: theme.textPrimary }}>{ev.label}</span>
+                        {/* 섹터 배지 */}
+                        {e?.sector && e.sector !== 'Other' && (
+                          <span className="text-[8px] mono px-1 border"
+                            style={{ color: SECTOR_COLOR[e.sector], borderColor: `${SECTOR_COLOR[e.sector]}40` }}>
+                            {SECTOR_LABEL[e.sector]}
+                          </span>
+                        )}
+                        {e?.isSP500 && (
+                          <span className="text-[8px] mono px-1 border"
+                            style={{ color: '#7BAF7A', borderColor: '#7BAF7A40' }}>S&P</span>
+                        )}
+                        {e?.isNDX100 && (
+                          <span className="text-[8px] mono px-1 border"
+                            style={{ color: '#7B9FDF', borderColor: '#7B9FDF40' }}>NDX</span>
+                        )}
+                        {/* EPS 예상 */}
+                        {e?.epsEstimate != null && (
                           <span className="text-[9px] mono ml-auto shrink-0"
-                            style={{ color: surpriseColor(ev.earning.surprise, theme.accent, theme.accentGreen) }}>
-                            {ev.earning.surprise > 0 ? '+' : ''}{ev.earning.surprise.toFixed(1)}%
+                            style={{ color: theme.textDimmer }}>
+                            EPS {e.epsEstimate > 0 ? '+' : ''}{e.epsEstimate.toFixed(2)}
                           </span>
                         )}
                       </div>
-                      <div className="text-[10px] mono truncate" style={{ color: theme.textFaint }}>
-                        {ev.dateKST.slice(5).replace('-', '/')} · {ev.desc}
+                      {/* 날짜 + 한글명 */}
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[10px] mono" style={{ color: theme.textFaint }}>
+                          {ev.dateKST.slice(5).replace('-', '/')}
+                        </span>
+                        {e && (
+                          <span className="text-[10px] truncate" style={{ color: theme.textDimmer }}>
+                            · {e.nameKo}
+                          </span>
+                        )}
+                        {!e && (
+                          <span className="text-[10px] truncate" style={{ color: theme.textDimmer }}>
+                            · {ev.desc}
+                          </span>
+                        )}
+                        {/* 시총 */}
+                        {e?.marketCap != null && e.marketCap > 0 && (
+                          <span className="text-[9px] mono ml-auto shrink-0" style={{ color: theme.textDimmer }}>
+                            ${e.marketCap >= 1000 ? `${(e.marketCap/1000).toFixed(1)}T` : `${e.marketCap}B`}
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
