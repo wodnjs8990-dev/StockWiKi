@@ -151,7 +151,9 @@ function fmtRevenue(v: number | null | undefined, market: 'US' | 'KR'): string {
   return `${(v / 10000).toFixed(1)}조`;
 }
 
-export default function EventsView({ T }: { T?: any }) {
+type CustomEventItem = { id: string; date: string; label: string; desc: string; color: string; createdAt: string };
+
+export default function EventsView({ T, customEvents = [] }: { T?: any; customEvents?: CustomEventItem[] }) {
   const theme = T ?? {
     bgPage: '#1a1a1a', bgSurface: '#141414', bgCard: '#0f0f0f',
     bgTabActive: '#e8e4d6', bgHover: '#1f1f1f',
@@ -323,9 +325,19 @@ export default function EventsView({ T }: { T?: any }) {
     return [...fomcFiltered, ...futuresFiltered, ...macroFiltered];
   })();
 
+  // 어드민에서 추가한 커스텀 이벤트 → CalEvent 변환
+  const customCalEvents: CalEvent[] = customEvents.map(e => ({
+    dateKST: e.date,
+    label: e.label,
+    desc: e.desc,
+    color: e.color,
+    importance: 3 as const,
+  }));
+
   const allEvents: CalEvent[] = [
     ...(showMacro ? filteredSpecial : []),
     ...(showEarnings ? earningEvents : []),
+    ...customCalEvents,
   ];
   const eventsByDate: Record<string, CalEvent[]> = {};
   for (const ev of allEvents) {

@@ -3,6 +3,48 @@
 
 import { get } from '@vercel/edge-config';
 
+// ── 배너 타입
+export type BannerConfig = {
+  enabled: boolean;
+  message: string;
+  color: 'gold' | 'red' | 'teal' | 'blue' | 'green';
+  expiresAt?: string;
+  link?: string;
+  linkText?: string;
+};
+
+// ── 커스텀 이벤트 타입
+export type CustomEvent = {
+  id: string;
+  date: string;
+  label: string;
+  desc: string;
+  color: string;
+  createdAt: string;
+};
+
+// ── 배너 읽기
+export async function getBanner(): Promise<BannerConfig | null> {
+  try {
+    const banner = await get<BannerConfig>('banner');
+    if (!banner || !banner.enabled) return null;
+    // 만료 시각 체크
+    if (banner.expiresAt && new Date(banner.expiresAt) < new Date()) return null;
+    return banner;
+  } catch {
+    return null;
+  }
+}
+
+// ── 커스텀 이벤트 읽기
+export async function getCustomEvents(): Promise<CustomEvent[]> {
+  try {
+    return (await get<CustomEvent[]>('customEvents')) ?? [];
+  } catch {
+    return [];
+  }
+}
+
 export type SiteConfig = {
   maintenanceMode: boolean;
   maintenanceMessage?: string;

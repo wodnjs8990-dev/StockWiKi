@@ -1,7 +1,8 @@
 import { Suspense } from 'react';
 import type { Metadata } from 'next';
 import StockWiki from '@/components/StockWiki';
-import { getSiteConfig } from '@/lib/config';
+import { getSiteConfig, getBanner, getCustomEvents } from '@/lib/config';
+import SiteBanner from '@/components/SiteBanner';
 import { TERMS } from '@/data/terms';
 
 export const dynamic = 'force-dynamic';
@@ -63,13 +64,25 @@ export async function generateMetadata(
 }
 
 async function StockWikiWithConfig() {
-  const config = await getSiteConfig();
+  const [config, banner, customEvents] = await Promise.all([
+    getSiteConfig(),
+    getBanner(),
+    getCustomEvents(),
+  ]);
+
   const features = config.features ?? {
     glossary: true,
     calculator: true,
     commandK: true,
+    events: true,
   };
-  return <StockWiki features={features} />;
+
+  return (
+    <>
+      {banner && <SiteBanner banner={banner} />}
+      <StockWiki features={features} customEvents={customEvents} />
+    </>
+  );
 }
 
 export default function HomePage() {

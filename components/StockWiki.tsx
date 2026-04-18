@@ -83,7 +83,9 @@ function Highlight({ text, query, color }: { text: string; query: string; color:
   );
 }
 
-export default function StockWiki({ features }: { features?: Features }) {
+type CustomEventItem = { id: string; date: string; label: string; desc: string; color: string; createdAt: string };
+
+export default function StockWiki({ features, customEvents }: { features?: Features; customEvents?: CustomEventItem[] }) {
   const feat = features ?? { glossary: true, calculator: true, commandK: true, events: true };
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -551,7 +553,7 @@ export default function StockWiki({ features }: { features?: Features }) {
           />
         )}
         {activeTab === 'events' && feat.events !== false && (
-          <EventsView T={T} />
+          <EventsView T={T} customEvents={customEvents ?? []} />
         )}
       </main>
 
