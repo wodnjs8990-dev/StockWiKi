@@ -1220,16 +1220,23 @@ function TermModal({ term, termList, onClose, categoryColors, favorites, toggleF
   const handleHandleTouchStart = (e: React.TouchEvent) => {
     const el = modalRef.current;
     if (!el) return;
+    // 열릴 때 animation 클래스 제거 — transform 직접 제어를 위해
+    el.style.animation = 'none';
     (el as any)._handleDragStartY = e.touches[0].clientY;
     (el as any)._handleDragging = true;
   };
   const handleHandleTouchMove = (e: React.TouchEvent) => {
     const el = modalRef.current;
     if (!el || !(el as any)._handleDragging) return;
-    e.preventDefault(); // 핸들 영역에서만 페이지 스크롤 막기
+    e.preventDefault();
     const dy = e.touches[0].clientY - ((el as any)._handleDragStartY ?? 0);
     if (dy > 0) {
-      el.style.transform = `translateY(${Math.min(dy * 0.6, 140)}px)`;
+      // 1:1로 손가락을 따라감 — 저항 없음
+      el.style.transform = `translateY(${dy}px)`;
+      el.style.transition = 'none';
+    } else {
+      // 위로 당기면 살짝 저항
+      el.style.transform = `translateY(${dy * 0.1}px)`;
       el.style.transition = 'none';
     }
   };
@@ -1238,13 +1245,15 @@ function TermModal({ term, termList, onClose, categoryColors, favorites, toggleF
     if (!el) return;
     (el as any)._handleDragging = false;
     const dy = e.changedTouches[0].clientY - ((el as any)._handleDragStartY ?? 0);
-    if (dy > 80) {
-      el.style.transform = 'translateY(100%)';
+    const threshold = window.innerHeight * 0.25; // 화면 1/4 이상 내리면 닫힘
+    if (dy > threshold) {
       el.style.transition = 'transform 0.28s cubic-bezier(0.4,0,0.2,1)';
-      setTimeout(() => onClose(), 260);
+      el.style.transform = 'translateY(100%)';
+      setTimeout(() => onClose(), 270);
     } else {
-      el.style.transform = '';
-      el.style.transition = 'transform 0.22s cubic-bezier(0.4,0,0.2,1)';
+      // 원위치 — 스프링처럼 튕겨 올라옴
+      el.style.transition = 'transform 0.32s cubic-bezier(0.34,1.56,0.64,1)';
+      el.style.transform = 'translateY(0)';
     }
   };
   const relatedTerms = term.related?.map(id => TERMS.find(t => t.id === id)).filter(Boolean) || [];
