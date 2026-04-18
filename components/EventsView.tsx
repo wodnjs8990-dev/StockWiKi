@@ -102,6 +102,12 @@ export default function EventsView({ T }: { T?: any }) {
     accent: '#C89650', accentGreen: '#4A7045',
   };
 
+  // 라이트 모드 판별 (bgPage가 밝은 계열이면 라이트)
+  const isLight = theme.bgPage?.startsWith('#f') || theme.bgPage?.startsWith('#e') || theme.bgPage?.startsWith('#fff');
+  // 이벤트 태그 배경 투명도: 라이트에서 더 진하게
+  const evBgAlpha = isLight ? '40' : '22';
+  const evBorderAlpha = isLight ? 'cc' : '99';
+
   const today = getKSTToday();
   const [year, setYear] = useState(() => parseInt(today.slice(0, 4)));
   const [month, setMonth] = useState(() => parseInt(today.slice(5, 7)));
@@ -353,7 +359,7 @@ export default function EventsView({ T }: { T?: any }) {
                     {evs.slice(0, 4).map((ev, i) => (
                       <div key={i}
                         className={`flex items-center gap-1 px-1 py-0.5 text-[8px] md:text-[10px] truncate rounded-sm${i >= 2 ? ' hidden md:flex' : ''}`}
-                        style={{ background: `${ev.color}22`, borderLeft: `2px solid ${ev.color}`, color: ev.color }}>
+                        style={{ background: `${ev.color}${evBgAlpha}`, borderLeft: `2px solid ${ev.color}${evBorderAlpha}`, color: ev.color }}>
                         <span className="truncate font-semibold">{ev.label}</span>
                       </div>
                     ))}
@@ -384,7 +390,7 @@ export default function EventsView({ T }: { T?: any }) {
             ].map(({ color, label }) => (
               <div key={label} className="flex items-center gap-1.5">
                 <span className="w-2.5 h-2.5 rounded-sm"
-                  style={{ background: `${color}33`, borderLeft: `2px solid ${color}` }} />
+                  style={{ background: `${color}${isLight ? '55' : '33'}`, borderLeft: `2px solid ${color}` }} />
                 <span className="text-[10px] mono" style={{ color: theme.textDimmer }}>{label}</span>
               </div>
             ))}
@@ -424,7 +430,7 @@ export default function EventsView({ T }: { T?: any }) {
                           style={{
                             borderColor: theme.borderSoft,
                             borderLeft: `3px solid ${ev.color}`,
-                            background: isExpanded ? `${ev.color}0f` : 'transparent',
+                            background: isExpanded ? `${ev.color}${isLight ? '18' : '0f'}` : 'transparent',
                             cursor: e ? 'pointer' : 'default',
                           }}
                           onClick={() => e && setSelectedEarning(isExpanded ? null : e)}
@@ -467,7 +473,7 @@ export default function EventsView({ T }: { T?: any }) {
                         {/* 확장 디테일 */}
                         {isExpanded && e && (
                           <div className="px-4 py-3 border-b"
-                            style={{ borderColor: theme.borderSoft, background: `${ev.color}08`, borderLeft: `3px solid ${ev.color}` }}>
+                            style={{ borderColor: theme.borderSoft, background: `${ev.color}${isLight ? '14' : '08'}`, borderLeft: `3px solid ${ev.color}` }}>
                             <div className="grid grid-cols-2 gap-3">
                               {/* EPS */}
                               <div>
@@ -634,7 +640,7 @@ export default function EventsView({ T }: { T?: any }) {
                     <div className="min-w-0 flex-1">
                       {/* 종목명 + 배지 행 */}
                       <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
-                        <span className="w-1.5 h-1.5 rounded-sm shrink-0" style={{ background: ev.color }} />
+                        <span className="w-2 h-2 rounded-sm shrink-0" style={{ background: ev.color }} />
                         <span className="text-xs font-semibold" style={{ color: theme.textPrimary }}>{ev.label}</span>
                         {/* 섹터 배지 */}
                         {e?.sector && e.sector !== 'Other' && (
