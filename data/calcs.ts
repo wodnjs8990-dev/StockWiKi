@@ -41,6 +41,8 @@ export const CALC_CATEGORIES: CalcCategory[] = [
       { id: 'fxconvert', name: '환전 수수료', num: '19' },
       { id: 'shortsell', name: '공매도 손익', num: '20' },
       { id: 'splitorder', name: '분할매수 · 분할매도', num: '21' },
+      { id: 'gapcalc', name: '갭 상하한가', num: '46' },
+      { id: 'marginliquid', name: '반대매매 가격', num: '47' },
     ],
   },
   {
@@ -52,6 +54,8 @@ export const CALC_CATEGORIES: CalcCategory[] = [
       { id: 'greeks', name: '옵션 Greeks', num: '25' },
       { id: 'rollover', name: '롤오버 비용', num: '26' },
       { id: 'optionbep', name: '옵션 손익분기', num: '27' },
+      { id: 'futuresfair', name: '선물 이론가 · 괴리율', num: '48' },
+      { id: 'optionspread', name: '옵션 스프레드 전략', num: '49' },
     ],
   },
   {
@@ -61,6 +65,8 @@ export const CALC_CATEGORIES: CalcCategory[] = [
       { id: 'kelly', name: '켈리 공식', num: '29' },
       { id: 'mdd', name: '최대낙폭', num: '30' },
       { id: 'var', name: 'VaR 추정', num: '31' },
+      { id: 'winrate', name: '승률 · 기대값', num: '50' },
+      { id: 'margincheck', name: '증거금 유지율', num: '51' },
     ],
   },
   {
@@ -90,6 +96,7 @@ export const CALC_CATEGORIES: CalcCategory[] = [
       { id: 'taxsaving', name: 'ISA · IRP · 연금저축 절세', num: '43' },
       { id: 'finincometax', name: '금융소득 종합과세 시뮬레이터', num: '44' },
       { id: 'taxaccount', name: '절세 계좌 우선순위', num: '45' },
+      { id: 'derivtax', name: '파생상품 양도소득세', num: '52' },
     ],
   },
 ];

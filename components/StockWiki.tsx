@@ -1711,6 +1711,13 @@ function CalculatorView({ selectedCalc, setSelectedCalc, T, isDark }) {
       case 'rebalance': return <RebalanceCalc />;
       case 'finincometax': return <FinIncomeTaxCalc />;
       case 'taxaccount': return <TaxAccountCalc />;
+      case 'gapcalc': return <GapCalc />;
+      case 'marginliquid': return <MarginLiquidCalc />;
+      case 'futuresfair': return <FuturesFairCalc />;
+      case 'optionspread': return <OptionSpreadCalc />;
+      case 'winrate': return <WinRateCalc />;
+      case 'margincheck': return <MarginCheckCalc />;
+      case 'derivtax': return <DerivTaxCalc />;
       default: return null;
     }
   };
@@ -2357,7 +2364,7 @@ function PERCalc() {
         <NumInput label="발행주식수" value={shares} onChange={setShares} unit="주" placeholder="10,000,000" hint="자기주식 제외" />
       </div>
       <div className="grid md:grid-cols-2 border" style={{ borderColor: _BORDER }}>
-        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="EPS · 주당순이익" value={fmt(eps)} unit="원" /></div>
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="EPS · 주당순이익" value={fmt(eps)} unit="원" /></div>
         <ResultBox label="PER · 주가수익비율" value={fmt(per)} unit="배" highlight />
       </div>
       <CalcNote
@@ -2398,9 +2405,9 @@ function PSRCalc() {
         <NumInput label="연간 매출액" value={sales} onChange={setSales} unit="원" placeholder="500,000,000,000" hint="최근 4분기 합산" />
         <NumInput label="발행주식수" value={shares} onChange={setShares} unit="주" placeholder="10,000,000" />
       </div>
-      <div className="grid md:grid-cols-3 border" style={{ borderColor: _BORDER }}>
-        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="SPS · 주당매출액" value={fmt(sps, 0)} unit="원" /></div>
-        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="시가총액" value={fmt(marketCap, 0)} unit="원" /></div>
+      <div className="grid grid-cols-1 md:grid-cols-3 border" style={{ borderColor: _BORDER }}>
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="SPS · 주당매출액" value={fmt(sps, 0)} unit="원" /></div>
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="시가총액" value={fmt(marketCap, 0)} unit="원" /></div>
         <ResultBox label="PSR · 주가매출비율" value={fmt(psr, 2)} unit="배" highlight />
       </div>
       <CalcNote
@@ -2442,7 +2449,7 @@ function PBRCalc() {
         <NumInput label="발행주식수" value={shares} onChange={setShares} unit="주" placeholder="10,000,000" />
       </div>
       <div className="grid md:grid-cols-2 border" style={{ borderColor: _BORDER }}>
-        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="BPS · 주당순자산" value={fmt(bps)} unit="원" /></div>
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="BPS · 주당순자산" value={fmt(bps)} unit="원" /></div>
         <ResultBox label="PBR · 주가순자산비율" value={fmt(pbr)} unit="배" highlight />
       </div>
       <CalcNote
@@ -2484,7 +2491,7 @@ function TargetPriceCalc() {
         <NumInput label="현재 주가" value={current} onChange={setCurrent} unit="원" placeholder="45,000" />
       </div>
       <div className="grid md:grid-cols-2 border" style={{ borderColor: _BORDER }}>
-        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="목표주가" value={fmt(target, 0)} unit="원" highlight /></div>
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="목표주가" value={fmt(target, 0)} unit="원" highlight /></div>
         <ResultBox label="상승여력" value={fmt(upside)} unit="%" />
       </div>
       <CalcNote
@@ -2539,9 +2546,9 @@ function DCFCalc() {
         <NumInput label="할인율 (WACC)" value={discount} onChange={setDiscount} unit="%" placeholder="10" hint="보통 8~12%" />
         <NumInput label="영구성장률" value={terminal} onChange={setTerminal} unit="%" placeholder="2.5" hint="GDP 성장률 수준" />
       </div>
-      <div className="grid md:grid-cols-3 border" style={{ borderColor: _BORDER }}>
-        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="5년 PV 합계" value={fmt(pv, 0)} unit="원" /></div>
-        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="터미널 PV" value={fmt(pvTerminal, 0)} unit="원" /></div>
+      <div className="grid grid-cols-1 md:grid-cols-3 border" style={{ borderColor: _BORDER }}>
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="5년 PV 합계" value={fmt(pv, 0)} unit="원" /></div>
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="터미널 PV" value={fmt(pvTerminal, 0)} unit="원" /></div>
         <ResultBox label="기업가치 (EV)" value={fmt(enterpriseValue, 0)} unit="원" highlight />
       </div>
       <CalcNote
@@ -2590,9 +2597,9 @@ function WACCCalc() {
         <NumInput label="타인자본비용 (Rd)" value={rd} onChange={setRd} unit="%" placeholder="4.5" hint="회사채 금리 수준" />
         <NumInput label="법인세율" value={taxrate} onChange={setTaxrate} unit="%" placeholder="22" />
       </div>
-      <div className="grid md:grid-cols-3 border" style={{ borderColor: _BORDER }}>
-        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="자기자본 비중" value={fmt(wE * 100)} unit="%" /></div>
-        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="부채 비중" value={fmt(wD * 100)} unit="%" /></div>
+      <div className="grid grid-cols-1 md:grid-cols-3 border" style={{ borderColor: _BORDER }}>
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="자기자본 비중" value={fmt(wE * 100)} unit="%" /></div>
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="부채 비중" value={fmt(wD * 100)} unit="%" /></div>
         <ResultBox label="WACC" value={fmt(wacc)} unit="%" highlight />
       </div>
       <CalcNote
@@ -2636,7 +2643,7 @@ function ROECalc() {
         <NumInput label="총자산" value={assets} onChange={setAssets} unit="원" placeholder="1,000,000,000,000" />
       </div>
       <div className="grid md:grid-cols-2 border" style={{ borderColor: _BORDER }}>
-        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="ROE" value={fmt(roe)} unit="%" highlight color="#A63D33" /></div>
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="ROE" value={fmt(roe)} unit="%" highlight color="#A63D33" /></div>
         <ResultBox label="ROA" value={fmt(roa)} unit="%" />
       </div>
       <CalcNote
@@ -2683,9 +2690,9 @@ function DuPontCalc() {
         <NumInput label="자기자본" value={equity} onChange={setEquity} unit="원" placeholder="600,000,000,000" />
       </div>
       <div className="grid md:grid-cols-4 border" style={{ borderColor: _BORDER }}>
-        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="순이익률" value={fmt(margin * 100)} unit="%" /></div>
-        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="자산회전율" value={fmt(turnover, 3)} unit="회" /></div>
-        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="재무레버리지" value={fmt(leverage, 3)} unit="배" /></div>
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="순이익률" value={fmt(margin * 100)} unit="%" /></div>
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="자산회전율" value={fmt(turnover, 3)} unit="회" /></div>
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="재무레버리지" value={fmt(leverage, 3)} unit="배" /></div>
         <ResultBox label="ROE" value={fmt(roe)} unit="%" highlight color="#A63D33" />
       </div>
       <CalcNote
@@ -2730,9 +2737,9 @@ function MarginCalc() {
         <NumInput label="판관비" value={sga} onChange={setSga} unit="원" placeholder="200,000,000,000" />
         <NumInput label="당기순이익" value={ni} onChange={setNi} unit="원" placeholder="120,000,000,000" />
       </div>
-      <div className="grid md:grid-cols-3 border" style={{ borderColor: _BORDER }}>
-        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="매출총이익률" value={fmt(gross)} unit="%" /></div>
-        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="영업이익률" value={fmt(op)} unit="%" highlight color="#A63D33" /></div>
+      <div className="grid grid-cols-1 md:grid-cols-3 border" style={{ borderColor: _BORDER }}>
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="매출총이익률" value={fmt(gross)} unit="%" /></div>
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="영업이익률" value={fmt(op)} unit="%" highlight color="#A63D33" /></div>
         <ResultBox label="순이익률" value={fmt(net)} unit="%" />
       </div>
       <CalcNote
@@ -2775,9 +2782,9 @@ function BEPCalc() {
         <NumInput label="단위당 판매가" value={price} onChange={setPrice} unit="원" placeholder="10,000" />
         <NumInput label="단위당 변동비" value={varcost} onChange={setVarcost} unit="원" placeholder="6,000" />
       </div>
-      <div className="grid md:grid-cols-3 border" style={{ borderColor: _BORDER }}>
-        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="BEP 수량" value={fmt(unit, 0)} unit="개" highlight color="#A63D33" /></div>
-        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="BEP 매출액" value={fmt(sales, 0)} unit="원" /></div>
+      <div className="grid grid-cols-1 md:grid-cols-3 border" style={{ borderColor: _BORDER }}>
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="BEP 수량" value={fmt(unit, 0)} unit="개" highlight color="#A63D33" /></div>
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="BEP 매출액" value={fmt(sales, 0)} unit="원" /></div>
         <ResultBox label="한계이익률" value={fmt(cm)} unit="%" />
       </div>
       <CalcNote
@@ -2819,9 +2826,9 @@ function DividendCalc() {
         <NumInput label="주당배당금 (DPS)" value={dps} onChange={setDps} unit="원" placeholder="2,000" />
         <NumInput label="보유주식수" value={shares} onChange={setShares} unit="주" placeholder="100" />
       </div>
-      <div className="grid md:grid-cols-3 border" style={{ borderColor: _BORDER }}>
-        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="배당수익률" value={fmt(yld)} unit="%" highlight color="#C08E6A" /></div>
-        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="세전 배당금" value={fmt(annualDiv, 0)} unit="원" /></div>
+      <div className="grid grid-cols-1 md:grid-cols-3 border" style={{ borderColor: _BORDER }}>
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="배당수익률" value={fmt(yld)} unit="%" highlight color="#C08E6A" /></div>
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="세전 배당금" value={fmt(annualDiv, 0)} unit="원" /></div>
         <ResultBox label="세후 수령액" value={fmt(afterTax, 0)} unit="원" />
       </div>
       <CalcNote
@@ -2872,9 +2879,9 @@ function CompoundCalc() {
         <NumInput label="연 수익률" value={rate} onChange={setRate} unit="%" placeholder="8" />
         <NumInput label="투자 기간" value={years} onChange={setYears} unit="년" placeholder="20" />
       </div>
-      <div className="grid md:grid-cols-3 border" style={{ borderColor: _BORDER }}>
-        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="최종 평가액" value={fmt(total, 0)} unit="원" highlight color="#C08E6A" /></div>
-        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="총 투자원금" value={fmt(totalInvested, 0)} unit="원" /></div>
+      <div className="grid grid-cols-1 md:grid-cols-3 border" style={{ borderColor: _BORDER }}>
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="최종 평가액" value={fmt(total, 0)} unit="원" highlight color="#C08E6A" /></div>
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="총 투자원금" value={fmt(totalInvested, 0)} unit="원" /></div>
         <ResultBox label="순수익" value={fmt(profit, 0)} unit="원" />
       </div>
       <CalcNote
@@ -2917,7 +2924,7 @@ function CAGRCalc() {
         <NumInput label="기간" value={years} onChange={setYears} unit="년" placeholder="10" />
       </div>
       <div className="grid md:grid-cols-2 border" style={{ borderColor: _BORDER }}>
-        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="CAGR" value={fmt(cagr)} unit="%" highlight color="#C08E6A" /></div>
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="CAGR" value={fmt(cagr)} unit="%" highlight color="#C08E6A" /></div>
         <ResultBox label="총 수익률" value={fmt(totalReturn)} unit="%" />
       </div>
       <CalcNote
@@ -3017,7 +3024,7 @@ function AvgPriceCalc() {
       <div className="grid md:grid-cols-2 border" style={{ borderColor: _BORDER }}>
         <div className="border-r border-b" style={{ borderColor: _BORDER }}><ResultBox label="평균 매수단가" value={fmt(avg, 0)} unit="원" highlight color="#8A8A8A" /></div>
         <div className="border-b" style={{ borderColor: _BORDER }}><ResultBox label="총 보유수량" value={fmt(totalQty, 0)} unit="주" /></div>
-        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="평가손익" value={fmt(pnl, 0)} unit="원" /></div>
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="평가손익" value={fmt(pnl, 0)} unit="원" /></div>
         <ResultBox label="수익률" value={fmt(pnlRate)} unit="%" />
       </div>
       <CalcNote
@@ -3068,8 +3075,8 @@ function CommissionCalc() {
         <NumInput label="수수료율" value={feeRate} onChange={setFeeRate} unit="%" placeholder="0.015" />
       </div>
       <div className={`grid ${type === 'sell' ? 'md:grid-cols-4' : 'md:grid-cols-3'} border`} style={{ borderColor: _BORDER }}>
-        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="거래금액" value={fmt(amount, 0)} unit="원" /></div>
-        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="수수료" value={fmt(fee, 0)} unit="원" /></div>
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="거래금액" value={fmt(amount, 0)} unit="원" /></div>
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="수수료" value={fmt(fee, 0)} unit="원" /></div>
         {type === 'sell' && <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="증권거래세" value={fmt(tax, 0)} unit="원" /></div>}
         <ResultBox label={type === 'buy' ? '총 매수대금' : '실수령액'} value={fmt(total, 0)} unit="원" highlight color="#8A8A8A" />
       </div>
@@ -3115,7 +3122,7 @@ function BreakevenCalc() {
         <NumInput label="수수료율 (편도)" value={feeRate} onChange={setFeeRate} unit="%" placeholder="0.015" />
       </div>
       <div className="grid md:grid-cols-2 border" style={{ borderColor: _BORDER }}>
-        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="손익분기 매도가" value={fmt(breakeven, 0)} unit="원" highlight color="#8A8A8A" /></div>
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="손익분기 매도가" value={fmt(breakeven, 0)} unit="원" highlight color="#8A8A8A" /></div>
         <ResultBox label="필요 상승률" value={fmt(pctUp)} unit="%" />
       </div>
       <CalcNote
@@ -3160,9 +3167,9 @@ function PositionSizeCalc() {
         <NumInput label="진입가" value={entry} onChange={setEntry} unit="원" placeholder="50,000" />
         <NumInput label="손절가" value={stop} onChange={setStop} unit="원" placeholder="47,000" />
       </div>
-      <div className="grid md:grid-cols-3 border" style={{ borderColor: _BORDER }}>
-        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="허용 손실액" value={fmt(riskAmt, 0)} unit="원" /></div>
-        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="매수 수량" value={fmt(shares, 0)} unit="주" highlight color="#8A8A8A" /></div>
+      <div className="grid grid-cols-1 md:grid-cols-3 border" style={{ borderColor: _BORDER }}>
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="허용 손실액" value={fmt(riskAmt, 0)} unit="원" /></div>
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="매수 수량" value={fmt(shares, 0)} unit="주" highlight color="#8A8A8A" /></div>
         <ResultBox label="포지션 비중" value={fmt(posPct)} unit="%" />
       </div>
       <CalcNote
@@ -3216,7 +3223,7 @@ function FuturesCalc() {
         <NumInput label="승수" value={multiplier} onChange={setMultiplier} unit="원" placeholder="250,000" />
       </div>
       <div className="grid md:grid-cols-2 border" style={{ borderColor: _BORDER }}>
-        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="포인트 손익" value={fmt(directedDiff, 2)} unit="pt" /></div>
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="포인트 손익" value={fmt(directedDiff, 2)} unit="pt" /></div>
         <ResultBox label="손익금액" value={fmt(pnl, 0)} unit="원" highlight color={pnl >= 0 ? '#C89650' : '#A63D33'} />
       </div>
       <CalcNote
@@ -3261,9 +3268,9 @@ function LeverageCalc() {
         <NumInput label="증거금률" value={marginRate} onChange={setMarginRate} unit="%" placeholder="10" />
         <NumInput label="투자 가용 자본" value={capital} onChange={setCapital} unit="원" placeholder="10,000,000" />
       </div>
-      <div className="grid md:grid-cols-3 border" style={{ borderColor: _BORDER }}>
-        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="필요 증거금" value={fmt(margin, 0)} unit="원" /></div>
-        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="실질 레버리지" value={fmt(leverage)} unit="배" highlight color="#6B6B6B" /></div>
+      <div className="grid grid-cols-1 md:grid-cols-3 border" style={{ borderColor: _BORDER }}>
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="필요 증거금" value={fmt(margin, 0)} unit="원" /></div>
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="실질 레버리지" value={fmt(leverage)} unit="배" highlight color="#6B6B6B" /></div>
         <ResultBox label="최대 명목포지션" value={fmt(maxLoss, 0)} unit="원" />
       </div>
       <CalcNote
@@ -3340,9 +3347,9 @@ function BlackScholesCalc() {
         <NumInput label="무위험금리 (r)" value={r} onChange={setR} unit="%" placeholder="3.5" />
         <NumInput label="변동성 (σ)" value={sigma} onChange={setSigma} unit="%" placeholder="20" hint="내재변동성 또는 역사적변동성" />
       </div>
-      <div className="grid md:grid-cols-3 border" style={{ borderColor: _BORDER }}>
-        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="d₁" value={result ? fmt(result.d1, 4) : '—'} unit="" /></div>
-        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="d₂" value={result ? fmt(result.d2, 4) : '—'} unit="" /></div>
+      <div className="grid grid-cols-1 md:grid-cols-3 border" style={{ borderColor: _BORDER }}>
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="d₁" value={result ? fmt(result.d1, 4) : '—'} unit="" /></div>
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="d₂" value={result ? fmt(result.d2, 4) : '—'} unit="" /></div>
         <ResultBox label={type === 'call' ? '콜 이론가' : '풋 이론가'} value={result ? fmt(result.price, 2) : '—'} unit="원" highlight color="#6B6B6B" />
       </div>
       <CalcNote
@@ -3416,10 +3423,10 @@ function GreeksCalc() {
         <NumInput label="변동성" value={sigma} onChange={setSigma} unit="%" placeholder="20" />
       </div>
       <div className="grid md:grid-cols-5 border" style={{ borderColor: _BORDER }}>
-        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="Delta Δ" value={greeks ? fmt(greeks.delta, 4) : '—'} unit="" highlight color="#6B6B6B" /></div>
-        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="Gamma Γ" value={greeks ? fmt(greeks.gamma, 5) : '—'} unit="" /></div>
-        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="Theta Θ" value={greeks ? fmt(greeks.theta, 4) : '—'} unit="/일" /></div>
-        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="Vega ν" value={greeks ? fmt(greeks.vega, 4) : '—'} unit="" /></div>
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="Delta Δ" value={greeks ? fmt(greeks.delta, 4) : '—'} unit="" highlight color="#6B6B6B" /></div>
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="Gamma Γ" value={greeks ? fmt(greeks.gamma, 5) : '—'} unit="" /></div>
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="Theta Θ" value={greeks ? fmt(greeks.theta, 4) : '—'} unit="/일" /></div>
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="Vega ν" value={greeks ? fmt(greeks.vega, 4) : '—'} unit="" /></div>
         <ResultBox label="Rho ρ" value={greeks ? fmt(greeks.rho, 4) : '—'} unit="" />
       </div>
       <CalcNote
@@ -3465,7 +3472,7 @@ function SharpeCalc() {
         <NumInput label="하방편차" value={downside} onChange={setDownside} unit="%" placeholder="8" hint="손실 구간의 표준편차" />
       </div>
       <div className="grid md:grid-cols-2 border" style={{ borderColor: _BORDER }}>
-        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="샤프지수" value={fmt(sharpe, 3)} unit="" highlight color="#4F7E7C" /></div>
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="샤프지수" value={fmt(sharpe, 3)} unit="" highlight color="#4F7E7C" /></div>
         <ResultBox label="소티노지수" value={fmt(sortino, 3)} unit="" />
       </div>
       <CalcNote
@@ -3509,9 +3516,9 @@ function KellyCalc() {
         <NumInput label="평균 수익금" value={winAmt} onChange={setWinAmt} unit="원" placeholder="200,000" />
         <NumInput label="평균 손실금" value={lossAmt} onChange={setLossAmt} unit="원" placeholder="100,000" />
       </div>
-      <div className="grid md:grid-cols-3 border" style={{ borderColor: _BORDER }}>
-        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="Full Kelly" value={fmt(f * 100)} unit="%" highlight color="#4F7E7C" /></div>
-        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="Half Kelly (권장)" value={fmt(halfKelly * 100)} unit="%" /></div>
+      <div className="grid grid-cols-1 md:grid-cols-3 border" style={{ borderColor: _BORDER }}>
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="Full Kelly" value={fmt(f * 100)} unit="%" highlight color="#4F7E7C" /></div>
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="Half Kelly (권장)" value={fmt(halfKelly * 100)} unit="%" /></div>
         <ResultBox label="손익비 (b)" value={fmt(b)} unit=":1" />
       </div>
       <CalcNote
@@ -3551,7 +3558,7 @@ function MDDCalc() {
         <NumInput label="저점 (Trough)" value={trough} onChange={setTrough} unit="원" placeholder="70,000,000" />
       </div>
       <div className="grid md:grid-cols-2 border" style={{ borderColor: _BORDER }}>
-        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="MDD" value={fmt(mdd)} unit="%" highlight color="#A63D33" /></div>
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="MDD" value={fmt(mdd)} unit="%" highlight color="#A63D33" /></div>
         <ResultBox label="회복 필요 수익률" value={fmt(recovery)} unit="%" />
       </div>
       <CalcNote
@@ -3605,7 +3612,7 @@ function VaRCalc() {
         <NumInput label="기간" value={days} onChange={setDays} unit="일" placeholder="1" />
       </div>
       <div className="grid md:grid-cols-2 border" style={{ borderColor: _BORDER }}>
-        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="1일 VaR" value={fmt(dailyVar, 0)} unit="원" /></div>
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="1일 VaR" value={fmt(dailyVar, 0)} unit="원" /></div>
         <ResultBox label={`${days}일 VaR`} value={fmt(multiDayVar, 0)} unit="원" highlight color="#A63D33" />
       </div>
       <CalcNote
@@ -3650,9 +3657,9 @@ function FXCalc() {
         <NumInput label="매수 환율" value={buyRate} onChange={setBuyRate} unit="KRW" placeholder="1,300" />
         <NumInput label="매도 환율" value={sellRate} onChange={setSellRate} unit="KRW" placeholder="1,380" />
       </div>
-      <div className="grid md:grid-cols-3 border" style={{ borderColor: _BORDER }}>
-        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="매수 시 원화" value={fmt(krwSpent, 0)} unit="원" /></div>
-        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="매도 시 원화" value={fmt(krwReceived, 0)} unit="원" /></div>
+      <div className="grid grid-cols-1 md:grid-cols-3 border" style={{ borderColor: _BORDER }}>
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="매수 시 원화" value={fmt(krwSpent, 0)} unit="원" /></div>
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="매도 시 원화" value={fmt(krwReceived, 0)} unit="원" /></div>
         <ResultBox label={`환차${pnl >= 0 ? '익' : '손'}`} value={fmt(pnl, 0)} unit={`원 (${fmt(pnlPct)}%)`} highlight color={pnl >= 0 ? '#C89650' : '#A63D33'} />
       </div>
       <CalcNote
@@ -3696,7 +3703,7 @@ function RealRateCalc() {
         <NumInput label="인플레이션 (CPI)" value={inflation} onChange={setInflation} unit="%" placeholder="3" />
       </div>
       <div className="grid md:grid-cols-2 border" style={{ borderColor: _BORDER }}>
-        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="실질금리 (Fisher)" value={fmt(real, 3)} unit="%" highlight color="#7C6A9B" /></div>
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="실질금리 (Fisher)" value={fmt(real, 3)} unit="%" highlight color="#7C6A9B" /></div>
         <ResultBox label="간이 계산" value={fmt(simpleReal)} unit="%" />
       </div>
       <CalcNote
@@ -3750,7 +3757,7 @@ function BondPriceCalc() {
         <NumInput label="잔존만기" value={years} onChange={setYears} unit="년" placeholder="5" />
       </div>
       <div className="grid md:grid-cols-2 border" style={{ borderColor: _BORDER }}>
-        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="채권 가격 (PV)" value={fmt(pv, 0)} unit="원" highlight color="#7C6A9B" /></div>
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="채권 가격 (PV)" value={fmt(pv, 0)} unit="원" highlight color="#7C6A9B" /></div>
         <ResultBox label="액면 대비" value={fmt(premium, 2)} unit="%" />
       </div>
       <CalcNote
@@ -3840,9 +3847,9 @@ function CapitalGainCalc() {
         <NumInput label="매도가" value={sellPrice} onChange={setSellPrice} unit="원" placeholder="70,000" />
         <NumInput label="취득비용 (수수료 등)" value={tradeCost} onChange={setTradeCost} unit="원" placeholder="50,000" />
       </div>
-      <div className="grid md:grid-cols-3 border" style={{ borderColor: _BORDER }}>
-        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="양도차익" value={fmt(gain, 0)} unit="원" /></div>
-        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="세율" value={fmt(taxRate)} unit="%" /></div>
+      <div className="grid grid-cols-1 md:grid-cols-3 border" style={{ borderColor: _BORDER }}>
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="양도차익" value={fmt(gain, 0)} unit="원" /></div>
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="세율" value={fmt(taxRate)} unit="%" /></div>
         <ResultBox label="산출세액" value={fmt(taxAmount, 0)} unit="원" highlight color="#5B8DB8" />
       </div>
       <CalcNote
@@ -3895,7 +3902,7 @@ function HealthInsuranceCalc() {
         <NumInput label="기타소득 (근로·사업·기타)" value={otherIncome} onChange={setOtherIncome} unit="원" placeholder="0" />
       </div>
       <div className="grid md:grid-cols-2 border" style={{ borderColor: _BORDER }}>
-        <div className="border-r" style={{ borderColor: _BORDER }}>
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}>
           <ResultBox label="종합과세 여부" value={isGrossIncome ? '과세' : '비과세'} unit="" />
         </div>
         <ResultBox label="피부양자 탈락" value={isDependentLost ? '예' : '아니오'} unit="" />
@@ -3991,7 +3998,7 @@ function IncomeTaxCalc() {
         <NumInput label="기타공제액" value={otherDeductions} onChange={setOtherDeductions} unit="원" placeholder="0" />
       </div>
       <div className={`grid ${incomeType === 'employment' ? 'md:grid-cols-3' : 'md:grid-cols-2'} border`} style={{ borderColor: _BORDER }}>
-        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="과세표준" value={fmt(taxableIncome, 0)} unit="원" /></div>
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="과세표준" value={fmt(taxableIncome, 0)} unit="원" /></div>
         <div className={incomeType === 'employment' ? 'border-r' : ''} style={{ borderColor: _BORDER }}><ResultBox label="산출세액" value={fmt(tax, 0)} unit="원" /></div>
         {incomeType === 'employment' && <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="지방소득세" value={fmt(localTax, 0)} unit="원" /></div>}
         <ResultBox label="세율" value={fmt(bracket)} unit="%" highlight color="#5B8DB8" />
@@ -4177,7 +4184,7 @@ function PensionCalc() {
         </div>
       )}
       <div className="grid md:grid-cols-2 border" style={{ borderColor: _BORDER }}>
-        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="예상 월 연금액" value={fmt(monthlyPension, 0)} unit="원" highlight color="#5B8DB8" /></div>
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="예상 월 연금액" value={fmt(monthlyPension, 0)} unit="원" highlight color="#5B8DB8" /></div>
         <ResultBox label="연간 수령액" value={fmt(monthlyPension * 12, 0)} unit="원" />
       </div>
       <CalcNote
@@ -4263,8 +4270,8 @@ function TaxSavingCalc() {
         </div>
       )}
       <div className={`grid ${savingType === 'isa' ? 'md:grid-cols-2' : 'md:grid-cols-3'} border`} style={{ borderColor: _BORDER }}>
-        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="절세액" value={fmt(taxSavings, 0)} unit="원" /></div>
-        {savingType === 'isa' && <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="일반계좌 대비 절약" value={fmt(expectedProfit > 0 ? (expectedProfit * 0.154 - expectedProfit * 0.099) : 0, 0)} unit="원" /></div>}
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="절세액" value={fmt(taxSavings, 0)} unit="원" /></div>
+        {savingType === 'isa' && <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="일반계좌 대비 절약" value={fmt((Number(expectedProfit)||0) > 0 ? ((Number(expectedProfit)||0) * 0.154 - (Number(expectedProfit)||0) * 0.099) : 0, 0)} unit="원" /></div>}
         <ResultBox label={savingType === 'isa' ? '실효수익률' : '세액공제율'} value={fmt(effectiveReturn, 2)} unit="%" highlight color="#5B8DB8" />
       </div>
       <CalcNote
@@ -4327,9 +4334,9 @@ function FxConvertCalc() {
         <NumInput label="기준환율 (매매기준율)" value={rate} onChange={setRate} unit="원/$" placeholder="1,350" />
         <NumInput label="스프레드 (환전 우대 전)" value={spread} onChange={setSpread} unit="%" hint="일반 1.75%, 우대 시 더 낮음" />
       </div>
-      <div className="grid md:grid-cols-3 border" style={{ borderColor: _BORDER }}>
-        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="적용 환율" value={fmt(appliedRate, 2)} unit="원/$" /></div>
-        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="스프레드 비용" value={fmt(spreadCost, 0)} unit={dir === 'buy' ? '원' : '$'} /></div>
+      <div className="grid grid-cols-1 md:grid-cols-3 border" style={{ borderColor: _BORDER }}>
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="적용 환율" value={fmt(appliedRate, 2)} unit="원/$" /></div>
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="스프레드 비용" value={fmt(spreadCost, 0)} unit={dir === 'buy' ? '원' : '$'} /></div>
         <ResultBox label={dir === 'buy' ? '수령 달러' : '수령 원화'} value={dir === 'buy' ? fmt(usdResult, 2) : fmt(krwResult, 0)} unit={dir === 'buy' ? '$' : '원'} highlight color="#8A8A8A" />
       </div>
       <CalcNote
@@ -4371,9 +4378,9 @@ function ShortSellCalc() {
         <NumInput label="대차금리 (연)" value={borrowRate} onChange={setBorrowRate} unit="%" hint="종목별 상이, 일반 1~5%" />
       </div>
       <div className="grid md:grid-cols-4 border" style={{ borderColor: _BORDER }}>
-        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="주가차익" value={fmt(pnl, 0)} unit="원" /></div>
-        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="대차료" value={fmt(-borrowCost, 0)} unit="원" /></div>
-        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="증권거래세" value={fmt(-sellTax, 0)} unit="원" /></div>
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="주가차익" value={fmt(pnl, 0)} unit="원" /></div>
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="대차료" value={fmt(-borrowCost, 0)} unit="원" /></div>
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="증권거래세" value={fmt(-sellTax, 0)} unit="원" /></div>
         <ResultBox label="순손익" value={fmt(netPnl, 0)} unit="원" highlight color="#8A8A8A" />
       </div>
       <div className="border border-t-0" style={{ borderColor: _BORDER }}>
@@ -4486,9 +4493,9 @@ function RolloverCalc() {
         <NumInput label="계약 수" value={contracts} onChange={setContracts} unit="계약" placeholder="5" />
         <NumInput label="계약 승수" value={multiplier} onChange={setMultiplier} unit="원/pt" hint="코스피200선물 250,000원/pt" />
       </div>
-      <div className="grid md:grid-cols-3 border" style={{ borderColor: _BORDER }}>
-        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="베이시스" value={fmt(basis, 2)} unit="pt" /></div>
-        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="롤오버 비용" value={fmt(rollCost, 0)} unit="원" highlight color="#6B6B6B" /></div>
+      <div className="grid grid-cols-1 md:grid-cols-3 border" style={{ borderColor: _BORDER }}>
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="베이시스" value={fmt(basis, 2)} unit="pt" /></div>
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="롤오버 비용" value={fmt(rollCost, 0)} unit="원" highlight color="#6B6B6B" /></div>
         <ResultBox label="베이시스율" value={fmt(rollPct, 3)} unit="%" />
       </div>
       <CalcNote
@@ -4533,9 +4540,9 @@ function OptionBEPCalc() {
         <NumInput label="프리미엄 (옵션가)" value={premium} onChange={setPremium} unit="pt" placeholder="2.50" />
         <NumInput label="계약 승수" value={multiplier} onChange={setMultiplier} unit="원/pt" hint="코스피200 250,000원" />
       </div>
-      <div className="grid md:grid-cols-3 border" style={{ borderColor: _BORDER }}>
-        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="손익분기 (BEP)" value={fmt(bep, 2)} unit="pt" highlight color="#6B6B6B" /></div>
-        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="최대 손실" value={fmt(-maxLoss, 0)} unit="원" /></div>
+      <div className="grid grid-cols-1 md:grid-cols-3 border" style={{ borderColor: _BORDER }}>
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="손익분기 (BEP)" value={fmt(bep, 2)} unit="pt" highlight color="#6B6B6B" /></div>
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="최대 손실" value={fmt(-maxLoss, 0)} unit="원" /></div>
         <ResultBox label={type === 'call' ? '최대 이익' : `최대 이익 (지수 0 시)`} value={type === 'call' ? '이론상 무한' : fmt(maxProfit, 0)} unit={type === 'call' ? '' : '원'} />
       </div>
       <CalcNote
@@ -4627,9 +4634,9 @@ function FxHedgeCalc() {
         <NumInput label="선물환 프리미엄 (연)" value={fwdPremium} onChange={setFwdPremium} unit="%" hint="한미 금리차 반영, 약 1~2% 수준" />
       </div>
       <div className="grid md:grid-cols-4 border" style={{ borderColor: _BORDER }}>
-        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="원화 환산 총액" value={fmt(krwValue, 0)} unit="원" /></div>
-        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="헷지 금액" value={fmt(hedgeAmt, 0)} unit="원" /></div>
-        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="비헷지 금액" value={fmt(unhedgedAmt, 0)} unit="원" /></div>
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="원화 환산 총액" value={fmt(krwValue, 0)} unit="원" /></div>
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="헷지 금액" value={fmt(hedgeAmt, 0)} unit="원" /></div>
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="비헷지 금액" value={fmt(unhedgedAmt, 0)} unit="원" /></div>
         <ResultBox label="연간 헷지 비용" value={fmt(hedgeCost, 0)} unit="원" highlight color="#6B9B6B" />
       </div>
       <CalcNote
@@ -4758,9 +4765,9 @@ function FinIncomeTaxCalc() {
           ? `⚠ 금융소득 ${fmt(fin/10000, 0)}만원 — 2,000만원 초과로 종합과세 대상입니다.`
           : `✓ 금융소득 ${fmt(fin/10000, 0)}만원 — 2,000만원 이하로 분리과세(15.4%) 적용됩니다.`}
       </div>
-      <div className="grid md:grid-cols-3 border" style={{ borderColor: _BORDER }}>
-        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="금융소득 합계" value={fmt(fin, 0)} unit="원" /></div>
-        <div className="border-r" style={{ borderColor: _BORDER }}>
+      <div className="grid grid-cols-1 md:grid-cols-3 border" style={{ borderColor: _BORDER }}>
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="금융소득 합계" value={fmt(fin, 0)} unit="원" /></div>
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}>
           <ResultBox label={isComprehensive ? '종합과세 세액' : '분리과세 세액'} value={fmt(isComprehensive ? comprehensiveTax : separateTax, 0)} unit="원" highlight color="#5B8DB8" />
         </div>
         <ResultBox label="실효세율" value={fmt(effectiveRate, 1)} unit="%" />
@@ -5038,6 +5045,467 @@ const GUIDE_SECTIONS = [
     ],
   },
 ];
+
+// ─────────────────────────────────────────────
+// 갭 상하한가 계산기
+// ─────────────────────────────────────────────
+function GapCalc() {
+  const [prevClose, setPrevClose] = useState('');
+  const [market, setMarket] = useState<'kospi'|'kosdaq'>('kospi');
+  const prev = Number(prevClose) || 0;
+  const limitPct = 30;
+  const upperLimit = Math.floor(prev * (1 + limitPct / 100));
+  const lowerLimit = Math.ceil(prev * (1 - limitPct / 100));
+  const gaps = [1, 2, 3, 5, 10, 15, 20].map(pct => ({
+    pct,
+    up: Math.round(prev * (1 + pct / 100)),
+    down: Math.round(prev * (1 - pct / 100)),
+  }));
+
+  return (
+    <div>
+      <CalcHeader num="46" title="갭 상하한가 계산" desc="전일 종가 기준 상하한가 및 구간별 갭 가격을 계산합니다." color="#8A8A8A" />
+      <div className="grid md:grid-cols-2 gap-5 mb-6">
+        <NumInput label="전일 종가" value={prevClose} onChange={setPrevClose} unit="원" placeholder="50,000" />
+        <div>
+          <div className="text-[11px] mono uppercase tracking-[0.15em] mb-2" style={{ color: _T.textFaint }}>시장</div>
+          <div className="flex border" style={{ borderColor: _BORDER }}>
+            {(['kospi', 'kosdaq'] as const).map(m => (
+              <button key={m} onClick={() => setMarket(m)} className="flex-1 py-2.5 text-xs font-medium transition-all border-r last:border-r-0" style={{ borderColor: _BORDER, background: market === m ? '#8A8A8A' : 'transparent', color: market === m ? '#fff' : _T.textMuted }}>
+                {m === 'kospi' ? 'KOSPI' : 'KOSDAQ'}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 border mb-6" style={{ borderColor: _BORDER }}>
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label={`상한가 (+${limitPct}%)`} value={fmt(upperLimit, 0)} unit="원" highlight color="#A63D33" /></div>
+        <ResultBox label={`하한가 (−${limitPct}%)`} value={fmt(lowerLimit, 0)} unit="원" highlight color="#4F7E7C" />
+      </div>
+      {prev > 0 && (
+        <div className="border" style={{ borderColor: _BORDER }}>
+          <div className="grid grid-cols-3 px-3 py-2 border-b text-[11px] mono uppercase tracking-[0.1em]" style={{ borderColor: _BORDER, color: _T.textFaint, background: _T.bgCard }}>
+            <span>갭 %</span><span className="text-center" style={{ color: '#A63D33' }}>상승가</span><span className="text-right" style={{ color: '#4F7E7C' }}>하락가</span>
+          </div>
+          {gaps.map(g => (
+            <div key={g.pct} className="grid grid-cols-3 px-3 py-2 border-b last:border-b-0 text-sm" style={{ borderColor: _BORDER }}>
+              <span className="mono" style={{ color: _T.textMuted }}>±{g.pct}%</span>
+              <span className="mono text-center" style={{ color: '#A63D33' }}>{fmt(g.up, 0)}</span>
+              <span className="mono text-right" style={{ color: '#4F7E7C' }}>{fmt(g.down, 0)}</span>
+            </div>
+          ))}
+        </div>
+      )}
+      <CalcNote
+        how={['전일 종가 입력 → 상하한가(±30%) 자동 계산', '구간별 갭(1~20%) 상승/하락 가격 테이블 제공']}
+        example={['전일 종가 50,000원', '상한가 = 65,000원, 하한가 = 35,000원', '5% 상승 시 52,500원 / 5% 하락 시 47,500원']}
+        tip={['한국 주식 상하한가: ±30% (2015년 6월 확대)', '선물은 상하한가 없음 (서킷브레이커 별도)', '갭업/갭다운 발생 시 전일 종가 기준으로 계산']}
+      />
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// 반대매매 가격 계산기
+// ─────────────────────────────────────────────
+function MarginLiquidCalc() {
+  const [buyPrice, setBuyPrice] = useState('');
+  const [qty, setQty] = useState('');
+  const [marginRate, setMarginRate] = useState('40');
+  const [maintRate, setMaintRate] = useState('20');
+
+  const bp = Number(buyPrice) || 0;
+  const q = Number(qty) || 0;
+  const mr = Number(marginRate) / 100;
+  const maintR = Number(maintRate) / 100;
+
+  const totalValue = bp * q;
+  const initialMargin = totalValue * mr;
+  const loan = totalValue - initialMargin;
+  // 반대매매 가격: (loan) / (qty * (1 - maintR)) 이 아니라
+  // 평가금액 × maintR = loan → 평가금액 = loan / maintR → 주당 = loan / (maintR * qty)
+  const liquidPrice = q > 0 && maintR > 0 ? loan / (q * (1 - maintR)) : 0;
+  const drawdown = bp > 0 ? ((liquidPrice - bp) / bp) * 100 : 0;
+
+  const scenarios = [10, 20, 30, 40, 50].map(mr2 => ({
+    mr2,
+    liq: q > 0 ? loan / (q * (1 - mr2 / 100)) : 0,
+  }));
+
+  return (
+    <div>
+      <CalcHeader num="47" title="반대매매 가격" desc="신용·미수 거래 시 반대매매(강제청산) 발생 가격을 계산합니다." color="#8A8A8A" />
+      <div className="grid md:grid-cols-2 gap-5 mb-6">
+        <NumInput label="매수 단가" value={buyPrice} onChange={setBuyPrice} unit="원" placeholder="50,000" />
+        <NumInput label="수량" value={qty} onChange={setQty} unit="주" placeholder="100" />
+      </div>
+      <div className="grid md:grid-cols-2 gap-5 mb-6">
+        <NumInput label="개시 증거금률" value={marginRate} onChange={setMarginRate} unit="%" placeholder="40" />
+        <NumInput label="유지 증거금률" value={maintRate} onChange={setMaintRate} unit="%" placeholder="20" />
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 border mb-6" style={{ borderColor: _BORDER }}>
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="총 매수금액" value={fmt(totalValue, 0)} unit="원" /></div>
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="대출금 (융자)" value={fmt(loan, 0)} unit="원" /></div>
+        <ResultBox label="반대매매 가격" value={fmt(liquidPrice, 0)} unit="원" highlight color="#A63D33" />
+      </div>
+      <div className="border mb-4" style={{ borderColor: _BORDER }}>
+        <ResultBox label={`매수가 대비 하락폭 (${fmt(drawdown, 1)}%)`} value={fmt(liquidPrice - bp, 0)} unit="원" />
+      </div>
+      <CalcNote
+        how={['매수단가 × 수량 = 총 매수금액', '대출금 = 총금액 × (1 - 개시증거금률)', '반대매매가 = 대출금 ÷ (수량 × (1 - 유지증거금률))']}
+        example={['50,000원 × 100주 = 500만원, 증거금 40%', '대출금 = 300만원', '유지율 20% 시 반대매매가 = 300만 ÷ (100 × 0.8) = 37,500원']}
+        tip={['증권사마다 유지증거금률 상이 (보통 20~140%)', '신용거래: 유지율 140% 이하 → 반대매매', '미수거래: D+2일까지 미결제 시 강제청산', '하한가 근접 시 반대매매 리스크 급증']}
+      />
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// 선물 이론가 · 괴리율
+// ─────────────────────────────────────────────
+function FuturesFairCalc() {
+  const [spotIndex, setSpotIndex] = useState('');
+  const [futuresPrice, setFuturesPrice] = useState('');
+  const [riskFreeRate, setRiskFreeRate] = useState('3.5');
+  const [dividendYield, setDividendYield] = useState('1.5');
+  const [daysToExp, setDaysToExp] = useState('');
+
+  const S = Number(spotIndex) || 0;
+  const F = Number(futuresPrice) || 0;
+  const r = Number(riskFreeRate) / 100;
+  const d = Number(dividendYield) / 100;
+  const T = (Number(daysToExp) || 0) / 365;
+
+  // Cost of Carry 모델: F* = S × e^((r-d)×T)
+  const fairValue = S > 0 && T > 0 ? S * Math.exp((r - d) * T) : 0;
+  const basis = F - S;
+  const basisRate = S > 0 ? (basis / S) * 100 : 0;
+  const mispricing = fairValue > 0 ? F - fairValue : 0;
+  const mispricingPct = fairValue > 0 ? (mispricing / fairValue) * 100 : 0;
+
+  // 차익거래 판단
+  const arbitrage = Math.abs(mispricingPct) > 0.1
+    ? mispricingPct > 0 ? '매도차익 가능 (선물 고평가)' : '매수차익 가능 (선물 저평가)'
+    : '차익거래 기회 없음';
+
+  return (
+    <div>
+      <CalcHeader num="48" title="선물 이론가 · 괴리율" desc="Cost of Carry 모델로 KOSPI200 선물 이론가와 괴리율을 계산합니다." color="#6B6B6B" />
+      <div className="grid md:grid-cols-2 gap-5 mb-6">
+        <NumInput label="현물지수 (KOSPI200)" value={spotIndex} onChange={setSpotIndex} unit="pt" placeholder="350.00" />
+        <NumInput label="선물 현재가" value={futuresPrice} onChange={setFuturesPrice} unit="pt" placeholder="351.50" />
+      </div>
+      <div className="grid md:grid-cols-3 gap-5 mb-6">
+        <NumInput label="무위험이자율" value={riskFreeRate} onChange={setRiskFreeRate} unit="%" placeholder="3.5" />
+        <NumInput label="배당수익률" value={dividendYield} onChange={setDividendYield} unit="%" placeholder="1.5" />
+        <NumInput label="만기까지 잔존일수" value={daysToExp} onChange={setDaysToExp} unit="일" placeholder="30" />
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 border mb-4" style={{ borderColor: _BORDER }}>
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="선물 이론가 (F*)" value={fairValue > 0 ? fmt(fairValue, 2) : '—'} unit="pt" /></div>
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="베이시스 (F−S)" value={S > 0 ? fmt(basis, 2) : '—'} unit={`pt (${fmt(basisRate, 2)}%)`} /></div>
+        <ResultBox label="괴리율 (F−F*)" value={fairValue > 0 ? fmt(mispricingPct, 3) : '—'} unit="%" highlight color="#6B6B6B" />
+      </div>
+      <div className="border mb-6 px-4 py-3 text-sm" style={{ borderColor: Math.abs(mispricingPct) > 0.1 ? '#C89650' : _BORDER, color: Math.abs(mispricingPct) > 0.1 ? '#C89650' : _T.textMuted }}>
+        {fairValue > 0 ? arbitrage : '현물지수·선물가·잔존일수를 모두 입력하세요'}
+      </div>
+      <CalcNote
+        how={['이론가 F* = S × e^((r−d)×T)', 'r: 무위험이자율, d: 배당수익률, T: 잔존기간(연)', '괴리율 = (실제 선물가 − 이론가) / 이론가 × 100']}
+        example={['S=350, r=3.5%, d=1.5%, T=30일(0.082년)', 'F* = 350 × e^(0.02×0.082) = 350.57pt', '실제 F=351.50 → 괴리율 = +0.26%']}
+        tip={['KOSPI200 선물 1계약 = 지수 × 250,000원', '배당수익률: 분기 결산 전후 크게 변동', '괴리율 ±0.3~0.5% 초과 시 프로그램 차익거래 발동', '콘탱고(F>F*): 보유비용 시장, 백워데이션(F<F*): 희귀']}
+      />
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// 옵션 스프레드 전략 손익
+// ─────────────────────────────────────────────
+function OptionSpreadCalc() {
+  const [strategy, setStrategy] = useState<'straddle'|'strangle'|'bullcall'|'bearcall'>('straddle');
+  const [spot, setSpot] = useState('');
+  const [strike1, setStrike1] = useState('');
+  const [strike2, setStrike2] = useState('');
+  const [prem1, setPrem1] = useState('');
+  const [prem2, setPrem2] = useState('');
+
+  const S = Number(spot) || 0;
+  const K1 = Number(strike1) || 0;
+  const K2 = Number(strike2) || 0;
+  const P1 = Number(prem1) || 0;
+  const P2 = Number(prem2) || 0;
+  const mult = 250000; // KOSPI200 옵션 승수
+
+  let bep1 = 0, bep2 = 0, maxLoss = 0, maxProfit = 0, label1 = '', label2 = '';
+
+  if (strategy === 'straddle') {
+    // 매수 스트래들: 콜+풋 동일 행사가 매수
+    const totalPrem = P1 + P2;
+    bep1 = K1 - totalPrem;
+    bep2 = K1 + totalPrem;
+    maxLoss = -totalPrem * mult;
+    maxProfit = Infinity;
+    label1 = `하방 BEP (${fmt(bep1, 2)}pt)`;
+    label2 = `상방 BEP (${fmt(bep2, 2)}pt)`;
+  } else if (strategy === 'strangle') {
+    // 매수 스트랭글: 풋(K1) + 콜(K2) 매수, K1 < K2
+    const totalPrem = P1 + P2;
+    bep1 = K1 - totalPrem;
+    bep2 = K2 + totalPrem;
+    maxLoss = -totalPrem * mult;
+    maxProfit = Infinity;
+    label1 = `하방 BEP (${fmt(bep1, 2)}pt)`;
+    label2 = `상방 BEP (${fmt(bep2, 2)}pt)`;
+  } else if (strategy === 'bullcall') {
+    // 강세 콜 스프레드: K1 콜 매수, K2 콜 매도
+    const netPrem = P1 - P2;
+    bep1 = K1 + netPrem;
+    maxLoss = -netPrem * mult;
+    maxProfit = (K2 - K1 - netPrem) * mult;
+    label1 = `BEP (${fmt(bep1, 2)}pt)`;
+    label2 = '';
+  } else if (strategy === 'bearcall') {
+    // 약세 콜 스프레드: K1 콜 매도, K2 콜 매수
+    const netPrem = P2 - P1;
+    bep1 = K1 + netPrem;
+    maxLoss = -(K2 - K1 - netPrem) * mult;
+    maxProfit = netPrem * mult;
+    label1 = `BEP (${fmt(bep1, 2)}pt)`;
+    label2 = '';
+  }
+
+  const strategies = [
+    { id: 'straddle', label: '스트래들' },
+    { id: 'strangle', label: '스트랭글' },
+    { id: 'bullcall', label: '강세 콜 스프레드' },
+    { id: 'bearcall', label: '약세 콜 스프레드' },
+  ] as const;
+
+  const needsK2 = strategy !== 'straddle';
+  const prem1Label = strategy === 'strangle' ? '풋 프리미엄 (K1)' : strategy === 'straddle' ? '콜 프리미엄' : 'K1 콜 프리미엄';
+  const prem2Label = strategy === 'straddle' ? '풋 프리미엄' : strategy === 'strangle' ? '콜 프리미엄 (K2)' : 'K2 콜 프리미엄';
+
+  return (
+    <div>
+      <CalcHeader num="49" title="옵션 스프레드 전략" desc="스트래들·스트랭글·콜 스프레드의 BEP와 최대손익을 계산합니다." color="#6B6B6B" />
+      <div className="flex flex-wrap gap-1 mb-5">
+        {strategies.map(s => (
+          <button key={s.id} onClick={() => setStrategy(s.id)} className="px-3 py-2 text-xs font-medium border transition-all" style={{ borderColor: _BORDER, background: strategy === s.id ? '#6B6B6B' : 'transparent', color: strategy === s.id ? '#fff' : _T.textMuted }}>
+            {s.label}
+          </button>
+        ))}
+      </div>
+      <div className="grid md:grid-cols-2 gap-5 mb-5">
+        <NumInput label="행사가 K1" value={strike1} onChange={setStrike1} unit="pt" placeholder="350.00" />
+        {needsK2 && <NumInput label="행사가 K2" value={strike2} onChange={setStrike2} unit="pt" placeholder="360.00" />}
+      </div>
+      <div className="grid md:grid-cols-2 gap-5 mb-6">
+        <NumInput label={prem1Label} value={prem1} onChange={setPrem1} unit="pt" placeholder="3.50" />
+        <NumInput label={prem2Label} value={prem2} onChange={setPrem2} unit="pt" placeholder="3.50" />
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 border mb-4" style={{ borderColor: _BORDER }}>
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label={label1 || 'BEP'} value={bep1 > 0 ? fmt(bep1, 2) : '—'} unit="pt" /></div>
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="최대 손실" value={isFinite(maxLoss) ? fmt(maxLoss, 0) : '—'} unit="원" highlight color="#A63D33" /></div>
+        <ResultBox label="최대 이익" value={isFinite(maxProfit) ? fmt(maxProfit, 0) : '무제한'} unit={isFinite(maxProfit) ? '원' : ''} highlight color="#4A7045" />
+      </div>
+      {label2 && <div className="border border-t-0 mb-4" style={{ borderColor: _BORDER }}><ResultBox label={label2} value={bep2 > 0 ? fmt(bep2, 2) : '—'} unit="pt" /></div>}
+      <CalcNote
+        how={['전략 선택 → 행사가·프리미엄 입력', 'KOSPI200 옵션 승수 250,000원 적용', '스트래들: 동일 행사가 콜+풋 매수 (변동성 베팅)', '스트랭글: 다른 행사가 콜+풋 매수 (더 큰 변동성 필요)']}
+        example={['스트래들: K=350, 콜 3.5pt + 풋 3.0pt = 총 6.5pt', '상방 BEP = 356.5, 하방 BEP = 343.5', '최대 손실 = 6.5 × 250,000 = 162.5만원']}
+        tip={['만기 근처 변동성 급등 예상 시 스트래들 유효', '프리미엄이 클수록 BEP 폭 넓어짐 → 진입 타이밍 중요', '수직 스프레드: 방향성 있지만 리스크 제한 원할 때', 'KOSPI200 옵션은 유럽형 — 만기에만 행사 가능']}
+      />
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// 승률 · 기대값 계산기
+// ─────────────────────────────────────────────
+function WinRateCalc() {
+  const [winRate, setWinRate] = useState('');
+  const [avgWin, setAvgWin] = useState('');
+  const [avgLoss, setAvgLoss] = useState('');
+  const [trades, setTrades] = useState('');
+
+  const w = (Number(winRate) || 0) / 100;
+  const W = Number(avgWin) || 0;
+  const L = Number(avgLoss) || 0;
+  const n = Number(trades) || 0;
+
+  const expectedValue = w * W - (1 - w) * L;
+  const profitFactor = L > 0 ? (w * W) / ((1 - w) * L) : 0;
+  const bepWinRate = L > 0 && W > 0 ? (L / (W + L)) * 100 : 0;
+  const totalExpected = n > 0 ? expectedValue * n : 0;
+
+  // 손익비
+  const rr = L > 0 ? W / L : 0;
+
+  // 연속 손실 확률 (최대 10연패)
+  const consecLoss = [3, 5, 7, 10].map(k => ({
+    k,
+    prob: Math.pow(1 - w, k) * 100,
+  }));
+
+  return (
+    <div>
+      <CalcHeader num="50" title="승률 · 기대값 계산기" desc="매매 승률과 손익비로 기대값·손익비·연속 손실 확률을 계산합니다." color="#4F7E7C" />
+      <div className="grid md:grid-cols-2 gap-5 mb-5">
+        <NumInput label="승률" value={winRate} onChange={setWinRate} unit="%" placeholder="45" />
+        <NumInput label="평균 수익 (1회)" value={avgWin} onChange={setAvgWin} unit="원" placeholder="150,000" />
+      </div>
+      <div className="grid md:grid-cols-2 gap-5 mb-6">
+        <NumInput label="평균 손실 (1회)" value={avgLoss} onChange={setAvgLoss} unit="원" placeholder="100,000" />
+        <NumInput label="총 거래 횟수 (선택)" value={trades} onChange={setTrades} unit="회" placeholder="100" />
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 border mb-4" style={{ borderColor: _BORDER }}>
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="1회 기대값" value={fmt(expectedValue, 0)} unit="원" highlight color={expectedValue >= 0 ? '#4F7E7C' : '#A63D33'} /></div>
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="손익비 (R:R)" value={fmt(rr, 2)} unit=":1" /></div>
+        <ResultBox label="손익분기 최소 승률" value={fmt(bepWinRate, 1)} unit="%" />
+      </div>
+      {n > 0 && (
+        <div className="border border-t-0 mb-4" style={{ borderColor: _BORDER }}>
+          <ResultBox label={`${n}회 거래 후 기대 수익`} value={fmt(totalExpected, 0)} unit="원" highlight color={totalExpected >= 0 ? '#4F7E7C' : '#A63D33'} />
+        </div>
+      )}
+      {w > 0 && (
+        <div className="border mb-4" style={{ borderColor: _BORDER }}>
+          <div className="px-3 py-2 border-b text-[11px] mono uppercase tracking-[0.1em]" style={{ borderColor: _BORDER, color: _T.textFaint, background: _T.bgCard }}>연속 손실 확률</div>
+          <div className="grid grid-cols-4">
+            {consecLoss.map(c => (
+              <div key={c.k} className="p-3 border-r last:border-r-0 text-center" style={{ borderColor: _BORDER }}>
+                <div className="text-[11px] mono" style={{ color: _T.textFaint }}>{c.k}연패</div>
+                <div className="text-lg mono font-light mt-1" style={{ color: c.prob > 10 ? '#A63D33' : _T.textPrimary }}>{fmt(c.prob, 2)}%</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      <CalcNote
+        how={['기대값 = 승률 × 평균수익 − (1−승률) × 평균손실', '손익비 = 평균수익 ÷ 평균손실', '손익분기 승률 = 손실 ÷ (수익 + 손실)']}
+        example={['승률 45%, 수익 15만원, 손실 10만원', '기대값 = 0.45 × 15 − 0.55 × 10 = 6,750 − 5,500 = 1,250원', '손익비 = 1.5:1, 손익분기 승률 = 40%']}
+        tip={['기대값 > 0이면 장기적으로 수익 구조', '승률 낮아도 손익비 크면 충분히 수익 가능', '예: 승률 30% + 손익비 3:1 → 기대값 양수', '연속 손실 대비 자금관리가 핵심 (켈리 공식 참고)']}
+      />
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// 선물 증거금 유지율 체크
+// ─────────────────────────────────────────────
+function MarginCheckCalc() {
+  const [positions, setPositions] = useState([
+    { name: 'KOSPI200 선물', qty: '', entryPrice: '', currentPrice: '', marginPer: '1250000' },
+  ]);
+
+  const updatePos = (i: number, field: string, val: string) => {
+    setPositions(prev => prev.map((p, idx) => idx === i ? { ...p, [field]: val } : p));
+  };
+  const addPos = () => setPositions(prev => [...prev, { name: '', qty: '', entryPrice: '', currentPrice: '', marginPer: '1250000' }]);
+  const removePos = (i: number) => setPositions(prev => prev.filter((_, idx) => idx !== i));
+
+  const computed = positions.map(p => {
+    const qty = Number(p.qty) || 0;
+    const entry = Number(p.entryPrice) || 0;
+    const cur = Number(p.currentPrice) || 0;
+    const marginPer = Number(p.marginPer) || 0;
+    const mult = 250000;
+    const pnl = (cur - entry) * qty * mult;
+    const totalMargin = marginPer * Math.abs(qty);
+    const maintMargin = totalMargin * 0.5; // 유지증거금 = 개시의 50%
+    return { ...p, qty, entry, cur, pnl, totalMargin, maintMargin };
+  });
+
+  const totalPnl = computed.reduce((s, p) => s + p.pnl, 0);
+  const totalMargin = computed.reduce((s, p) => s + p.totalMargin, 0);
+  const totalMaint = computed.reduce((s, p) => s + p.maintMargin, 0);
+  const maintRatio = totalMargin > 0 ? ((totalMargin + totalPnl) / totalMaint) * 100 : 0;
+  const isMarginCall = maintRatio < 100 && totalMargin > 0;
+
+  return (
+    <div>
+      <CalcHeader num="51" title="선물 증거금 유지율" desc="KOSPI200 선물 포지션의 증거금 유지율과 마진콜 여부를 확인합니다." color="#4F7E7C" />
+      <div className="border mb-4" style={{ borderColor: _BORDER }}>
+        <div className="grid grid-cols-5 px-3 py-2 border-b text-[11px] mono uppercase tracking-[0.1em]" style={{ borderColor: _BORDER, color: _T.textFaint, background: _T.bgCard }}>
+          <span>종목</span><span>계약수</span><span>진입가</span><span>현재가</span><span>개시증거금/계약</span>
+        </div>
+        {computed.map((p, i) => (
+          <div key={i} className="grid grid-cols-5 items-center px-3 py-2 border-b last:border-b-0 gap-1" style={{ borderColor: _BORDER }}>
+            <input value={p.name} onChange={e => updatePos(i, 'name', e.target.value)} className="bg-transparent border-b text-sm outline-none" style={{ borderColor: _BORDER, color: _T.textPrimary }} placeholder="종목명" />
+            <input value={p.qty} onChange={e => updatePos(i, 'qty', e.target.value)} className="bg-transparent border-b text-sm mono outline-none" style={{ borderColor: _BORDER, color: _T.textPrimary }} placeholder="1" />
+            <input value={p.entryPrice} onChange={e => updatePos(i, 'entryPrice', e.target.value)} className="bg-transparent border-b text-sm mono outline-none" style={{ borderColor: _BORDER, color: _T.textPrimary }} placeholder="350.00" />
+            <input value={p.currentPrice} onChange={e => updatePos(i, 'currentPrice', e.target.value)} className="bg-transparent border-b text-sm mono outline-none" style={{ borderColor: _BORDER, color: p.pnl >= 0 ? '#4A7045' : '#A63D33' }} placeholder="348.00" />
+            <input value={p.marginPer} onChange={e => updatePos(i, 'marginPer', e.target.value)} className="bg-transparent border-b text-sm mono outline-none" style={{ borderColor: _BORDER, color: _T.textMuted }} placeholder="1,250,000" />
+          </div>
+        ))}
+      </div>
+      <div className="flex gap-2 mb-5">
+        <button onClick={addPos} className="text-[12px] mono px-3 py-1.5 border" style={{ borderColor: _BORDER, color: _T.textFaint }}>+ 포지션 추가</button>
+        {positions.length > 1 && <button onClick={() => removePos(positions.length - 1)} className="text-[12px] mono px-3 py-1.5 border" style={{ borderColor: _BORDER, color: _T.textFaint }}>− 삭제</button>}
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 border mb-4" style={{ borderColor: _BORDER }}>
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="총 평가손익" value={fmt(totalPnl, 0)} unit="원" highlight color={totalPnl >= 0 ? '#4A7045' : '#A63D33'} /></div>
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="증거금 유지율" value={totalMargin > 0 ? fmt(maintRatio, 1) : '—'} unit="%" /></div>
+        <ResultBox label="마진콜 여부" value={totalMargin > 0 ? (isMarginCall ? '⚠ 마진콜' : '✓ 정상') : '—'} unit="" highlight color={isMarginCall ? '#A63D33' : '#4A7045'} />
+      </div>
+      <CalcNote
+        how={['계약수 × (현재가 − 진입가) × 250,000 = 평가손익', '유지증거금 = 개시증거금 × 50%', '유지율 = (개시증거금 + 평가손익) ÷ 유지증거금 × 100']}
+        example={['KOSPI200 선물 1계약, 진입 350.00, 현재 347.00', '손익 = (347−350) × 1 × 250,000 = −75만원', '개시 125만, 유지 62.5만 → 유지율 = 50만/62.5만 = 80% (마진콜)']}
+        tip={['KOSPI200 선물 개시증거금: 계약당 약 125만원 (시장 변동 시 변경)', '유지율 100% 이하 시 마진콜 → 추가 납부 또는 포지션 청산', '미니 선물(MINI): 승수 50,000원, 증거금 약 25만원', '증거금은 KRX 고시 기준이며 증권사마다 상이할 수 있음']}
+      />
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// 파생상품 양도소득세
+// ─────────────────────────────────────────────
+function DerivTaxCalc() {
+  const [totalProfit, setTotalProfit] = useState('');
+  const [totalLoss, setTotalLoss] = useState('');
+  const [prevCarryover, setPrevCarryover] = useState('');
+
+  const profit = Number(totalProfit) || 0;
+  const loss = Number(totalLoss) || 0;
+  const carryover = Number(prevCarryover) || 0;
+
+  const netGain = profit - loss;
+  const deduction = 2500000; // 250만원 기본공제
+  const afterCarryover = netGain - carryover;
+  const taxableGain = Math.max(0, afterCarryover - deduction);
+  const taxRate = 20; // 파생상품 20%
+  const localTaxRate = 2; // 지방소득세 10% of 20%
+  const tax = taxableGain * (taxRate / 100);
+  const localTax = taxableGain * (localTaxRate / 100);
+  const totalTax = tax + localTax;
+  const effectiveRate = netGain > 0 ? (totalTax / netGain) * 100 : 0;
+
+  return (
+    <div>
+      <CalcHeader num="52" title="파생상품 양도소득세" desc="선물·옵션 연간 손익 합산 후 250만원 공제를 적용한 양도세를 계산합니다." color="#5B8DB8" />
+      <div className="grid md:grid-cols-2 gap-5 mb-5">
+        <NumInput label="연간 총 이익 합계" value={totalProfit} onChange={setTotalProfit} unit="원" placeholder="10,000,000" />
+        <NumInput label="연간 총 손실 합계" value={totalLoss} onChange={setTotalLoss} unit="원" placeholder="3,000,000" />
+      </div>
+      <div className="mb-6">
+        <NumInput label="전년도 이월결손금 (있는 경우)" value={prevCarryover} onChange={setPrevCarryover} unit="원" placeholder="0" />
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 border mb-4" style={{ borderColor: _BORDER }}>
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="순손익 (이익−손실)" value={fmt(netGain, 0)} unit="원" /></div>
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="과세표준 (공제 후)" value={fmt(taxableGain, 0)} unit="원" /></div>
+        <ResultBox label="납부세액 (국세+지방)" value={fmt(totalTax, 0)} unit="원" highlight color="#5B8DB8" />
+      </div>
+      {taxableGain > 0 && (
+        <div className="border border-t-0 mb-4" style={{ borderColor: _BORDER }}>
+          <ResultBox label={`실효세율 (순이익 대비)`} value={fmt(effectiveRate, 2)} unit="%" />
+        </div>
+      )}
+      <CalcNote
+        how={['순손익 = 총이익 − 총손실 (연간 합산)', '이월결손금 차감 후 250만원 기본공제', '과세표준 × 20% + 지방소득세 2% (합계 22%)']}
+        example={['총이익 1,000만, 총손실 300만, 이월결손 0', '순손익 700만 − 250만(공제) = 과세표준 450만원', '세금 = 450만 × 22% = 99만원']}
+        tip={['파생상품(선물·옵션): 세율 20% + 지방세 2% = 22%', '기본공제 250만원: 매년 리셋', '손실 이월: 5년간 이월공제 가능 (법정 요건 충족 시)', '해외선물도 동일 세율 적용, 환산 손익으로 계산', '5월 종합소득세 신고 시 함께 신고', '※ 정확한 납세액은 세무사 확인을 권장합니다.']}
+      />
+    </div>
+  );
+}
 
 function GuideDrawer({ onClose, T, isDark }: { onClose: () => void; T: any; isDark: boolean }) {
   const [activeSection, setActiveSection] = useState('about');
