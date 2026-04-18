@@ -95,6 +95,12 @@ input, button, select {
   color: inherit;
 }
 
+/* iOS Safari auto-zoom 완전 방지 — 16px 미만 font-size에서 zoom이 트리거됨 */
+input, textarea, select {
+  font-size: 16px !important;
+  touch-action: manipulation;
+}
+
 input:focus { outline: none; }
 input::placeholder { color: var(--placeholder); }
 
@@ -276,11 +282,12 @@ html:not(.light) input::placeholder {
   animation: modal-overlay-in 0.2s ease-out forwards;
 }
 .modal-panel-in {
-  animation: modal-panel-in 0.22s cubic-bezier(0.4,0,0.2,1) forwards;
+  animation: modal-panel-in 0.22s cubic-bezier(0.4,0,0.2,1) both;
 }
 @media (max-width: 767px) {
+  /* forwards 대신 both 사용 — animation 제거 시 transform이 즉시 해제됨 */
   .modal-panel-in {
-    animation: modal-panel-slide-up 0.30s cubic-bezier(0.32,0.72,0,1) forwards;
+    animation: modal-panel-slide-up 0.30s cubic-bezier(0.32,0.72,0,1) both;
   }
 }
 

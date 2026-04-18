@@ -1286,9 +1286,13 @@ function TermModal({ term, termList, onClose, categoryColors, favorites, toggleF
   const closeWithAnimation = () => {
     const el = modalRef.current;
     if (el && window.innerWidth < 768) {
-      el.style.transform = 'translateY(100%)';
+      // CSS animation(modal-panel-in)이 transform을 덮어쓰지 못하도록 제거
+      el.style.animation = 'none';
+      // 강제 reflow — 브라우저가 현재 위치를 확정하도록
+      void el.offsetHeight;
       el.style.transition = 'transform 0.28s cubic-bezier(0.4,0,0.2,1)';
-      setTimeout(() => onClose(), 260);
+      el.style.transform = 'translateY(100%)';
+      setTimeout(() => onClose(), 270);
     } else {
       onClose();
     }
@@ -1422,9 +1426,8 @@ function TermModal({ term, termList, onClose, categoryColors, favorites, toggleF
                       value={compareSearch}
                       onChange={e => setCompareSearch(e.target.value)}
                       placeholder="비교할 용어 검색..."
-                      className="flex-1 px-3 py-2 text-sm bg-transparent"
-                      style={{ color: T.textPrimary }}
-                      autoFocus
+                      className="flex-1 px-3 py-2 bg-transparent"
+                      style={{ color: T.textPrimary, fontSize: '16px' }}
                     />
                   </div>
                   <div className="text-[12px] mono mb-2" style={{ color: T.textFaint }}>
