@@ -3,6 +3,23 @@ import { NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
+// ─── In-memory 캐시 ──────────────────────────────────────
+// 과거 데이터: 24시간 TTL (변하지 않음)
+// 미래 데이터: 1시간 TTL
+type CacheEntry = { data: EarningItem[]; expiresAt: number };
+const cache: Record<string, CacheEntry> = {};
+
+function getCached(key: string): EarningItem[] | null {
+  const entry = cache[key];
+  if (!entry) return null;
+  if (Date.now() > entry.expiresAt) { delete cache[key]; return null; }
+  return entry.data;
+}
+
+function setCached(key: string, data: EarningItem[], ttlMs: number) {
+  cache[key] = { data, expiresAt: Date.now() + ttlMs };
+}
+
 // ─── 타입 ───────────────────────────────────────────────
 export type EarningItem = {
   symbol: string;
@@ -34,66 +51,111 @@ const US_NAME_MAP: Record<string, string> = {
 
 const FINNHUB_KEY = process.env.FINNHUB_API_KEY ?? '';
 
-// ─── Finnhub: 미국 어닝 캘린더 (올해 1월~향후 90일) ──────
+// ─── Finnhub: 미국 어닝 캘린더 ──────────────────────────
+// 분기별로 쪼개서 캐싱: 과거 분기는 24h TTL, 현재/미래는 1h TTL
 async function fetchFinnhubEarnings(): Promise<EarningItem[]> {
   if (!FINNHUB_KEY) return [];
 
   const todayKST = new Date(Date.now() + 9 * 3600 * 1000);
-  // 올해 1월 1일부터 조회 (연간 어닝 시즌 전체 커버)
   const currentYear = todayKST.getUTCFullYear();
-  const fromStr = `${currentYear}-01-01`;
-  const toDate = new Date(todayKST);
-  toDate.setDate(toDate.getDate() + 90);
-  const toStr = toDate.toISOString().slice(0, 10);
+  const todayStr = todayKST.toISOString().slice(0, 10);
 
-  // Finnhub 어닝 캘린더: 날짜 범위 내 모든 종목 반환
-  try {
-    const url = `https://finnhub.io/api/v1/calendar/earnings?from=${fromStr}&to=${toStr}&token=${FINNHUB_KEY}`;
-    const res = await fetch(url, { next: { revalidate: 3600 } });
-    if (!res.ok) return [];
-    const data = await res.json();
-    const earningsArr = data?.earningsCalendar ?? [];
+  // 분기 구간 정의: Q1~Q4 + 미래(현재분기 이후 90일)
+  const quarters = [
+    { key: `finnhub-${currentYear}-Q1`, from: `${currentYear}-01-01`, to: `${currentYear}-03-31` },
+    { key: `finnhub-${currentYear}-Q2`, from: `${currentYear}-04-01`, to: `${currentYear}-06-30` },
+    { key: `finnhub-${currentYear}-Q3`, from: `${currentYear}-07-01`, to: `${currentYear}-09-30` },
+    { key: `finnhub-${currentYear}-Q4`, from: `${currentYear}-10-01`, to: `${currentYear}-12-31` },
+  ];
 
-    // US_NAME_MAP에 있는 종목만 필터 (주요 종목)
+  // 미래 90일 (현재 분기 이후 구간 보완)
+  const futureEnd = new Date(todayKST);
+  futureEnd.setDate(futureEnd.getDate() + 90);
+  const futureKey = `finnhub-future-${todayStr}`;
+
+  const allResults: EarningItem[] = [];
+
+  const parseItems = (earningsArr: any[]): EarningItem[] => {
     const watchSymbols = new Set(Object.keys(US_NAME_MAP));
-    const filtered = earningsArr.filter((e: any) => watchSymbols.has(e.symbol));
+    return earningsArr
+      .filter((e: any) => watchSymbols.has(e.symbol))
+      .map((e: any) => {
+        const epsEstimate = typeof e.epsEstimate === 'number' ? e.epsEstimate : null;
+        const epsActual = typeof e.epsActual === 'number' ? e.epsActual : null;
+        const surprise = epsActual != null && epsEstimate != null && epsEstimate !== 0
+          ? ((epsActual - epsEstimate) / Math.abs(epsEstimate)) * 100
+          : null;
+        const hour = (e.hour ?? '').toLowerCase();
+        const timing: 'BMO' | 'AMC' | 'unknown' =
+          hour === 'bmo' ? 'BMO' : hour === 'amc' ? 'AMC' : 'unknown';
+        let dateKST = e.date ?? '';
+        if (timing === 'AMC' && dateKST) {
+          const d = new Date(dateKST + 'T00:00:00-05:00');
+          d.setDate(d.getDate() + 1);
+          dateKST = new Date(d.getTime() + 9 * 3600 * 1000).toISOString().slice(0, 10);
+        }
+        return {
+          symbol: e.symbol,
+          nameKo: US_NAME_MAP[e.symbol] ?? e.symbol,
+          date: dateKST,
+          market: 'US' as const,
+          timing,
+          epsEstimate,
+          epsActual,
+          revenueEstimate: typeof e.revenueEstimate === 'number' ? e.revenueEstimate / 1_000_000 : null,
+          revenueActual: typeof e.revenueActual === 'number' ? e.revenueActual / 1_000_000 : null,
+          surprise,
+        };
+      });
+  };
 
-    return filtered.map((e: any) => {
-      const epsEstimate = typeof e.epsEstimate === 'number' ? e.epsEstimate : null;
-      const epsActual = typeof e.epsActual === 'number' ? e.epsActual : null;
-      const surprise = epsActual != null && epsEstimate != null && epsEstimate !== 0
-        ? ((epsActual - epsEstimate) / Math.abs(epsEstimate)) * 100
-        : null;
+  const fetchRange = async (from: string, to: string): Promise<EarningItem[]> => {
+    try {
+      const url = `https://finnhub.io/api/v1/calendar/earnings?from=${from}&to=${to}&token=${FINNHUB_KEY}`;
+      const res = await fetch(url, { cache: 'no-store' });
+      if (!res.ok) return [];
+      const data = await res.json();
+      return parseItems(data?.earningsCalendar ?? []);
+    } catch {
+      return [];
+    }
+  };
 
-      // Finnhub hour: 'bmo' | 'amc' | 'dmh' | ''
-      const hour = (e.hour ?? '').toLowerCase();
-      const timing: 'BMO' | 'AMC' | 'unknown' =
-        hour === 'bmo' ? 'BMO' : hour === 'amc' ? 'AMC' : 'unknown';
-
-      // date는 ET 기준 YYYY-MM-DD — KST로 변환 (AMC면 +1일)
-      let dateKST = e.date ?? '';
-      if (timing === 'AMC' && dateKST) {
-        const d = new Date(dateKST + 'T00:00:00-05:00');
-        d.setDate(d.getDate() + 1);
-        dateKST = new Date(d.getTime() + 9 * 3600 * 1000).toISOString().slice(0, 10);
-      }
-
-      return {
-        symbol: e.symbol,
-        nameKo: US_NAME_MAP[e.symbol] ?? e.symbol,
-        date: dateKST,
-        market: 'US' as const,
-        timing,
-        epsEstimate,
-        epsActual,
-        revenueEstimate: typeof e.revenueEstimate === 'number' ? e.revenueEstimate / 1_000_000 : null,
-        revenueActual: typeof e.revenueActual === 'number' ? e.revenueActual / 1_000_000 : null,
-        surprise,
-      };
-    });
-  } catch {
-    return [];
+  // 분기별 캐시 조회 / fetch
+  for (const q of quarters) {
+    const isPastQuarter = q.to < todayStr;
+    const cached = getCached(q.key);
+    if (cached) {
+      allResults.push(...cached);
+      continue;
+    }
+    const items = await fetchRange(q.from, q.to);
+    if (items.length > 0 || isPastQuarter) {
+      // 과거 분기: 24시간, 현재/미래 분기: 1시간
+      const ttl = isPastQuarter ? 24 * 3600 * 1000 : 3600 * 1000;
+      setCached(q.key, items, ttl);
+      allResults.push(...items);
+    }
   }
+
+  // 미래 90일 추가 fetch (분기 경계 넘는 구간 보완, 1시간 캐시)
+  const futureCached = getCached(futureKey);
+  if (futureCached) {
+    allResults.push(...futureCached);
+  } else {
+    const futureItems = await fetchRange(todayStr, futureEnd.toISOString().slice(0, 10));
+    setCached(futureKey, futureItems, 3600 * 1000);
+    allResults.push(...futureItems);
+  }
+
+  // 중복 제거 (symbol+date 기준)
+  const seen = new Set<string>();
+  return allResults.filter(e => {
+    const k = `${e.symbol}-${e.date}`;
+    if (seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
 }
 
 // ─── DART: 한국 주요 종목 실적 공시 ────────────────────────
@@ -132,59 +194,103 @@ const KR_CORPS: { corpCode: string; name: string; symbol: string }[] = [
   { corpCode: '00251685', name: '카카오뱅크', symbol: '323410' },
 ];
 
+// 종목별로 corp_code를 지정해서 직접 조회 — page_count 한계로 누락되는 문제 해결
 async function fetchDartEarnings(): Promise<EarningItem[]> {
   if (!DART_KEY) return [];
 
-  const results: EarningItem[] = [];
   const today = new Date(Date.now() + 9 * 3600 * 1000);
-  // 올해 1월 1일부터 조회
-  const from = new Date(`${today.getUTCFullYear()}-01-01T00:00:00Z`);
-  const to = new Date(today); to.setDate(to.getDate() + 90);
-  const fmt = (d: Date) => d.toISOString().slice(0, 10).replace(/-/g, '');
+  const todayStr = today.toISOString().slice(0, 10);
+  const currentYear = today.getUTCFullYear();
+  const fromStr = `${currentYear}0101`;
+  const toStr = todayStr.replace(/-/g, '');
 
-  // 분기(A003) → 반기(A002) → 사업(A001) 순으로 조회
-  for (const pType of ['A003', 'A002', 'A001']) {
-    try {
-      const url = `https://opendart.fss.or.kr/api/list.json?crtfc_key=${DART_KEY}&bgn_de=${fmt(from)}&end_de=${fmt(to)}&pblntf_ty=A&pblntf_detail_ty=${pType}&page_count=100`;
-      const res = await fetch(url, { next: { revalidate: 3600 } });
-      if (!res.ok) continue;
-      const data = await res.json();
-      // 013 = 조회 결과 없음 (정상)
-      if (data.status !== '000' && data.status !== '013') continue;
+  // 분기별 캐시 키 — 과거 분기는 한번만 fetch
+  const quarters = [
+    { key: `dart-${currentYear}-Q1`, from: `${currentYear}0101`, to: `${currentYear}0331` },
+    { key: `dart-${currentYear}-Q2`, from: `${currentYear}0401`, to: `${currentYear}0630` },
+    { key: `dart-${currentYear}-Q3`, from: `${currentYear}0701`, to: `${currentYear}0930` },
+    { key: `dart-${currentYear}-Q4`, from: `${currentYear}1001`, to: `${currentYear}1231` },
+  ];
 
-      for (const item of (data.list ?? [])) {
-        const corp = KR_CORPS.find(c => c.corpCode === item.corp_code);
-        if (!corp) continue;
-
-        const rcpDate = item.rcept_dt as string; // YYYYMMDD
-        const dateFormatted = `${rcpDate.slice(0, 4)}-${rcpDate.slice(4, 6)}-${rcpDate.slice(6, 8)}`;
-        const existing = results.find(r => r.symbol === corp.symbol);
-
-        if (existing) {
-          // 더 최신 공시로 날짜 업데이트
-          if (dateFormatted > existing.date) existing.date = dateFormatted;
-          continue;
-        }
-
-        results.push({
-          symbol: corp.symbol,
-          nameKo: corp.name,
-          date: dateFormatted,
-          market: 'KR',
-          timing: undefined,
-          epsEstimate: null,
-          epsActual: null,
-          revenueEstimate: null,
-          revenueActual: null,
-          surprise: null,
-        });
-      }
-    } catch {
-      // 개별 실패 무시
+  // 종목별로 corp_code 지정해서 직접 조회하는 함수
+  // DART list API: corp_code 파라미터로 특정 회사만 조회 가능
+  const fetchCorpEarnings = async (
+    corp: typeof KR_CORPS[0],
+    bgn: string,
+    end: string
+  ): Promise<{ date: string } | null> => {
+    // 분기(A003) 우선, 없으면 반기(A002), 없으면 사업(A001)
+    for (const pType of ['A003', 'A002', 'A001']) {
+      try {
+        const url = `https://opendart.fss.or.kr/api/list.json?crtfc_key=${DART_KEY}&corp_code=${corp.corpCode}&bgn_de=${bgn}&end_de=${end}&pblntf_ty=A&pblntf_detail_ty=${pType}&page_count=10`;
+        const res = await fetch(url, { cache: 'no-store' });
+        if (!res.ok) continue;
+        const data = await res.json();
+        if (data.status !== '000' && data.status !== '013') continue;
+        const list: any[] = data.list ?? [];
+        if (list.length === 0) continue;
+        // 가장 최신 공시일
+        const latest = list.reduce((a: any, b: any) => a.rcept_dt > b.rcept_dt ? a : b);
+        const rdt = latest.rcept_dt as string;
+        return { date: `${rdt.slice(0, 4)}-${rdt.slice(4, 6)}-${rdt.slice(6, 8)}` };
+      } catch { /* 개별 실패 무시 */ }
     }
+    return null;
+  };
+
+  const allResults: EarningItem[] = [];
+
+  for (const q of quarters) {
+    // 아직 시작 안 한 분기는 스킵
+    if (q.from > toStr) continue;
+
+    const isPastQuarter = q.to < todayStr.replace(/-/g, '');
+    const cached = getCached(q.key);
+    if (cached) {
+      allResults.push(...cached);
+      continue;
+    }
+
+    // 이 분기의 실제 조회 범위 (오늘 이후는 오늘까지만)
+    const effectiveTo = q.to > toStr ? toStr : q.to;
+
+    // 30개 종목을 5개씩 병렬로 (DART API 부하 제한)
+    const quarterResults: EarningItem[] = [];
+    const BATCH = 5;
+    for (let i = 0; i < KR_CORPS.length; i += BATCH) {
+      const batch = KR_CORPS.slice(i, i + BATCH);
+      const settled = await Promise.allSettled(
+        batch.map(corp => fetchCorpEarnings(corp, q.from, effectiveTo))
+      );
+      for (let j = 0; j < batch.length; j++) {
+        const result = settled[j];
+        if (result.status === 'fulfilled' && result.value) {
+          quarterResults.push({
+            symbol: batch[j].symbol,
+            nameKo: batch[j].name,
+            date: result.value.date,
+            market: 'KR',
+            timing: undefined,
+            epsEstimate: null, epsActual: null,
+            revenueEstimate: null, revenueActual: null, surprise: null,
+          });
+        }
+      }
+    }
+
+    // 과거 분기: 24h TTL, 현재 분기: 1h TTL
+    const ttl = isPastQuarter ? 24 * 3600 * 1000 : 3600 * 1000;
+    setCached(q.key, quarterResults, ttl);
+    allResults.push(...quarterResults);
   }
 
-  return results;
+  // symbol 중복 제거 (여러 분기에 같은 종목이 있으면 최신 날짜 우선)
+  const bySymbol = new Map<string, EarningItem>();
+  for (const e of allResults) {
+    const existing = bySymbol.get(e.symbol);
+    if (!existing || e.date > existing.date) bySymbol.set(e.symbol, e);
+  }
+  return Array.from(bySymbol.values());
 }
 
 // ─── Route Handler ───────────────────────────────────────

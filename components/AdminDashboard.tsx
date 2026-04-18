@@ -410,31 +410,40 @@ export default function AdminDashboard({
             })}
           </div>
 
-          {/* DART 할당량 표시 */}
-          {metrics?.dart_quota && !metricsLoading && (
-            <div className="px-5 py-3 border-b" style={{ borderColor: '#1a1a1a' }}>
-              <div className="text-[9px] mono uppercase tracking-[0.25em] mb-2" style={{ color: '#5a5a5a' }}>DART 일일 할당량</div>
-              <div className="flex items-center gap-4">
-                <div className="flex-1 h-1.5 rounded-sm overflow-hidden" style={{ background: '#1f1f1f' }}>
-                  {/* 어닝 조회 1회 ≈ 30건, 헬스체크 ≈ 3건 — 실제 소비량은 서버에서 트래킹 불가, 추산치 표시 */}
-                  <div
-                    className="h-full rounded-sm"
-                    style={{
-                      width: '0.1%', // 40,000건 중 아주 소량 사용
-                      background: '#4A7045',
-                      transition: 'width 0.5s ease',
-                    }}
-                  />
+          {/* DART 할당량 표시 — 항상 렌더링, 로딩 중엔 스켈레톤 */}
+          <div className="px-5 py-3 border-b" style={{ borderColor: '#1a1a1a' }}>
+            <div className="text-[9px] mono uppercase tracking-[0.25em] mb-2" style={{ color: '#5a5a5a' }}>DART 일일 할당량</div>
+            {metricsLoading ? (
+              <div className="h-1.5 rounded-sm animate-pulse" style={{ background: '#1f1f1f' }} />
+            ) : (
+              <>
+                <div className="flex items-center gap-4">
+                  <div className="flex-1 h-1.5 rounded-sm overflow-hidden" style={{ background: '#1f1f1f' }}>
+                    {/* 헬스체크 1회 ≈ 1건, 어닝 풀조회 ≈ 3건(보고서유형별) — 추산치 */}
+                    <div
+                      className="h-full rounded-sm transition-all duration-500"
+                      style={{
+                        width: `${Math.min(((services?.dart?.todayCount ?? 0) / 40000) * 100, 100).toFixed(2)}%`,
+                        minWidth: '2px',
+                        background: (services?.dart?.todayCount ?? 0) > 35000 ? '#A63D33'
+                          : (services?.dart?.todayCount ?? 0) > 20000 ? '#C89650'
+                          : '#4A7045',
+                      }}
+                    />
+                  </div>
+                  <span className="text-[10px] mono shrink-0" style={{ color: '#7a7a7a' }}>
+                    한도: {(40000).toLocaleString()}건/일
+                  </span>
                 </div>
-                <span className="text-[10px] mono shrink-0" style={{ color: '#7a7a7a' }}>
-                  한도: {metrics.dart_quota.daily_limit.toLocaleString()}건/일
-                </span>
-              </div>
-              <div className="text-[9px] mono mt-1" style={{ color: '#4a4a4a' }}>
-                {metrics.dart_quota.note}
-              </div>
-            </div>
-          )}
+                <div className="text-[9px] mono mt-1" style={{ color: '#4a4a4a' }}>
+                  {services?.dart?.todayCount !== undefined
+                    ? `오늘 공시 ${services.dart.todayCount.toLocaleString()}건 · `
+                    : ''}
+                  일 40,000건 한도 · 어닝 조회 1회 ≈ 3건(3보고서유형)
+                </div>
+              </>
+            )}
+          </div>
 
           {/* 시스템 정보 */}
           <div className="px-5 py-2 border-b" style={{ borderColor: '#1f1f1f', color: '#5a5a5a' }}>
