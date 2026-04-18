@@ -330,9 +330,9 @@ export default function EventsView({ T }: { T?: any }) {
                 <div
                   key={`${day}-${idx}`}
                   onClick={() => { setSelectedDate(isSelected ? null : day); setSelectedEarning(null); }}
-                  className="border-r border-b p-1.5 cursor-pointer overflow-hidden"
+                  className="border-r border-b p-1 md:p-1.5 cursor-pointer overflow-hidden"
                   style={{
-                    minHeight: '120px',
+                    minHeight: 'clamp(60px, 10vw, 140px)',
                     borderColor: theme.borderSoft,
                     background: isToday ? `${theme.accent}14` : isSelected ? theme.bgHover : 'transparent',
                     outline: isToday ? `1px solid ${theme.accent}50` : isSelected ? `1px solid ${theme.borderMid}` : 'none',
@@ -352,13 +352,17 @@ export default function EventsView({ T }: { T?: any }) {
                   <div className="flex flex-col gap-0.5">
                     {evs.slice(0, 4).map((ev, i) => (
                       <div key={i}
-                        className="flex items-center gap-1 px-1.5 py-0.5 text-[10px] md:text-[11px] truncate rounded-sm"
+                        className={`flex items-center gap-1 px-1 py-0.5 text-[8px] md:text-[10px] truncate rounded-sm${i >= 2 ? ' hidden md:flex' : ''}`}
                         style={{ background: `${ev.color}22`, borderLeft: `2px solid ${ev.color}`, color: ev.color }}>
                         <span className="truncate font-semibold">{ev.label}</span>
                       </div>
                     ))}
+                    {/* 모바일: 2개 초과 / 데스크탑: 4개 초과 */}
+                    {evs.length > 2 && (
+                      <div className="text-[8px] mono px-1 md:hidden" style={{ color: theme.textDimmer }}>+{evs.length - 2}개</div>
+                    )}
                     {evs.length > 4 && (
-                      <div className="text-[9px] mono px-1" style={{ color: theme.textDimmer }}>+{evs.length - 4}개</div>
+                      <div className="text-[9px] mono px-1 hidden md:block" style={{ color: theme.textDimmer }}>+{evs.length - 4}개</div>
                     )}
                   </div>
                 </div>
