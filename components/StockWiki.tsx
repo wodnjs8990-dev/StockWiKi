@@ -4,7 +4,7 @@ import React, { useState, useMemo, useEffect, useRef, createContext, useContext 
 
 // 계산기 세션 key prefix — 비교 모드에서 B 패널이 독립적인 state를 갖도록
 const CalcPrefixContext = createContext<string>('');
-import { Search, Calculator, BookOpen, ChevronRight, ChevronLeft, X, ArrowUpRight, Star, Clock, Menu, Link as LinkIcon, Copy, Check, Share2, CalendarDays } from 'lucide-react';
+import { Search, Calculator, BookOpen, ChevronRight, ChevronLeft, X, ArrowUpRight, Star, Clock, Menu, Link as LinkIcon, Copy, Check, Share2, CalendarDays, Info, Keyboard } from 'lucide-react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { TERMS, CATEGORIES, CATEGORY_COLORS } from '@/data/terms';
@@ -3634,7 +3634,7 @@ function BondPriceCalc() {
 const GUIDE_SECTIONS = [
   {
     id: 'about',
-    icon: '◈',
+    icon: Info,
     title: '소개',
     color: '#C89650',
     items: [
@@ -3658,7 +3658,7 @@ const GUIDE_SECTIONS = [
   },
   {
     id: 'glossary',
-    icon: '中',
+    icon: BookOpen,
     title: '금융 사전',
     color: '#7B9FDF',
     items: [
@@ -3690,7 +3690,7 @@ const GUIDE_SECTIONS = [
   },
   {
     id: 'calculator',
-    icon: '⊟',
+    icon: Calculator,
     title: '계산기',
     color: '#5FA8A0',
     items: [
@@ -3710,7 +3710,7 @@ const GUIDE_SECTIONS = [
   },
   {
     id: 'events',
-    icon: '⊡',
+    icon: CalendarDays,
     title: '이벤트 캘린더',
     color: '#9B7FD4',
     items: [
@@ -3738,7 +3738,7 @@ const GUIDE_SECTIONS = [
   },
   {
     id: 'shortcuts',
-    icon: '⌘',
+    icon: Keyboard,
     title: '단축키 · 기타',
     color: '#8A9A7A',
     items: [
@@ -3829,7 +3829,7 @@ function GuideDrawer({ onClose, T, isDark }: { onClose: () => void; T: any; isDa
                 background: 'transparent',
               }}
             >
-              <span className="font-mono text-[14px]">{s.icon}</span>
+              {React.createElement(s.icon, { size: 14 })}
               <span className="font-medium">{s.title}</span>
             </button>
           ))}
@@ -3930,7 +3930,7 @@ function GuideDrawer({ onClose, T, isDark }: { onClose: () => void; T: any; isDa
                 background: 'transparent',
               }}
             >
-              <span className="font-mono">{s.icon}</span>
+              {React.createElement(s.icon, { size: 13 })}
               <span>{s.title}</span>
             </button>
           ))}
