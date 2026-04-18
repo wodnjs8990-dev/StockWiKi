@@ -16,6 +16,57 @@ const FOMC_2026 = [
   { dateKST: '2026-12-18', label: 'FOMC', desc: '금리+점도표', color: '#4F7E7C' },
 ];
 
+// ── 미국 주요 경제지표 2026
+// CPI: BLS 확인 (Jan14·Feb13·Mar11·Apr10·May12), 이후 패턴 기반
+// NFP: 첫째 금요일 (5월은 메이데이로 인해 May8 확인됨)
+// PCE: BEA 마지막 금요일 근처 (12월 크리스마스 → 12/23로 조정)
+const MACRO_2026 = [
+  // ── CPI (소비자물가)
+  { dateKST: '2026-01-14', label: 'CPI',  desc: '12월 소비자물가 (美)',   color: '#E07B54' },
+  { dateKST: '2026-02-13', label: 'CPI',  desc: '1월 소비자물가 (美)',    color: '#E07B54' },
+  { dateKST: '2026-03-11', label: 'CPI',  desc: '2월 소비자물가 (美)',    color: '#E07B54' },
+  { dateKST: '2026-04-10', label: 'CPI',  desc: '3월 소비자물가 (美)',    color: '#E07B54' },
+  { dateKST: '2026-05-12', label: 'CPI',  desc: '4월 소비자물가 (美)',    color: '#E07B54' },
+  { dateKST: '2026-06-10', label: 'CPI',  desc: '5월 소비자물가 (美)',    color: '#E07B54' },
+  { dateKST: '2026-07-14', label: 'CPI',  desc: '6월 소비자물가 (美)',    color: '#E07B54' },
+  { dateKST: '2026-08-12', label: 'CPI',  desc: '7월 소비자물가 (美)',    color: '#E07B54' },
+  { dateKST: '2026-09-11', label: 'CPI',  desc: '8월 소비자물가 (美)',    color: '#E07B54' },
+  { dateKST: '2026-10-13', label: 'CPI',  desc: '9월 소비자물가 (美)',    color: '#E07B54' },
+  { dateKST: '2026-11-12', label: 'CPI',  desc: '10월 소비자물가 (美)',   color: '#E07B54' },
+  { dateKST: '2026-12-11', label: 'CPI',  desc: '11월 소비자물가 (美)',   color: '#E07B54' },
+  // ── NFP (비농업 고용)
+  { dateKST: '2026-01-09', label: 'NFP',  desc: '12월 비농업 고용 (美)',  color: '#7B9FDF' },
+  { dateKST: '2026-02-06', label: 'NFP',  desc: '1월 비농업 고용 (美)',   color: '#7B9FDF' },
+  { dateKST: '2026-03-06', label: 'NFP',  desc: '2월 비농업 고용 (美)',   color: '#7B9FDF' },
+  { dateKST: '2026-04-03', label: 'NFP',  desc: '3월 비농업 고용 (美)',   color: '#7B9FDF' },
+  { dateKST: '2026-05-08', label: 'NFP',  desc: '4월 비농업 고용 (美)',   color: '#7B9FDF' }, // 메이데이 이후 두번째 금요일
+  { dateKST: '2026-06-05', label: 'NFP',  desc: '5월 비농업 고용 (美)',   color: '#7B9FDF' },
+  { dateKST: '2026-07-02', label: 'NFP',  desc: '6월 비농업 고용 (美)',   color: '#7B9FDF' },
+  { dateKST: '2026-08-07', label: 'NFP',  desc: '7월 비농업 고용 (美)',   color: '#7B9FDF' },
+  { dateKST: '2026-09-04', label: 'NFP',  desc: '8월 비농업 고용 (美)',   color: '#7B9FDF' },
+  { dateKST: '2026-10-02', label: 'NFP',  desc: '9월 비농업 고용 (美)',   color: '#7B9FDF' },
+  { dateKST: '2026-11-06', label: 'NFP',  desc: '10월 비농업 고용 (美)',  color: '#7B9FDF' },
+  { dateKST: '2026-12-04', label: 'NFP',  desc: '11월 비농업 고용 (美)',  color: '#7B9FDF' },
+  // ── PCE (개인소비지출 물가)
+  { dateKST: '2026-01-30', label: 'PCE',  desc: '12월 PCE 물가 (美)',     color: '#B07AB0' },
+  { dateKST: '2026-02-27', label: 'PCE',  desc: '1월 PCE 물가 (美)',      color: '#B07AB0' },
+  { dateKST: '2026-03-27', label: 'PCE',  desc: '2월 PCE 물가 (美)',      color: '#B07AB0' },
+  { dateKST: '2026-04-30', label: 'PCE',  desc: '3월 PCE 물가 (美)',      color: '#B07AB0' },
+  { dateKST: '2026-05-29', label: 'PCE',  desc: '4월 PCE 물가 (美)',      color: '#B07AB0' },
+  { dateKST: '2026-06-26', label: 'PCE',  desc: '5월 PCE 물가 (美)',      color: '#B07AB0' },
+  { dateKST: '2026-07-31', label: 'PCE',  desc: '6월 PCE 물가 (美)',      color: '#B07AB0' },
+  { dateKST: '2026-08-28', label: 'PCE',  desc: '7월 PCE 물가 (美)',      color: '#B07AB0' },
+  { dateKST: '2026-09-25', label: 'PCE',  desc: '8월 PCE 물가 (美)',      color: '#B07AB0' },
+  { dateKST: '2026-10-30', label: 'PCE',  desc: '9월 PCE 물가 (美)',      color: '#B07AB0' },
+  { dateKST: '2026-11-25', label: 'PCE',  desc: '10월 PCE 물가 (美)',     color: '#B07AB0' },
+  { dateKST: '2026-12-23', label: 'PCE',  desc: '11월 PCE 물가 (美)',     color: '#B07AB0' }, // 크리스마스 전날
+  // ── GDP (분기 속보치)
+  { dateKST: '2026-01-29', label: 'GDP',  desc: 'Q4 2025 GDP 속보 (美)',  color: '#5FA8A0' },
+  { dateKST: '2026-04-29', label: 'GDP',  desc: 'Q1 2026 GDP 속보 (美)',  color: '#5FA8A0' },
+  { dateKST: '2026-07-30', label: 'GDP',  desc: 'Q2 2026 GDP 속보 (美)',  color: '#5FA8A0' },
+  { dateKST: '2026-10-29', label: 'GDP',  desc: 'Q3 2026 GDP 속보 (美)',  color: '#5FA8A0' },
+];
+
 // ── 코스피200 선물 만기 (분기 둘째 목요일)
 function getFuturesExpiry(year: number, month: number): string {
   const d = new Date(year, month - 1, 1);
@@ -72,6 +123,7 @@ type CalEvent = {
   desc: string;
   color: string;
   earning?: EarningItem;
+  macro?: { actual?: number | null; estimate?: number | null; prev?: number | null; unit?: string };
 };
 
 function surpriseColor(s: number | null | undefined, accent: string, green: string): string {
@@ -119,6 +171,8 @@ export default function EventsView({ T }: { T?: any }) {
   const [indexFilter, setIndexFilter] = useState<'ALL' | 'SP500' | 'NDX100'>('ALL');
   const [sectorFilter, setSectorFilter] = useState<Sector | 'ALL'>('ALL');
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
+  const [macroEvents, setMacroEvents] = useState<CalEvent[]>([]);
+  const [selectedMacroDesc, setSelectedMacroDesc] = useState<string | null>(null);
 
   const fetchEarnings = async () => {
     setLoading(true);
@@ -139,7 +193,24 @@ export default function EventsView({ T }: { T?: any }) {
     }
   };
 
-  useEffect(() => { fetchEarnings(); }, []);
+  const fetchMacro = async () => {
+    try {
+      const res = await fetch('/api/macro-calendar');
+      const data = await res.json();
+      if (data.ok) {
+        const evs: CalEvent[] = (data.events ?? []).map((e: any) => ({
+          dateKST: e.date,
+          label: e.label,
+          desc: e.desc,
+          color: e.color,
+          macro: { actual: e.actual, estimate: e.estimate, prev: e.prev, unit: e.unit },
+        }));
+        setMacroEvents(evs);
+      }
+    } catch { /* 실패해도 조용히 */ }
+  };
+
+  useEffect(() => { fetchEarnings(); fetchMacro(); }, []);
 
   // 섹터별 색상
   const SECTOR_COLOR: Record<string, string> = {
@@ -174,7 +245,9 @@ export default function EventsView({ T }: { T?: any }) {
       earning: e,
     }));
 
-  const allEvents: CalEvent[] = [...FOMC_2026, ...FUTURES_EVENTS, ...earningEvents];
+  // macroEvents(Finnhub API)가 있으면 우선 사용, 없으면 MACRO_2026 fallback
+  const macroToUse = macroEvents.length > 0 ? macroEvents : (MACRO_2026 as CalEvent[]);
+  const allEvents: CalEvent[] = [...FOMC_2026, ...FUTURES_EVENTS, ...macroToUse, ...earningEvents];
   const eventsByDate: Record<string, CalEvent[]> = {};
   for (const ev of allEvents) {
     if (!eventsByDate[ev.dateKST]) eventsByDate[ev.dateKST] = [];
@@ -381,11 +454,12 @@ export default function EventsView({ T }: { T?: any }) {
             style={{ borderColor: theme.border, background: theme.bgCard }}>
             {[
               { color: '#4F7E7C', label: 'FOMC' },
-              { color: '#7B9FDF', label: 'Tech' },
-              { color: '#C89650', label: 'Finance' },
+              { color: '#E07B54', label: 'CPI' },
+              { color: '#7B9FDF', label: 'NFP' },
+              { color: '#B07AB0', label: 'PCE' },
+              { color: '#5FA8A0', label: 'GDP' },
               { color: '#7BAF7A', label: 'Healthcare' },
-              { color: '#D4956A', label: 'Consumer' },
-              { color: '#C4A84F', label: 'Energy' },
+              { color: '#C89650', label: 'Finance' },
               { color: '#8A8A8A', label: 'K200만기' },
             ].map(({ color, label }) => (
               <div key={label} className="flex items-center gap-1.5">
@@ -421,7 +495,10 @@ export default function EventsView({ T }: { T?: any }) {
                 <div>
                   {selectedEvents.map((ev, i) => {
                     const isExpanded = ev.earning != null && selectedEarning?.symbol === ev.earning?.symbol;
+                    const isMacroExpanded = ev.macro != null && selectedMacroDesc === ev.desc;
                     const e = ev.earning;
+                    const m = ev.macro;
+                    const isClickable = !!e || !!m;
                     return (
                       <div key={i}>
                         {/* 이벤트 행 */}
@@ -430,10 +507,13 @@ export default function EventsView({ T }: { T?: any }) {
                           style={{
                             borderColor: theme.borderSoft,
                             borderLeft: `3px solid ${ev.color}`,
-                            background: isExpanded ? `${ev.color}${isLight ? '18' : '0f'}` : 'transparent',
-                            cursor: e ? 'pointer' : 'default',
+                            background: (isExpanded || isMacroExpanded) ? `${ev.color}${isLight ? '18' : '0f'}` : 'transparent',
+                            cursor: isClickable ? 'pointer' : 'default',
                           }}
-                          onClick={() => e && setSelectedEarning(isExpanded ? null : e)}
+                          onClick={() => {
+                            if (e) setSelectedEarning(isExpanded ? null : e);
+                            else if (m) setSelectedMacroDesc(isMacroExpanded ? null : ev.desc);
+                          }}
                           onMouseEnter={el => { if (e && !isExpanded) (el.currentTarget as HTMLElement).style.background = theme.bgHover; }}
                           onMouseLeave={el => { if (e && !isExpanded) (el.currentTarget as HTMLElement).style.background = 'transparent'; }}
                         >
@@ -471,6 +551,27 @@ export default function EventsView({ T }: { T?: any }) {
                         </div>
 
                         {/* 확장 디테일 */}
+                        {/* 매크로 확장 디테일 */}
+                        {isMacroExpanded && m && (
+                          <div className="px-4 py-3 border-b"
+                            style={{ borderColor: theme.borderSoft, background: `${ev.color}${isLight ? '14' : '08'}`, borderLeft: `3px solid ${ev.color}` }}>
+                            <div className="grid grid-cols-3 gap-3">
+                              {[
+                                { label: '발표치', val: m.actual },
+                                { label: '예상치', val: m.estimate },
+                                { label: '이전치', val: m.prev },
+                              ].map(({ label, val }) => (
+                                <div key={label}>
+                                  <div className="text-[9px] mono uppercase tracking-[0.15em] mb-1" style={{ color: theme.textDimmer }}>{label}</div>
+                                  <span className="text-sm font-semibold" style={{ color: val != null ? ev.color : theme.textDimmer }}>
+                                    {val != null ? `${val}${m.unit ?? ''}` : '-'}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
                         {isExpanded && e && (
                           <div className="px-4 py-3 border-b"
                             style={{ borderColor: theme.borderSoft, background: `${ev.color}${isLight ? '14' : '08'}`, borderLeft: `3px solid ${ev.color}` }}>
@@ -585,7 +686,7 @@ export default function EventsView({ T }: { T?: any }) {
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-[9px] mono" style={{ color: theme.textDimmer }}>
-                  {loading ? '로딩 중...' : `${[...FOMC_2026, ...FUTURES_EVENTS, ...earningEvents].filter(e => e.dateKST >= today).length}건`}
+                  {loading ? '로딩 중...' : `${[...FOMC_2026, ...FUTURES_EVENTS, ...macroToUse, ...earningEvents].filter(e => e.dateKST >= today).length}건`}
                 </span>
                 {(indexFilter !== 'ALL' || sectorFilter !== 'ALL') && (
                   <button onClick={() => { setIndexFilter('ALL'); setSectorFilter('ALL'); }}
@@ -596,7 +697,7 @@ export default function EventsView({ T }: { T?: any }) {
                 )}
               </div>
             </div>
-            {([...FOMC_2026, ...FUTURES_EVENTS, ...earningEvents] as CalEvent[])
+            {([...FOMC_2026, ...FUTURES_EVENTS, ...macroToUse, ...earningEvents] as CalEvent[])
               .filter(ev => ev.dateKST >= today)
               .sort((a, b) => {
                 const d = a.dateKST.localeCompare(b.dateKST);
