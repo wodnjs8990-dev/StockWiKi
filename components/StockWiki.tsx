@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { Search, Calculator, BookOpen, ChevronRight, X, ArrowUpRight, Star, Clock, Menu, Link as LinkIcon, Copy, Check, Share2, CalendarDays } from 'lucide-react';
+import { Search, Calculator, BookOpen, ChevronRight, ChevronLeft, X, ArrowUpRight, Star, Clock, Menu, Link as LinkIcon, Copy, Check, Share2, CalendarDays } from 'lucide-react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { TERMS, CATEGORIES, CATEGORY_COLORS } from '@/data/terms';
@@ -507,16 +507,32 @@ function GlossaryView({ terms, searchQuery, setSearchQuery, searchRef, categorie
       )}
 
       {selectedTerm && (
-        <TermModal term={selectedTerm} onClose={closeTerm} categoryColors={categoryColors} favorites={favorites} toggleFav={toggleFav} onNavigate={(id) => {
-          const t = TERMS.find(x => x.id === id);
-          if (t) setSelectedTerm(t);
-        }} />
+        <TermModal
+          term={selectedTerm}
+          termList={terms}
+          onClose={closeTerm}
+          categoryColors={categoryColors}
+          favorites={favorites}
+          toggleFav={toggleFav}
+          onNavigate={(id) => {
+            const t = TERMS.find(x => x.id === id);
+            if (t) setSelectedTerm(t);
+          }}
+          onPrev={() => {
+            const idx = terms.findIndex(t => t.id === selectedTerm.id);
+            if (idx > 0) setSelectedTerm(terms[idx - 1]);
+          }}
+          onNext={() => {
+            const idx = terms.findIndex(t => t.id === selectedTerm.id);
+            if (idx < terms.length - 1) setSelectedTerm(terms[idx + 1]);
+          }}
+        />
       )}
     </div>
   );
 }
 
-function TermModal({ term, onClose, categoryColors, favorites, toggleFav, onNavigate }) {
+function TermModal({ term, termList, onClose, categoryColors, favorites, toggleFav, onNavigate, onPrev, onNext }) {
   const border = '#2a2a2a';
   const isFav = favorites.has(term.id);
   const relatedTerms = term.related?.map(id => TERMS.find(t => t.id === id)).filter(Boolean) || [];
@@ -524,6 +540,21 @@ function TermModal({ term, onClose, categoryColors, favorites, toggleFav, onNavi
   const hasRelations = term.relations && Object.keys(term.relations).length > 0;
   const hasImpact = !!term.marketImpact;
   const hasEasy = !!term.easy;
+
+  const currentIdx = termList ? termList.findIndex(t => t.id === term.id) : -1;
+  const hasPrev = currentIdx > 0;
+  const hasNext = termList && currentIdx < termList.length - 1;
+  const total = termList ? termList.length : 0;
+
+  // 키보드 ← → 네비게이션
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowLeft' && hasPrev) onPrev?.();
+      if (e.key === 'ArrowRight' && hasNext) onNext?.();
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [hasPrev, hasNext, onPrev, onNext]);
 
   return (
     <div
@@ -537,16 +568,51 @@ function TermModal({ term, onClose, categoryColors, favorites, toggleFav, onNavi
         onClick={e => e.stopPropagation()}
       >
         <div
-          className="px-6 md:px-8 py-4 md:py-5 flex items-center justify-between border-b sticky top-0 z-10"
+          className="px-4 md:px-8 py-4 md:py-5 flex items-center justify-between border-b sticky top-0 z-10"
           style={{ background: categoryColors[term.category]?.bg, color: categoryColors[term.category]?.text, borderColor: border }}
         >
-          <div className="flex items-center gap-3">
-            <span className="ball-joint" style={{ background: categoryColors[term.category]?.text }}></span>
+          <div className="flex items-center gap-2 md:gap-3">
+            {/* 이전 버튼 */}
+            <button
+              onClick={(e) => { e.stopPropagation(); onPrev?.(); }}
+              disabled={!hasPrev}
+              className="flex items-center justify-center w-7 h-7 border transition-all"
+              style={{
+                borderColor: hasPrev ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.08)',
+                color: hasPrev ? 'inherit' : 'rgba(255,255,255,0.25)',
+                background: 'transparent',
+                cursor: hasPrev ? 'pointer' : 'not-allowed',
+              }}
+              title="이전 용어 (←)"
+            >
+              <ChevronLeft size={14} />
+            </button>
+            <span className="ball-joint hidden sm:inline-block" style={{ background: categoryColors[term.category]?.text }}></span>
             <span className="text-[10px] mono uppercase tracking-[0.3em]">{term.category}</span>
+            {total > 0 && (
+              <span className="text-[10px] mono opacity-60 hidden sm:inline">
+                {currentIdx + 1} / {total}
+              </span>
+            )}
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 md:gap-3">
             <button onClick={() => toggleFav(term.id)} style={{ color: 'inherit' }}>
               <Star size={16} fill={isFav ? 'currentColor' : 'none'} />
+            </button>
+            {/* 다음 버튼 */}
+            <button
+              onClick={(e) => { e.stopPropagation(); onNext?.(); }}
+              disabled={!hasNext}
+              className="flex items-center justify-center w-7 h-7 border transition-all"
+              style={{
+                borderColor: hasNext ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.08)',
+                color: hasNext ? 'inherit' : 'rgba(255,255,255,0.25)',
+                background: 'transparent',
+                cursor: hasNext ? 'pointer' : 'not-allowed',
+              }}
+              title="다음 용어 (→)"
+            >
+              <ChevronRight size={14} />
             </button>
             <button onClick={onClose}><X size={18} /></button>
           </div>
