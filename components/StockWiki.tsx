@@ -5897,11 +5897,11 @@ function HomeView({ T, isDark, totalTerms, recent, favorites, categoryColors, se
 
   const FAMILY_LIST = [
     { id: 'fundamental', name: '펀더멘털',    color: HUE_FAMILIES.fundamental.base, cats: ['밸류에이션','수익성','기업재무','회계심화','배당','재무안정성'] },
-    { id: 'market',      name: '시장',        color: HUE_FAMILIES.market.base,      cats: ['한국시장','해외주식ETF','시장거래'] },
-    { id: 'macro',       name: '경제',        color: HUE_FAMILIES.macro.base,       cats: ['거시경제','미시경제'] },
+    { id: 'market',      name: '시장',        color: HUE_FAMILIES.market.base,      cats: ['한국시장','해외시장·지수','ETF·상장상품','시장거래'] },
+    { id: 'macro',       name: '경제',        color: HUE_FAMILIES.macro.base,       cats: ['통화정책·금리','물가·인플레이션','성장·경기순환','고용·소비·생산','환율·대외수지','금융위기·신용','재정·국가경제','미시경제'] },
     { id: 'risk',        name: '리스크·퀀트', color: HUE_FAMILIES.risk.base,        cats: ['포트폴리오','퀀트통계'] },
     { id: 'derivatives', name: '파생',        color: HUE_FAMILIES.derivatives.base, cats: ['선물옵션','파생헤지'] },
-    { id: 'trading',     name: '매매실전',    color: HUE_FAMILIES.trading.base,     cats: ['기술적지표','차트심리'] },
+    { id: 'trading',     name: '매매실전',    color: HUE_FAMILIES.trading.base,     cats: ['기술적지표','차트패턴·가격행동','투자심리·행동편향'] },
   ];
 
   const QUICK_CALCS = [
