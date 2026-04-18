@@ -5939,10 +5939,11 @@ function HomeView({ T, isDark, totalTerms, recent, favorites, categoryColors, se
               <h1 className="font-light leading-tight tracking-tight mb-4"
                 style={{ fontSize: 'clamp(22px, 2.8vw, 36px)', color: T.textPrimary }}>
                 사전 · 계산기 ·{' '}
-                <span style={{ color: T.accent }}>한 벌의 책상.</span>
+                <span style={{ color: T.accent }}>모든 판단의 시작.</span>
               </h1>
               <p className="text-sm leading-relaxed mb-6 max-w-sm" style={{ color: T.textMuted }}>
-                재무지표 {totalTerms}개 용어, 52개 계산기, 어닝·거시 이벤트 캘린더를 한 곳에.
+                {totalTerms}개 금융 용어와 계산기, 어닝·거시 이벤트 캘린더.<br />
+                전업투자자를 위한 한 벌의 책상.
               </p>
               <div className="flex flex-wrap gap-3">
                 <button onClick={() => { setActiveTab('glossary'); setTimeout(() => searchRef.current?.focus(), 100); }}
@@ -6017,13 +6018,13 @@ function HomeView({ T, isDark, totalTerms, recent, favorites, categoryColors, se
                     { label: 'Crypto',   sub: '24/7',         open: true,         color: HUE_FAMILIES.trading.base,       night: false },
                   ];
                   return markets.map(m => {
-                    // 다크모드: 장중 → 초록 glow, 야간세션 장중 → 흰색 테두리
-                    const dotColor  = m.open ? (isDark ? '#22c55e' : m.color) : T.textDimmer;
-                    const dotGlow   = m.open ? (isDark ? '0 0 6px #22c55e, 0 0 14px #22c55e80' : `0 0 5px ${m.color}`) : 'none';
+                    // 장중: 라이트=초록 dot+border / 다크=초록 glow + 흰색 박스 테두리
+                    const dotColor  = m.open ? '#22c55e' : T.textDimmer;
+                    const dotGlow   = m.open ? '0 0 6px #22c55e, 0 0 14px #22c55e80' : 'none';
                     const boxBorder = m.open
-                      ? (isDark && m.night ? 'rgba(255,255,255,0.55)' : `${m.color}60`)
+                      ? (isDark ? 'rgba(255,255,255,0.60)' : '#22c55e99')
                       : T.border;
-                    const textColor = m.open ? m.color : T.textDimmer;
+                    const textColor = m.open ? (isDark ? '#e8e4dc' : '#22c55e') : T.textDimmer;
                     return (
                     <div key={m.label} className="flex items-center gap-2 border px-3 py-1"
                       style={{ borderColor: boxBorder }}>
