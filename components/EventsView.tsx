@@ -173,6 +173,9 @@ export default function EventsView({ T }: { T?: any }) {
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
   const [macroEvents, setMacroEvents] = useState<CalEvent[]>([]);
   const [selectedMacroDesc, setSelectedMacroDesc] = useState<string | null>(null);
+  const [macroFilter, setMacroFilter] = useState<string>('ALL');
+  const [showEarnings, setShowEarnings] = useState(true);
+  const [showMacro, setShowMacro] = useState(true);
 
   const fetchEarnings = async () => {
     setLoading(true);
@@ -245,9 +248,40 @@ export default function EventsView({ T }: { T?: any }) {
       earning: e,
     }));
 
+  // ── 지표 카테고리
+  const MACRO_CATEGORIES: { key: string; label: string; color: string; labels: string[] }[] = [
+    { key: 'ALL',     label: 'ALL',     color: '#C89650', labels: [] },
+    { key: 'FOMC',    label: '연준',    color: '#4F7E7C', labels: ['FOMC', 'FOMC의사록', '연준대차대조표'] },
+    { key: 'PRICE',   label: '물가',    color: '#E07B54', labels: ['CPI', 'Core CPI', 'PPI', 'Core PPI', 'PCE', 'Core PCE'] },
+    { key: 'EMPLOY',  label: '고용',    color: '#7B9FDF', labels: ['NFP', 'ADP', '실업청구', '실업률'] },
+    { key: 'GROWTH',  label: '성장',    color: '#5FA8A0', labels: ['GDP', 'GDP 속보', 'GDP속보', '산업생산', '내구재'] },
+    { key: 'CONSUME', label: '소비',    color: '#C89650', labels: ['소매판매', 'Core 소매', '소비자신뢰', 'UMich신뢰'] },
+    { key: 'PMI',     label: 'PMI',     color: '#7BAF7A', labels: ['ISM제조', 'ISM서비스', 'PMI제조', 'PMI서비스', 'PMI제조F', 'PMI서비스F'] },
+    { key: 'HOUSING', label: '주택',    color: '#9B7FD4', labels: ['기존주택', '신규주택', '주택착공', '주택대기', 'MBA모기지'] },
+    { key: 'ENERGY',  label: '에너지',  color: '#C4A84F', labels: ['EIA원유', 'EIA천연가스'] },
+    { key: 'BOND',    label: '국채',    color: '#7A9FA0', labels: ['국채2Y', '국채5Y', '국채7Y', '국채10Y', '국채20Y', '국채30Y', '국채3M', '국채6M'] },
+    { key: 'K200',    label: 'K200',    color: '#8A8A8A', labels: ['K200만기'] },
+  ];
+
   // macroEvents(Finnhub API)가 있으면 우선 사용, 없으면 MACRO_2026 fallback
   const macroToUse = macroEvents.length > 0 ? macroEvents : (MACRO_2026 as CalEvent[]);
-  const allEvents: CalEvent[] = [...FOMC_2026, ...FUTURES_EVENTS, ...macroToUse, ...earningEvents];
+
+  // 지표 카테고리 필터 적용
+  const filteredSpecial: CalEvent[] = (() => {
+    const cat = MACRO_CATEGORIES.find(c => c.key === macroFilter);
+    const fomcFiltered = (macroFilter === 'ALL' || macroFilter === 'FOMC') ? FOMC_2026 : [];
+    const futuresFiltered = (macroFilter === 'ALL' || macroFilter === 'K200') ? FUTURES_EVENTS : [];
+    const macroFiltered = macroToUse.filter(ev => {
+      if (macroFilter === 'ALL') return true;
+      return cat?.labels.includes(ev.label) ?? false;
+    });
+    return [...fomcFiltered, ...futuresFiltered, ...macroFiltered];
+  })();
+
+  const allEvents: CalEvent[] = [
+    ...(showMacro ? filteredSpecial : []),
+    ...(showEarnings ? earningEvents : []),
+  ];
   const eventsByDate: Record<string, CalEvent[]> = {};
   for (const ev of allEvents) {
     if (!eventsByDate[ev.dateKST]) eventsByDate[ev.dateKST] = [];
@@ -364,24 +398,68 @@ export default function EventsView({ T }: { T?: any }) {
             </button>
           </div>
 
-          {/* 섹터 필터 */}
-          <div className="px-3 py-2 border-b flex flex-wrap gap-1"
-            style={{ borderColor: theme.border, background: theme.bgCard }}>
-            {ALL_SECTORS.map(s => {
-              const isActive = sectorFilter === s;
-              const color = s === 'ALL' ? theme.accent : SECTOR_COLOR[s];
-              return (
-                <button key={s} onClick={() => setSectorFilter(s)}
-                  className="text-[13px] mono px-2 py-0.5 border transition-all"
-                  style={{
-                    borderColor: isActive ? color : theme.borderSoft,
-                    background: isActive ? `${color}25` : 'transparent',
-                    color: isActive ? color : theme.textDimmer,
-                  }}>
-                  {s === 'ALL' ? 'ALL' : SECTOR_LABEL[s]}
-                </button>
-              );
-            })}
+          {/* 필터 바 — 어닝 섹터 + 지표 카테고리 */}
+          <div className="border-b" style={{ borderColor: theme.border, background: theme.bgCard }}>
+            {/* 어닝/지표 토글 + 섹터 */}
+            <div className="px-3 pt-2 pb-1 flex flex-wrap items-center gap-1.5">
+              {/* 어닝 / 지표 표시 토글 */}
+              <button
+                onClick={() => setShowEarnings(v => !v)}
+                className="text-[11px] mono px-2 py-0.5 border transition-all"
+                style={{
+                  borderColor: showEarnings ? theme.accent : theme.borderSoft,
+                  background: showEarnings ? `${theme.accent}20` : 'transparent',
+                  color: showEarnings ? theme.accent : theme.textDimmer,
+                }}>
+                어닝
+              </button>
+              <button
+                onClick={() => setShowMacro(v => !v)}
+                className="text-[11px] mono px-2 py-0.5 border transition-all"
+                style={{
+                  borderColor: showMacro ? '#5FA8A0' : theme.borderSoft,
+                  background: showMacro ? '#5FA8A020' : 'transparent',
+                  color: showMacro ? '#5FA8A0' : theme.textDimmer,
+                }}>
+                지표
+              </button>
+              <span className="w-px h-3 mx-0.5" style={{ background: theme.borderMid }} />
+              {/* 어닝 섹터 필터 */}
+              {ALL_SECTORS.map(s => {
+                const isActive = sectorFilter === s;
+                const color = s === 'ALL' ? theme.accent : SECTOR_COLOR[s];
+                return (
+                  <button key={s} onClick={() => setSectorFilter(s)}
+                    className="text-[11px] mono px-2 py-0.5 border transition-all"
+                    style={{
+                      borderColor: isActive ? color : theme.borderSoft,
+                      background: isActive ? `${color}25` : 'transparent',
+                      color: isActive ? color : theme.textDimmer,
+                    }}>
+                    {s === 'ALL' ? 'ALL' : SECTOR_LABEL[s]}
+                  </button>
+                );
+              })}
+            </div>
+            {/* 지표 카테고리 필터 */}
+            {showMacro && (
+              <div className="px-3 pb-2 flex flex-wrap gap-1">
+                {MACRO_CATEGORIES.map(cat => {
+                  const isActive = macroFilter === cat.key;
+                  return (
+                    <button key={cat.key} onClick={() => setMacroFilter(cat.key)}
+                      className="text-[11px] mono px-2 py-0.5 border transition-all"
+                      style={{
+                        borderColor: isActive ? cat.color : theme.borderSoft,
+                        background: isActive ? `${cat.color}25` : 'transparent',
+                        color: isActive ? cat.color : theme.textDimmer,
+                      }}>
+                      {cat.label}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           {/* 요일 헤더 */}
@@ -667,20 +745,26 @@ export default function EventsView({ T }: { T?: any }) {
                   다가오는 이벤트
                 </span>
                 {/* 활성 필터 표시 */}
-                {(indexFilter !== 'ALL' || sectorFilter !== 'ALL') && (
-                  <div className="flex gap-1">
+                {(indexFilter !== 'ALL' || sectorFilter !== 'ALL' || macroFilter !== 'ALL' || !showEarnings || !showMacro) && (
+                  <div className="flex gap-1 flex-wrap">
+                    {!showEarnings && <span className="text-[11px] mono px-1 border" style={{ color: theme.textDimmer, borderColor: theme.borderSoft }}>어닝숨김</span>}
+                    {!showMacro && <span className="text-[11px] mono px-1 border" style={{ color: theme.textDimmer, borderColor: theme.borderSoft }}>지표숨김</span>}
                     {indexFilter !== 'ALL' && (
-                      <span className="text-[13px] mono px-1 border"
+                      <span className="text-[11px] mono px-1 border"
                         style={{ color: theme.accent, borderColor: `${theme.accent}50` }}>
                         {indexFilter === 'SP500' ? 'S&P' : 'NDX'}
                       </span>
                     )}
                     {sectorFilter !== 'ALL' && (
-                      <span className="text-[13px] mono px-1 border"
+                      <span className="text-[11px] mono px-1 border"
                         style={{ color: SECTOR_COLOR[sectorFilter], borderColor: `${SECTOR_COLOR[sectorFilter]}50` }}>
                         {SECTOR_LABEL[sectorFilter]}
                       </span>
                     )}
+                    {macroFilter !== 'ALL' && (() => {
+                      const cat = MACRO_CATEGORIES.find(c => c.key === macroFilter);
+                      return cat ? <span className="text-[11px] mono px-1 border" style={{ color: cat.color, borderColor: `${cat.color}50` }}>{cat.label}</span> : null;
+                    })()}
                   </div>
                 )}
               </div>
@@ -688,8 +772,8 @@ export default function EventsView({ T }: { T?: any }) {
                 <span className="text-[13px] mono" style={{ color: theme.textDimmer }}>
                   {loading ? '로딩 중...' : `${[...FOMC_2026, ...FUTURES_EVENTS, ...macroToUse, ...earningEvents].filter(e => e.dateKST >= today).length}건`}
                 </span>
-                {(indexFilter !== 'ALL' || sectorFilter !== 'ALL') && (
-                  <button onClick={() => { setIndexFilter('ALL'); setSectorFilter('ALL'); }}
+                {(indexFilter !== 'ALL' || sectorFilter !== 'ALL' || macroFilter !== 'ALL' || !showEarnings || !showMacro) && (
+                  <button onClick={() => { setIndexFilter('ALL'); setSectorFilter('ALL'); setMacroFilter('ALL'); setShowEarnings(true); setShowMacro(true); }}
                     className="text-[13px] mono px-1.5 border hover:opacity-70 transition-opacity"
                     style={{ color: theme.textDimmer, borderColor: theme.borderSoft }}>
                     초기화
