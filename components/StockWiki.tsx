@@ -861,6 +861,7 @@ function GlossaryView({ terms, searchQuery, setSearchQuery, searchRef, categorie
 
   return (
     <div>
+      <MarketPulseRail T={T} totalTerms={totalCount} />
       <div className="mb-6 border-y" style={{ borderColor: T.border }}>
         <div className="flex items-center justify-end gap-3 py-2 border-b mono text-[12px] uppercase tracking-[0.2em] whitespace-nowrap" style={{ borderColor: T.border, color: T.textFaint }}>
           <span>§ Glossary</span>
@@ -1724,6 +1725,7 @@ function CalculatorView({ selectedCalc, setSelectedCalc, T, isDark }) {
 
   return (
     <div>
+      <MarketPulseRail T={T} totalTerms={TERMS.length} />
       {/* 상단 메타 바 */}
       <div className="mb-6 border-y" style={{ borderColor: T.border }}>
         <div className="flex items-center justify-between gap-3 py-2 border-b mono text-[12px] uppercase tracking-[0.2em] whitespace-nowrap" style={{ borderColor: T.border, color: T.textFaint }}>
@@ -2171,7 +2173,7 @@ function dispatchCalcHistory(calcId: string, calcName: string, results: { label:
   }));
 }
 
-function ResultBox({ label, value, unit, highlight, color = '#C89650' }: any) {
+function ResultBox({ label, value, unit, highlight, color = '#C89650', bands, interpret }: any) {
   const [copied, setCopied] = useState(false);
 
   // value가 쉼표 포함 숫자 문자열인지 확인해서 한국어 단위 계산
@@ -2187,7 +2189,6 @@ function ResultBox({ label, value, unit, highlight, color = '#C89650' }: any) {
 
   const handleCopy = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    // 복사 형식: "라벨: 값 단위 (한국어단위) · stockwiki.kr"
     const text = koreanUnit
       ? `${label}: ${value} ${unit || ''} (${koreanUnit}) · stockwiki.kr`
       : `${label}: ${value} ${unit || ''} · stockwiki.kr`;
@@ -2198,7 +2199,6 @@ function ResultBox({ label, value, unit, highlight, color = '#C89650' }: any) {
     } catch {}
   };
 
-  // 값이 비어있거나 '—'면 복사 버튼 비활성
   const hasValue = value && value !== '—' && value !== '0';
 
   return (
@@ -2218,17 +2218,10 @@ function ResultBox({ label, value, unit, highlight, color = '#C89650' }: any) {
           <button
             onClick={handleCopy}
             className="text-[11px] mono uppercase tracking-[0.15em] px-1.5 py-0.5 transition-all flex items-center gap-1"
-            style={{
-              opacity: copied ? 1 : 0.4,
-              color: 'inherit',
-            }}
+            style={{ opacity: copied ? 1 : 0.4, color: 'inherit' }}
             title="결과 복사"
           >
-            {copied ? (
-              <><Check size={10} /><span>복사됨</span></>
-            ) : (
-              <><Copy size={10} /><span>복사</span></>
-            )}
+            {copied ? <><Check size={10} /><span>복사됨</span></> : <><Copy size={10} /><span>복사</span></>}
           </button>
         )}
       </div>
@@ -2236,10 +2229,42 @@ function ResultBox({ label, value, unit, highlight, color = '#C89650' }: any) {
         {value} <span className="text-xs md:text-sm" style={{ opacity: 0.6 }}>{unit}</span>
       </div>
       {koreanUnit && (
-        <div className="text-xs mt-2 mono" style={{ opacity: 0.7 }}>
-          ≈ {koreanUnit}
-        </div>
+        <div className="text-xs mt-2 mono" style={{ opacity: 0.7 }}>≈ {koreanUnit}</div>
       )}
+      {/* 게이지 바 + 판정 칩 (highlight + bands prop 있을 때) */}
+      {highlight && bands && (() => {
+        const num = parseFloat((value || '').replace(/,/g, ''));
+        if (!isFinite(num)) return null;
+        const [low, high] = bands as [number, number];
+        const range = high - low;
+        const pct = Math.min(95, Math.max(5, ((num - low) / range) * 100));
+        const isLow  = num < low;
+        const isHigh = num >= high;
+        const judgeColor = isLow ? '#6f9c6a' : isHigh ? '#b94040' : '#c89650';
+        const judgeLabel = isLow ? '저평가 구간' : isHigh ? '고평가 구간' : '중립 구간';
+        const defaultInterp = isLow
+          ? `${num.toFixed(1)} — 업종 기준(${low}~${high}) 대비 저평가.`
+          : isHigh
+            ? `${num.toFixed(1)} — 업종 기준(${low}~${high}) 대비 고평가.`
+            : `${num.toFixed(1)} — 업종 기준 중립 범위.`;
+        return (
+          <div style={{ marginTop: 14 }}>
+            <div style={{ height: 4, background: 'rgba(0,0,0,0.25)', position: 'relative', marginBottom: 4 }}>
+              <div style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: `${pct}%`, background: 'linear-gradient(90deg, #6f9c6a 0%, #c89650 50%, #b94040 100%)' }} />
+              <div style={{ position: 'absolute', top: -3, left: `${pct}%`, width: 2, height: 10, background: 'rgba(255,255,255,0.9)', transform: 'translateX(-50%)' }} />
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, fontFamily: "'IBM Plex Mono',monospace", letterSpacing: '0.18em', textTransform: 'uppercase', opacity: 0.6, marginBottom: 8 }}>
+              <span>저평가</span><span>중립</span><span>고평가</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ border: `1px solid ${judgeColor}`, color: judgeColor, fontFamily: "'IBM Plex Mono',monospace", fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', padding: '2px 7px', background: 'rgba(0,0,0,0.2)' }}>◉ {judgeLabel}</span>
+            </div>
+            <div style={{ marginTop: 8, fontSize: 11.5, lineHeight: 1.55, color: 'rgba(255,255,255,0.75)', fontStyle: 'italic' }}>
+              {interpret ? interpret(num, isLow, isHigh) : defaultInterp}
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
@@ -2365,7 +2390,7 @@ function PERCalc() {
       </div>
       <div className="grid md:grid-cols-2 border" style={{ borderColor: _BORDER }}>
         <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="EPS · 주당순이익" value={fmt(eps)} unit="원" /></div>
-        <ResultBox label="PER · 주가수익비율" value={fmt(per)} unit="배" highlight />
+        <ResultBox label="PER · 주가수익비율" value={fmt(per)} unit="배" highlight bands={[10, 25]} interpret={(n, isLow, isHigh) => isLow ? `PER ${n.toFixed(1)}배 — 저평가 구간. 업종·성장성 함께 확인하세요.` : isHigh ? `PER ${n.toFixed(1)}배 — 고평가 구간. 성장 프리미엄이 반영된 수준.` : `PER ${n.toFixed(1)}배 — 업종 평균 수준.`} />
       </div>
       <CalcNote
         how={[
@@ -2450,7 +2475,7 @@ function PBRCalc() {
       </div>
       <div className="grid md:grid-cols-2 border" style={{ borderColor: _BORDER }}>
         <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="BPS · 주당순자산" value={fmt(bps)} unit="원" /></div>
-        <ResultBox label="PBR · 주가순자산비율" value={fmt(pbr)} unit="배" highlight />
+        <ResultBox label="PBR · 주가순자산비율" value={fmt(pbr)} unit="배" highlight bands={[0.5, 2.0]} interpret={(n, isLow, isHigh) => isLow ? `PBR ${n.toFixed(2)}배 — 순자산 대비 저평가.` : isHigh ? `PBR ${n.toFixed(2)}배 — 순자산 대비 고평가.` : `PBR ${n.toFixed(2)}배 — 통상적 범위.`} />
       </div>
       <CalcNote
         how={[
@@ -5503,6 +5528,54 @@ function DerivTaxCalc() {
         example={['총이익 1,000만, 총손실 300만, 이월결손 0', '순손익 700만 − 250만(공제) = 과세표준 450만원', '세금 = 450만 × 22% = 99만원']}
         tip={['파생상품(선물·옵션): 세율 20% + 지방세 2% = 22%', '기본공제 250만원: 매년 리셋', '손실 이월: 5년간 이월공제 가능 (법정 요건 충족 시)', '해외선물도 동일 세율 적용, 환산 손익으로 계산', '5월 종합소득세 신고 시 함께 신고', '※ 정확한 납세액은 세무사 확인을 권장합니다.']}
       />
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// Market Pulse Rail — PC 전용 상단 정보 레일
+// ─────────────────────────────────────────────
+function MarketPulseRail({ T, totalTerms }: { T: any; totalTerms: number }) {
+  const [now, setNow] = React.useState(() => new Date());
+  React.useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 60_000);
+    return () => clearInterval(id);
+  }, []);
+
+  const timeStr = now.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Seoul' });
+  const dateStr = now.toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit', timeZone: 'Asia/Seoul' });
+
+  const indices = [
+    { k: 'Terms',  v: String(totalTerms).padStart(3, '0'), u: '개',    bars: 4 },
+    { k: 'Calcs',  v: '052',                               u: '개',    bars: 4 },
+    { k: 'Events', v: '07',                                u: '이번주', bars: 2 },
+    { k: 'KST',    v: timeStr,                             u: dateStr, bars: 5 },
+  ];
+
+  return (
+    <div
+      className="hidden md:grid mb-5 border"
+      style={{ gridTemplateColumns: 'auto 1fr', borderColor: T.border, background: T.bgCard }}
+    >
+      <div className="flex items-center px-4 border-r" style={{ borderColor: T.border }}>
+        <span className="mono text-[11px] tracking-[0.3em] uppercase" style={{ color: T.textDimmer }}>§ Desk</span>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)' }}>
+        {indices.map((idx, i) => (
+          <div key={idx.k} style={{ display: 'flex', flexDirection: 'column', gap: 4, padding: '10px 16px', borderRight: i < indices.length - 1 ? `1px solid ${T.border}` : 'none' }}>
+            <span className="mono text-[10px] tracking-[0.28em] uppercase" style={{ color: T.textFaint }}>{idx.k}</span>
+            <span className="mono font-medium" style={{ fontSize: 18, color: T.textPrimary, letterSpacing: '-0.01em' }}>
+              {idx.v}
+              <span className="mono text-[10px] tracking-[0.1em] uppercase ml-1.5" style={{ color: T.textFaint }}>{idx.u}</span>
+            </span>
+            <div style={{ display: 'flex', gap: 2, marginTop: 2 }}>
+              {Array.from({ length: 5 }).map((_, j) => (
+                <span key={j} style={{ display: 'block', width: 4, height: 6, background: j < idx.bars ? T.accent : T.border, opacity: j < idx.bars ? 1 : 0.4 }} />
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

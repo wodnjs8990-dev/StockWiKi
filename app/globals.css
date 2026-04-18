@@ -280,3 +280,15 @@ html:not(.light) input::placeholder {
 }
 .toast-in  { animation: toast-in  0.2s ease-out forwards; }
 .toast-out { animation: toast-out 0.2s ease-in  forwards; }
+
+/* P1 — tabular-nums 전역 강제 */
+[class*="mono"],
+.font-mono,
+input[type="number"],
+input[type="text"].mono {
+  font-variant-numeric: tabular-nums;
+}
+
+/* 행간 · 문단 리듬 개선 */
+p, .leading-relaxed { line-height: 1.75; }
+.text-sm { line-height: 1.65; }
