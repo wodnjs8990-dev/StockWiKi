@@ -4,12 +4,12 @@ export const dynamic = 'force-dynamic';
 
 export async function GET() {
   const DART_KEY = process.env.DART_API_KEY ?? '';
-  if (\!DART_KEY) return NextResponse.json({ error: 'DART_API_KEY 없음' });
+  if (DART_KEY === '') return NextResponse.json({ error: 'DART_API_KEY 없음' });
 
   const bgn = '20260101';
   const end = '20260418';
 
-  const results: any = {};
+  const results: Record<string, any> = {};
 
   for (const pType of ['A003', 'A002', 'A001']) {
     try {
