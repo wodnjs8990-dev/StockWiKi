@@ -530,8 +530,42 @@ export default function StockWiki({ features }: { features?: Features }) {
         >
           <div
             className="relative w-[85vw] max-w-[320px] h-full flex flex-col overflow-y-auto"
-            style={{ background: T.bgSurface, borderRight: `1px solid ${T.border}` }}
+            style={{ background: T.bgSurface, borderRight: `1px solid ${T.border}`, touchAction: 'pan-y' }}
             onClick={e => e.stopPropagation()}
+            onTouchStart={e => {
+              const t = e.touches[0];
+              (e.currentTarget as any)._swipeStartX = t.clientX;
+              (e.currentTarget as any)._swipeStartY = t.clientY;
+            }}
+            onTouchMove={e => {
+              const startX = (e.currentTarget as any)._swipeStartX ?? 0;
+              const startY = (e.currentTarget as any)._swipeStartY ?? 0;
+              const dx = e.touches[0].clientX - startX;
+              const dy = Math.abs(e.touches[0].clientY - startY);
+              // 수평이 수직보다 크고 오른쪽으로 30px 이상 → 트랜슬레이트
+              if (dx > 0 && dx > dy) {
+                const clamped = Math.min(dx, 280);
+                (e.currentTarget as HTMLElement).style.transform = `translateX(${clamped}px)`;
+                (e.currentTarget as HTMLElement).style.transition = 'none';
+              }
+            }}
+            onTouchEnd={e => {
+              const startX = (e.currentTarget as any)._swipeStartX ?? 0;
+              const startY = (e.currentTarget as any)._swipeStartY ?? 0;
+              const dx = e.changedTouches[0].clientX - startX;
+              const dy = Math.abs(e.changedTouches[0].clientY - startY);
+              const el = e.currentTarget as HTMLElement;
+              if (dx > 80 && dx > dy) {
+                // 충분히 스와이프 → 닫기
+                el.style.transform = 'translateX(100%)';
+                el.style.transition = 'transform 0.22s ease';
+                setTimeout(() => setSidebarOpen(false), 200);
+              } else {
+                // 복귀
+                el.style.transform = '';
+                el.style.transition = 'transform 0.2s ease';
+              }
+            }}
           >
             {/* 사이드바 헤더 */}
             <div className="flex items-center justify-between px-5 py-4 border-b" style={{ borderColor: T.border }}>
@@ -577,36 +611,6 @@ export default function StockWiki({ features }: { features?: Features }) {
                 );
               })}
             </div>
-
-            {/* 즐겨찾기 카테고리 (금융 사전 탭일 때) */}
-            {activeTab === 'glossary' && (
-              <div className="px-4 py-3 border-b" style={{ borderColor: T.border }}>
-                <div className="text-[12px] mono uppercase tracking-[0.2em] mb-2" style={{ color: T.textFaint }}>카테고리</div>
-                <div className="flex flex-col gap-0.5">
-                  {categoriesWithFav.map(cat => {
-                    const active = selectedCategory === cat;
-                    const isFav = cat === '★ 즐겨찾기';
-                    const color = CATEGORY_COLORS[cat];
-                    return (
-                      <button
-                        key={cat}
-                        onClick={() => { changeCategory(cat); setSidebarOpen(false); }}
-                        className="flex items-center gap-2 px-3 py-2 text-xs transition-all text-left"
-                        style={{
-                          background: active ? (isFav ? T.accent : (color?.bg || T.bgTabActive)) : 'transparent',
-                          color: active ? (isFav ? '#0a0a0a' : (color?.text || T.textTabActive)) : T.textMuted,
-                        }}
-                      >
-                        {!isFav && cat !== '전체' && (
-                          <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: active ? (color?.text || '#1a1a1a') : (color?.bg || '#8a8a8a') }}></span>
-                        )}
-                        <span>{cat}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
 
             {/* 최근 본 용어 */}
             {recent.length > 0 && (
@@ -3898,11 +3902,39 @@ function GuideDrawer({ onClose, T, isDark }: { onClose: () => void; T: any; isDa
           background: T.bgSurface,
           borderTop: `1px solid ${T.border}`,
           borderRadius: '16px 16px 0 0',
+          touchAction: 'pan-x',
         }}
         onClick={e => e.stopPropagation()}
+        onTouchStart={e => {
+          const t = e.touches[0];
+          (e.currentTarget as any)._dragStartY = t.clientY;
+          (e.currentTarget as any)._dragging = true;
+        }}
+        onTouchMove={e => {
+          if (!(e.currentTarget as any)._dragging) return;
+          const dy = e.touches[0].clientY - ((e.currentTarget as any)._dragStartY ?? 0);
+          if (dy > 0) {
+            const clamped = Math.min(dy, 300);
+            (e.currentTarget as HTMLElement).style.transform = `translateY(${clamped}px)`;
+            (e.currentTarget as HTMLElement).style.transition = 'none';
+          }
+        }}
+        onTouchEnd={e => {
+          const dy = e.changedTouches[0].clientY - ((e.currentTarget as any)._dragStartY ?? 0);
+          const el = e.currentTarget as HTMLElement;
+          (el as any)._dragging = false;
+          if (dy > 100) {
+            el.style.transform = 'translateY(100%)';
+            el.style.transition = 'transform 0.25s ease';
+            setTimeout(() => onClose(), 220);
+          } else {
+            el.style.transform = '';
+            el.style.transition = 'transform 0.2s ease';
+          }
+        }}
       >
-        {/* 핸들 */}
-        <div className="flex justify-center pt-3 pb-1 shrink-0">
+        {/* 핸들 — 드래그 가능 표시 */}
+        <div className="flex justify-center pt-3 pb-1 shrink-0 cursor-grab active:cursor-grabbing">
           <div className="w-10 h-1 rounded-full" style={{ background: T.borderMid }}></div>
         </div>
 
