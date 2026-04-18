@@ -509,32 +509,13 @@ export default function StockWiki({ features }: { features?: Features }) {
             totalTerms={TERMS.length}
             recent={recent}
             favorites={favorites}
-            categoryColors={categoryColors}
+            categoryColors={CATEGORY_COLORS}
             setActiveTab={setActiveTab}
             setSelectedTerm={setSelectedTerm}
             setSelectedCalc={setSelectedCalc}
             setSearchQuery={setSearchQuery}
             searchRef={searchRef}
           />
-        )}
-          <div className="flex items-center justify-center" style={{ minHeight: '60vh' }}>
-            <div className="text-center max-w-md px-6">
-              <div className="text-[12px] mono uppercase tracking-[0.3em] mb-3" style={{ color: T.textFaint }}>
-                § Temporarily Disabled
-              </div>
-              <h2 className="text-2xl md:text-3xl font-light tracking-tight mb-4" style={{ color: T.textPrimary }}>
-                일시 비활성화<span style={{ color: T.accent }}>.</span>
-              </h2>
-              <p className="text-sm leading-relaxed mb-6" style={{ color: T.textMuted }}>
-                모든 기능이 일시적으로 비활성화되었습니다.<br />
-                관리자가 설정을 업데이트하면 자동으로 사용 가능해집니다.
-              </p>
-              <div className="inline-flex items-center gap-2 text-[12px] mono uppercase tracking-[0.25em] px-3 py-1.5 border" style={{ borderColor: T.border, color: T.textFaint }}>
-                <span className="w-1.5 h-1.5 rounded-full" style={{ background: T.accent }} />
-                <span>Service Standby</span>
-              </div>
-            </div>
-          </div>
         )}
         {activeTab === 'glossary' && feat.glossary && (
           <GlossaryView
