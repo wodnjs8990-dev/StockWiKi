@@ -891,11 +891,12 @@ function GlossaryView({ terms, searchQuery, setSearchQuery, searchRef, categorie
   const [selectedFamily, setSelectedFamily] = React.useState<string | null>(null);
 
   const FAMILY_LIST = [
-    { id: 'value',  name: '가치',   en: 'VALUE'  },
-    { id: 'profit', name: '수익',   en: 'PROFIT' },
-    { id: 'risk',   name: '리스크', en: 'RISK'   },
-    { id: 'macro',  name: '거시',   en: 'MACRO'  },
-    { id: 'trade',  name: '실전',   en: 'TRADE'  },
+    { id: 'fundamental', name: '펀더멘털',    en: 'FUNDAMENTAL' },
+    { id: 'market',      name: '시장',        en: 'MARKET'      },
+    { id: 'macro',       name: '경제',        en: 'ECON'        },
+    { id: 'risk',        name: '리스크·퀀트', en: 'RISK'        },
+    { id: 'derivatives', name: '파생',        en: 'DERIV'       },
+    { id: 'trading',     name: '매매실전',    en: 'TRADING'     },
   ];
 
   // family 선택 시 sub-category 초기화
@@ -5895,11 +5896,12 @@ function HomeView({ T, isDark, totalTerms, recent, favorites, categoryColors, se
   const isOpen = kstD >= 1 && kstD <= 5 && (kstH > 9 || (kstH === 9 && kstM >= 0)) && (kstH < 15 || (kstH === 15 && kstM <= 30));
 
   const FAMILY_LIST = [
-    { id: 'value',  name: '가치',   color: HUE_FAMILIES.value.base,  cats: ['밸류에이션','기업재무','회계심화'] },
-    { id: 'profit', name: '수익',   color: HUE_FAMILIES.profit.base, cats: ['수익성','배당','한국시장'] },
-    { id: 'risk',   name: '리스크', color: HUE_FAMILIES.risk.base,   cats: ['포트폴리오','퀀트통계','재무안정성'] },
-    { id: 'macro',  name: '거시',   color: HUE_FAMILIES.macro.base,  cats: ['거시경제','미시경제','해외주식ETF'] },
-    { id: 'trade',  name: '실전',   color: HUE_FAMILIES.trade.base,  cats: ['선물옵션','파생헤지','기술적지표','시장거래','차트심리'] },
+    { id: 'fundamental', name: '펀더멘털',    color: HUE_FAMILIES.fundamental.base, cats: ['밸류에이션','수익성','기업재무','회계심화','배당','재무안정성'] },
+    { id: 'market',      name: '시장',        color: HUE_FAMILIES.market.base,      cats: ['한국시장','해외주식ETF','시장거래'] },
+    { id: 'macro',       name: '경제',        color: HUE_FAMILIES.macro.base,       cats: ['거시경제','미시경제'] },
+    { id: 'risk',        name: '리스크·퀀트', color: HUE_FAMILIES.risk.base,        cats: ['포트폴리오','퀀트통계'] },
+    { id: 'derivatives', name: '파생',        color: HUE_FAMILIES.derivatives.base, cats: ['선물옵션','파생헤지'] },
+    { id: 'trading',     name: '매매실전',    color: HUE_FAMILIES.trading.base,     cats: ['기술적지표','차트심리'] },
   ];
 
   const QUICK_CALCS = [
@@ -5984,9 +5986,9 @@ function HomeView({ T, isDark, totalTerms, recent, favorites, categoryColors, se
         {/* stats rail */}
         <div className="grid border-t" style={{ gridTemplateColumns: 'repeat(4,1fr)', borderColor: T.border }}>
           {[
-            { k: 'Terms',   v: String(totalTerms).padStart(3,'0'), u: '개 용어',    color: HUE_FAMILIES.value.base },
-            { k: 'Calcs',   v: '052',                              u: '개 계산기',  color: HUE_FAMILIES.profit.base },
-            { k: 'Families',v: '005',                              u: 'hue family', color: HUE_FAMILIES.macro.base },
+            { k: 'Terms',   v: String(totalTerms).padStart(3,'0'), u: '개 용어',    color: HUE_FAMILIES.fundamental.base },
+            { k: 'Calcs',   v: '052',                              u: '개 계산기',  color: HUE_FAMILIES.market.base },
+            { k: 'Families',v: '006',                              u: 'hue family', color: HUE_FAMILIES.macro.base },
             { k: 'Fav',     v: String(favorites?.size ?? 0).padStart(3,'0'), u: '즐겨찾기', color: T.accent },
           ].map((s, i, arr) => (
             <div key={s.k} className="flex flex-col gap-1 px-4 md:px-6 py-3 border-r"
