@@ -1701,6 +1701,16 @@ function CalculatorView({ selectedCalc, setSelectedCalc, T, isDark }) {
       case 'gifttax': return <GiftTaxCalc />;
       case 'pension': return <PensionCalc />;
       case 'taxsaving': return <TaxSavingCalc />;
+      case 'fxconvert': return <FxConvertCalc />;
+      case 'shortsell': return <ShortSellCalc />;
+      case 'splitorder': return <SplitOrderCalc />;
+      case 'rollover': return <RolloverCalc />;
+      case 'optionbep': return <OptionBEPCalc />;
+      case 'sectorweight': return <SectorWeightCalc />;
+      case 'fxhedge': return <FxHedgeCalc />;
+      case 'rebalance': return <RebalanceCalc />;
+      case 'finincometax': return <FinIncomeTaxCalc />;
+      case 'taxaccount': return <TaxAccountCalc />;
       default: return null;
     }
   };
@@ -3192,7 +3202,7 @@ function FuturesCalc() {
   const pnl = directedDiff * Number(contracts || 0) * Number(multiplier || 0);
   return (
     <div>
-      <CalcHeader num="19" title="선물 손익 계산" desc="KOSPI200 선물 기준 손익을 산출합니다." color="#6B6B6B" />
+      <CalcHeader num="22" title="선물 손익 계산" desc="KOSPI200 선물 기준 손익을 산출합니다." color="#6B6B6B" />
       <div className="flex mb-5 border" style={{ borderColor: _BORDER }}>
         <button onClick={() => setSide('long')} className="flex-1 py-3 text-sm font-medium transition-all border-r"
           style={{ borderColor: _BORDER, background: side === 'long' ? '#4A7045' : 'transparent', color: side === 'long' ? _T.textPrimary : _T.textMuted }}>LONG · 매수</button>
@@ -3245,7 +3255,7 @@ function LeverageCalc() {
   const maxLoss = capital && marginRate ? Number(capital) / (Number(marginRate) / 100) : 0;
   return (
     <div>
-      <CalcHeader num="20" title="레버리지 · 증거금" desc="필요 증거금과 실질 레버리지를 산출합니다." color="#6B6B6B" />
+      <CalcHeader num="23" title="레버리지 · 증거금" desc="필요 증거금과 실질 레버리지를 산출합니다." color="#6B6B6B" />
       <div className="grid md:grid-cols-3 gap-5 mb-8">
         <NumInput label="계약 명목금액" value={notional} onChange={setNotional} unit="원" placeholder="100,000,000" />
         <NumInput label="증거금률" value={marginRate} onChange={setMarginRate} unit="%" placeholder="10" />
@@ -3316,7 +3326,7 @@ function BlackScholesCalc() {
 
   return (
     <div>
-      <CalcHeader num="21" title="블랙-숄즈 옵션가" desc="유럽형 옵션의 이론가를 계산합니다." color="#6B6B6B" />
+      <CalcHeader num="24" title="블랙-숄즈 옵션가" desc="유럽형 옵션의 이론가를 계산합니다." color="#6B6B6B" />
       <div className="flex mb-5 border" style={{ borderColor: _BORDER }}>
         <button onClick={() => setType('call')} className="flex-1 py-3 text-sm font-medium transition-all border-r"
           style={{ borderColor: _BORDER, background: type === 'call' ? '#4A7045' : 'transparent', color: type === 'call' ? _T.textPrimary : _T.textMuted }}>CALL · 콜옵션</button>
@@ -3391,7 +3401,7 @@ function GreeksCalc() {
 
   return (
     <div>
-      <CalcHeader num="22" title="옵션 Greeks" desc="델타·감마·세타·베가·로를 동시에 산출합니다." color="#6B6B6B" />
+      <CalcHeader num="25" title="옵션 Greeks" desc="델타·감마·세타·베가·로를 동시에 산출합니다." color="#6B6B6B" />
       <div className="flex mb-5 border" style={{ borderColor: _BORDER }}>
         <button onClick={() => setType('call')} className="flex-1 py-3 text-sm font-medium border-r"
           style={{ borderColor: _BORDER, background: type === 'call' ? '#4A7045' : 'transparent', color: type === 'call' ? _T.textPrimary : _T.textMuted }}>CALL</button>
@@ -3447,7 +3457,7 @@ function SharpeCalc() {
   const sortino = rp && downside ? (Number(rp) - Number(rf)) / Number(downside) : 0;
   return (
     <div>
-      <CalcHeader num="23" title="샤프 · 소티노지수" desc="위험조정수익률을 두 가지 지표로 비교합니다." color="#4F7E7C" />
+      <CalcHeader num="28" title="샤프 · 소티노지수" desc="위험조정수익률을 두 가지 지표로 비교합니다." color="#4F7E7C" />
       <div className="grid md:grid-cols-2 gap-5 mb-8">
         <NumInput label="포트폴리오 수익률" value={rp} onChange={setRp} unit="%" placeholder="15" />
         <NumInput label="무위험수익률" value={rf} onChange={setRf} unit="%" placeholder="3.5" />
@@ -3493,7 +3503,7 @@ function KellyCalc() {
   const halfKelly = f / 2;
   return (
     <div>
-      <CalcHeader num="24" title="켈리 공식" desc="장기 기대수익률 극대화를 위한 최적 베팅 비율을 산출합니다." color="#4F7E7C" />
+      <CalcHeader num="29" title="켈리 공식" desc="장기 기대수익률 극대화를 위한 최적 베팅 비율을 산출합니다." color="#4F7E7C" />
       <div className="grid md:grid-cols-3 gap-5 mb-8">
         <NumInput label="승률" value={winRate} onChange={setWinRate} unit="%" placeholder="55" />
         <NumInput label="평균 수익금" value={winAmt} onChange={setWinAmt} unit="원" placeholder="200,000" />
@@ -3535,7 +3545,7 @@ function MDDCalc() {
   const recovery = peak && trough ? ((Number(peak) - Number(trough)) / Number(trough)) * 100 : 0;
   return (
     <div>
-      <CalcHeader num="25" title="최대낙폭 (MDD)" desc="고점 대비 최대 하락률과 원금 회복에 필요한 수익률을 계산합니다." color="#4F7E7C" />
+      <CalcHeader num="30" title="최대낙폭 (MDD)" desc="고점 대비 최대 하락률과 원금 회복에 필요한 수익률을 계산합니다." color="#4F7E7C" />
       <div className="grid md:grid-cols-2 gap-5 mb-8">
         <NumInput label="고점 (Peak)" value={peak} onChange={setPeak} unit="원" placeholder="100,000,000" />
         <NumInput label="저점 (Trough)" value={trough} onChange={setTrough} unit="원" placeholder="70,000,000" />
@@ -3579,7 +3589,7 @@ function VaRCalc() {
   const multiDayVar = dailyVar * Math.sqrt(Number(days));
   return (
     <div>
-      <CalcHeader num="26" title="VaR 추정" desc="주어진 신뢰수준에서 예상 최대 손실을 추정합니다." color="#4F7E7C" />
+      <CalcHeader num="31" title="VaR 추정" desc="주어진 신뢰수준에서 예상 최대 손실을 추정합니다." color="#4F7E7C" />
       <div className="grid md:grid-cols-2 gap-5 mb-8">
         <NumInput label="포트폴리오 가치" value={value} onChange={setValue} unit="원" placeholder="100,000,000" />
         <NumInput label="일일 변동성" value={sigma} onChange={setSigma} unit="%" placeholder="1.5" />
@@ -3634,7 +3644,7 @@ function FXCalc() {
   const pnlPct = krwSpent ? (pnl / krwSpent) * 100 : 0;
   return (
     <div>
-      <CalcHeader num="27" title="환차손익 계산" desc="외화 매수·매도 시 원화 기준 손익을 산출합니다." color="#7C6A9B" />
+      <CalcHeader num="32" title="환차손익 계산" desc="외화 매수·매도 시 원화 기준 손익을 산출합니다." color="#7C6A9B" />
       <div className="grid md:grid-cols-3 gap-5 mb-8">
         <NumInput label="외화 금액" value={amount} onChange={setAmount} unit="USD" placeholder="10,000" />
         <NumInput label="매수 환율" value={buyRate} onChange={setBuyRate} unit="KRW" placeholder="1,300" />
@@ -3680,7 +3690,7 @@ function RealRateCalc() {
   const simpleReal = nominal && inflation ? Number(nominal) - Number(inflation) : 0;
   return (
     <div>
-      <CalcHeader num="28" title="실질금리 계산" desc="명목금리에서 인플레이션을 차감한 실질 구매력을 계산합니다." color="#7C6A9B" />
+      <CalcHeader num="33" title="실질금리 계산" desc="명목금리에서 인플레이션을 차감한 실질 구매력을 계산합니다." color="#7C6A9B" />
       <div className="grid md:grid-cols-2 gap-5 mb-8">
         <NumInput label="명목금리" value={nominal} onChange={setNominal} unit="%" placeholder="5" />
         <NumInput label="인플레이션 (CPI)" value={inflation} onChange={setInflation} unit="%" placeholder="3" />
@@ -3732,7 +3742,7 @@ function BondPriceCalc() {
 
   return (
     <div>
-      <CalcHeader num="29" title="채권 가격 계산" desc="액면가 · 쿠폰 · YTM으로 채권의 현재가격을 계산합니다." color="#7C6A9B" />
+      <CalcHeader num="34" title="채권 가격 계산" desc="액면가 · 쿠폰 · YTM으로 채권의 현재가격을 계산합니다." color="#7C6A9B" />
       <div className="grid md:grid-cols-2 gap-5 mb-8">
         <NumInput label="액면가" value={face} onChange={setFace} unit="원" placeholder="1,000,000" />
         <NumInput label="쿠폰금리 (연)" value={coupon} onChange={setCoupon} unit="%" placeholder="4" />
@@ -3818,7 +3828,7 @@ function CapitalGainCalc() {
 
   return (
     <div>
-      <CalcHeader num="30" title="양도소득세" desc="국내·해외·비상장주식 양도소득세를 계산합니다. 2024년 기준." color="#5B8DB8" />
+      <CalcHeader num="38" title="양도소득세" desc="국내·해외·비상장주식 양도소득세를 계산합니다. 2024년 기준." color="#5B8DB8" />
       <div className="flex mb-5 border" style={{ borderColor: _BORDER }}>
         <button onClick={() => setType('domestic')} className="flex-1 py-3 text-sm font-medium transition-all border-r" style={{ borderColor: _BORDER, background: type === 'domestic' ? '#4A7045' : 'transparent', color: type === 'domestic' ? _T.textPrimary : _T.textMuted }}>국내대주주</button>
         <button onClick={() => setType('foreign')} className="flex-1 py-3 text-sm font-medium transition-all border-r" style={{ borderColor: _BORDER, background: type === 'foreign' ? '#5B8DB8' : 'transparent', color: type === 'foreign' ? _T.textPrimary : _T.textMuted }}>해외주식</button>
@@ -3879,7 +3889,7 @@ function HealthInsuranceCalc() {
 
   return (
     <div>
-      <CalcHeader num="31" title="건강보험료 (금융소득 피부양자)" desc="금융소득 2천만원 초과 시 피부양자 탈락. 2024년 기준." color="#5B8DB8" />
+      <CalcHeader num="39" title="건강보험료 (금융소득 피부양자)" desc="금융소득 2천만원 초과 시 피부양자 탈락. 2024년 기준." color="#5B8DB8" />
       <div className="grid md:grid-cols-2 gap-5 mb-8">
         <NumInput label="금융소득 (이자+배당)" value={financialIncome} onChange={setFinancialIncome} unit="원" placeholder="30,000,000" />
         <NumInput label="기타소득 (근로·사업·기타)" value={otherIncome} onChange={setOtherIncome} unit="원" placeholder="0" />
@@ -3974,7 +3984,7 @@ function IncomeTaxCalc() {
 
   return (
     <div>
-      <CalcHeader num="32" title="종합소득세 간이" desc="근로소득 기준 연간 소득세를 추정합니다. 2024년 기준." color="#5B8DB8" />
+      <CalcHeader num="40" title="종합소득세 간이" desc="근로소득 기준 연간 소득세를 추정합니다. 2024년 기준." color="#5B8DB8" />
       <div className="grid md:grid-cols-2 gap-5 mb-8">
         <NumInput label="연소득" value={annualIncome} onChange={setAnnualIncome} unit="원" placeholder="50,000,000" />
         <NumInput label="부양가족 수 (본인제외)" value={dependents} onChange={setDependents} unit="명" placeholder="2" />
@@ -4057,7 +4067,7 @@ function GiftTaxCalc() {
 
   return (
     <div>
-      <CalcHeader num="33" title="증여세" desc="배우자·직계존속·직계비속별 공제 및 세율을 적용합니다. 2024년 기준." color="#5B8DB8" />
+      <CalcHeader num="41" title="증여세" desc="배우자·직계존속·직계비속별 공제 및 세율을 적용합니다. 2024년 기준." color="#5B8DB8" />
       <div className="grid md:grid-cols-2 gap-5 mb-8">
         <NumInput label="증여재산가액" value={giftAmount} onChange={setGiftAmount} unit="원" placeholder="200,000,000" />
         <NumInput label="10년 내 기증여액" value={priorGifts} onChange={setPriorGifts} unit="원" placeholder="0" />
@@ -4080,9 +4090,9 @@ function GiftTaxCalc() {
           </label>
         </div>
       )}
-      <div className="grid md:grid-cols-3 border" style={{ borderColor: _BORDER }}>
-        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="공제후 과세표준" value={fmt(taxableGift, 0)} unit="원" /></div>
-        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="세율" value={fmt(taxRate)} unit="%" /></div>
+      <div className="grid grid-cols-1 md:grid-cols-3 border" style={{ borderColor: _BORDER }}>
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="공제후 과세표준" value={fmt(taxableGift, 0)} unit="원" /></div>
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="세율" value={fmt(taxRate)} unit="%" /></div>
         <ResultBox label="산출세액" value={fmt(tax, 0)} unit="원" highlight color="#5B8DB8" />
       </div>
       <div className="mt-5 border" style={{ borderColor: _BORDER }}>
@@ -4149,7 +4159,7 @@ function PensionCalc() {
 
   return (
     <div>
-      <CalcHeader num="34" title="연금 수령액" desc="국민연금 또는 퇴직·개인연금의 예상 월 수령액을 계산합니다." color="#5B8DB8" />
+      <CalcHeader num="42" title="연금 수령액" desc="국민연금 또는 퇴직·개인연금의 예상 월 수령액을 계산합니다." color="#5B8DB8" />
       <div className="flex mb-5 border" style={{ borderColor: _BORDER }}>
         <button onClick={() => setPensionType('national')} className="flex-1 py-3 text-sm font-medium transition-all border-r" style={{ borderColor: _BORDER, background: pensionType === 'national' ? '#5B8DB8' : 'transparent', color: pensionType === 'national' ? _T.textPrimary : _T.textMuted }}>국민연금</button>
         <button onClick={() => setPensionType('retirement')} className="flex-1 py-3 text-sm font-medium transition-all" style={{ background: pensionType === 'retirement' ? '#C89650' : 'transparent', color: pensionType === 'retirement' ? _T.textPrimary : _T.textMuted }}>퇴직·개인연금</button>
@@ -4227,7 +4237,7 @@ function TaxSavingCalc() {
 
   return (
     <div>
-      <CalcHeader num="35" title="ISA · IRP · 연금저축 절세" desc="2024년 기준 절세 효과와 실제 수익률을 비교합니다." color="#5B8DB8" />
+      <CalcHeader num="43" title="ISA · IRP · 연금저축 절세" desc="2024년 기준 절세 효과와 실제 수익률을 비교합니다." color="#5B8DB8" />
       <div className="flex mb-5 border" style={{ borderColor: _BORDER }}>
         <button onClick={() => setSavingType('isa')} className="flex-1 py-3 text-sm font-medium transition-all border-r" style={{ borderColor: _BORDER, background: savingType === 'isa' ? '#5B8DB8' : 'transparent', color: savingType === 'isa' ? _T.textPrimary : _T.textMuted }}>ISA</button>
         <button onClick={() => setSavingType('irp')} className="flex-1 py-3 text-sm font-medium transition-all" style={{ background: savingType === 'irp' ? '#C89650' : 'transparent', color: savingType === 'irp' ? _T.textPrimary : _T.textMuted }}>IRP + 연금저축</button>
@@ -4277,6 +4287,615 @@ function TaxSavingCalc() {
           '연금저축은 부부 각각 600만원 한도 (별도)',
           '※ 세법은 변경될 수 있으며, 정확한 납세액은 세무사 확인을 권장합니다.',
         ]}
+      />
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// 환전 수수료
+// ─────────────────────────────────────────────
+function FxConvertCalc() {
+  const [amount, setAmount] = useState('');
+  const [rate, setRate] = useState('');
+  const [spread, setSpread] = useState('1.75');
+  const [dir, setDir] = useState<'buy'|'sell'>('buy');
+  const amt = Number(amount) || 0;
+  const baseRate = Number(rate) || 0;
+  const sp = Number(spread) / 100;
+  const appliedRate = dir === 'buy' ? baseRate * (1 + sp) : baseRate * (1 - sp);
+  const krwResult = dir === 'buy' ? amt * appliedRate : amt / baseRate * (1 - sp) * baseRate;
+  const usdResult = dir === 'buy' ? amt / appliedRate : amt / baseRate;
+  const spreadCost = dir === 'buy'
+    ? amt * appliedRate - amt * baseRate
+    : amt - amt * (1 - sp);
+  return (
+    <div>
+      <CalcHeader num="19" title="환전 수수료 계산" desc="기준환율 대비 실제 환전 비용을 계산합니다." color="#8A8A8A" />
+      <div className="flex mb-5 border" style={{ borderColor: _BORDER }}>
+        <button onClick={() => setDir('buy')} className="flex-1 py-3 text-sm font-medium transition-all border-r"
+          style={{ borderColor: _BORDER, background: dir === 'buy' ? '#4A7045' : 'transparent', color: dir === 'buy' ? _T.textPrimary : _T.textMuted }}>
+          달러 매수 (원→달러)
+        </button>
+        <button onClick={() => setDir('sell')} className="flex-1 py-3 text-sm font-medium transition-all"
+          style={{ background: dir === 'sell' ? '#A63D33' : 'transparent', color: dir === 'sell' ? _T.textPrimary : _T.textMuted }}>
+          달러 매도 (달러→원)
+        </button>
+      </div>
+      <div className="grid md:grid-cols-3 gap-5 mb-8">
+        <NumInput label={dir === 'buy' ? '환전할 원화' : '환전할 달러'} value={amount} onChange={setAmount} unit={dir === 'buy' ? '원' : '$'} placeholder={dir === 'buy' ? '1,000,000' : '1,000'} />
+        <NumInput label="기준환율 (매매기준율)" value={rate} onChange={setRate} unit="원/$" placeholder="1,350" />
+        <NumInput label="스프레드 (환전 우대 전)" value={spread} onChange={setSpread} unit="%" hint="일반 1.75%, 우대 시 더 낮음" />
+      </div>
+      <div className="grid md:grid-cols-3 border" style={{ borderColor: _BORDER }}>
+        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="적용 환율" value={fmt(appliedRate, 2)} unit="원/$" /></div>
+        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="스프레드 비용" value={fmt(spreadCost, 0)} unit={dir === 'buy' ? '원' : '$'} /></div>
+        <ResultBox label={dir === 'buy' ? '수령 달러' : '수령 원화'} value={dir === 'buy' ? fmt(usdResult, 2) : fmt(krwResult, 0)} unit={dir === 'buy' ? '$' : '원'} highlight color="#8A8A8A" />
+      </div>
+      <CalcNote
+        how={['기준환율(매매기준율) 입력', '스프레드: 은행/증권사별 상이, 우대 쿠폰 적용 시 0.1~0.3%까지 낮출 수 있음', '적용 환율 = 기준환율 × (1 ± 스프레드%)']}
+        example={['100만원 → 달러 환전, 기준환율 1,350원, 스프레드 1.75%', '적용 환율 = 1,350 × 1.0175 = 1,373.6원', '수령 달러 = 1,000,000 / 1,373.6 ≈ $728', '스프레드 비용 ≈ 12,741원']}
+        tip={['은행 앱 우대 쿠폰 활용 시 스프레드 0.3% 이하 가능', '미국 주식 투자 시 증권사 환전 스프레드가 은행보다 낮은 경우 많음', '달러 MMF/RP 활용 시 원화 대기 대비 환차익+이자 동시 노릴 수 있음', 'FX 매매(외환거래)와 일반 환전은 다름 — 환전 수수료는 항상 발생']}
+      />
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// 공매도 손익
+// ─────────────────────────────────────────────
+function ShortSellCalc() {
+  const [entry, setEntry] = useState('');
+  const [exit, setExit] = useState('');
+  const [qty, setQty] = useState('');
+  const [days, setDays] = useState('');
+  const [borrowRate, setBorrowRate] = useState('2.0');
+  const ep = Number(entry) || 0;
+  const xp = Number(exit) || 0;
+  const q = Number(qty) || 0;
+  const d = Number(days) || 0;
+  const br = Number(borrowRate) / 100;
+  const pnl = (ep - xp) * q;                          // 공매도: 하락 시 이익
+  const borrowCost = ep * q * br * (d / 365);          // 대차료
+  const sellTax = ep * q * 0.0018;                     // 증권거래세 0.18%
+  const netPnl = pnl - borrowCost - sellTax;
+  const retPct = ep * q ? (netPnl / (ep * q)) * 100 : 0;
+  return (
+    <div>
+      <CalcHeader num="20" title="공매도 손익 계산" desc="대차료·거래세 반영 후 실제 공매도 순손익을 계산합니다." color="#8A8A8A" />
+      <div className="grid md:grid-cols-2 gap-5 mb-8">
+        <NumInput label="진입가 (숏 진입)" value={entry} onChange={setEntry} unit="원" placeholder="50,000" />
+        <NumInput label="청산가 (숏 청산)" value={exit} onChange={setExit} unit="원" placeholder="45,000" hint="낮을수록 이익" />
+        <NumInput label="수량" value={qty} onChange={setQty} unit="주" placeholder="100" />
+        <NumInput label="보유 일수" value={days} onChange={setDays} unit="일" placeholder="10" />
+        <NumInput label="대차금리 (연)" value={borrowRate} onChange={setBorrowRate} unit="%" hint="종목별 상이, 일반 1~5%" />
+      </div>
+      <div className="grid md:grid-cols-4 border" style={{ borderColor: _BORDER }}>
+        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="주가차익" value={fmt(pnl, 0)} unit="원" /></div>
+        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="대차료" value={fmt(-borrowCost, 0)} unit="원" /></div>
+        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="증권거래세" value={fmt(-sellTax, 0)} unit="원" /></div>
+        <ResultBox label="순손익" value={fmt(netPnl, 0)} unit="원" highlight color="#8A8A8A" />
+      </div>
+      <div className="border border-t-0" style={{ borderColor: _BORDER }}>
+        <ResultBox label="수익률 (진입금액 대비)" value={fmt(retPct)} unit="%" />
+      </div>
+      <CalcNote
+        how={['진입가(숏 진입)와 청산가 입력', '대차금리는 증권사/종목별 상이 — 대차 잔고 많을수록 높아짐', '순손익 = 주가차익 − 대차료 − 증권거래세']}
+        example={['50,000원 숏 100주, 45,000원 청산, 10일 보유, 대차금리 2%', '주가차익 = (50,000−45,000) × 100 = 50만원', '대차료 = 5,000,000 × 2% × 10/365 ≈ 2,740원', '거래세 = 5,000,000 × 0.18% = 9,000원', '순손익 ≈ 488,260원']}
+        tip={['대차금리가 높은 종목(숏스퀴즈 위험) 주의', '공매도는 이론적으로 손실 무한 — 손절 기준 반드시 설정', '개인 공매도 가능 종목 확인 후 거래 (2025년 전면 재개 이후)', '대주 물량 부족 시 강제 청산(콜백) 가능성 유의']}
+      />
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// 분할매수 · 분할매도
+// ─────────────────────────────────────────────
+function SplitOrderCalc() {
+  const [mode, setMode] = useState<'buy'|'sell'>('buy');
+  const [basePrice, setBasePrice] = useState('');
+  const [totalAmt, setTotalAmt] = useState('');
+  const [steps, setSteps] = useState('3');
+  const [interval, setInterval] = useState('5');
+
+  const bp = Number(basePrice) || 0;
+  const ta = Number(totalAmt) || 0;
+  const n = Math.min(Math.max(Number(steps) || 3, 2), 5);
+  const intv = Number(interval) || 5;
+
+  const splitAmt = ta / n;
+  const rows = Array.from({ length: n }, (_, i) => {
+    const pct = mode === 'buy' ? -(i * intv) : (i * intv);
+    const price = bp * (1 + pct / 100);
+    const qty = price ? Math.floor(splitAmt / price) : 0;
+    const actual = qty * price;
+    return { step: i + 1, pct, price, qty, actual };
+  });
+  const totalQty = rows.reduce((s, r) => s + r.qty, 0);
+  const totalSpent = rows.reduce((s, r) => s + r.actual, 0);
+  const avgPrice = totalQty ? totalSpent / totalQty : 0;
+
+  return (
+    <div>
+      <CalcHeader num="21" title="분할매수 · 분할매도 전략" desc="단계별 진입/청산 가격과 수량을 자동으로 계산합니다." color="#8A8A8A" />
+      <div className="flex mb-5 border" style={{ borderColor: _BORDER }}>
+        <button onClick={() => setMode('buy')} className="flex-1 py-3 text-sm font-medium transition-all border-r"
+          style={{ borderColor: _BORDER, background: mode === 'buy' ? '#4A7045' : 'transparent', color: mode === 'buy' ? _T.textPrimary : _T.textMuted }}>
+          분할매수
+        </button>
+        <button onClick={() => setMode('sell')} className="flex-1 py-3 text-sm font-medium transition-all"
+          style={{ background: mode === 'sell' ? '#A63D33' : 'transparent', color: mode === 'sell' ? _T.textPrimary : _T.textMuted }}>
+          분할매도
+        </button>
+      </div>
+      <div className="grid md:grid-cols-2 gap-5 mb-8">
+        <NumInput label={mode === 'buy' ? '1차 매수가' : '1차 매도가'} value={basePrice} onChange={setBasePrice} unit="원" placeholder="50,000" />
+        <NumInput label="총 투자금액" value={totalAmt} onChange={setTotalAmt} unit="원" placeholder="10,000,000" />
+        <NumInput label="분할 횟수" value={steps} onChange={setSteps} unit="회" hint="최대 5회" placeholder="3" />
+        <NumInput label={mode === 'buy' ? '추가 매수 간격' : '추가 매도 간격'} value={interval} onChange={setInterval} unit="%" hint={mode === 'buy' ? '하락 시 추가 매수' : '상승 시 추가 매도'} placeholder="5" />
+      </div>
+      <div className="border mb-4" style={{ borderColor: _BORDER }}>
+        <div className="grid grid-cols-4 px-4 py-2 border-b text-[12px] mono uppercase tracking-[0.15em]" style={{ borderColor: _BORDER, color: _T.textFaint, background: _T.bgCard }}>
+          <span>단계</span><span>가격</span><span>수량</span><span>금액</span>
+        </div>
+        {rows.map(r => (
+          <div key={r.step} className="grid grid-cols-4 px-4 py-3 border-b text-sm" style={{ borderColor: _BORDER }}>
+            <span className="mono" style={{ color: _T.textFaint }}>{r.step}차</span>
+            <span style={{ color: _T.textPrimary }}>{fmt(r.price, 0)}원</span>
+            <span style={{ color: _T.textPrimary }}>{fmt(r.qty, 0)}주</span>
+            <span style={{ color: _T.textMuted }}>{fmt(r.actual, 0)}원</span>
+          </div>
+        ))}
+        <div className="grid grid-cols-4 px-4 py-3 text-sm font-medium" style={{ background: _T.bgCard }}>
+          <span className="mono" style={{ color: _T.accent }}>합계</span>
+          <span style={{ color: _T.accent }}>평균 {fmt(avgPrice, 0)}원</span>
+          <span style={{ color: _T.textPrimary }}>{fmt(totalQty, 0)}주</span>
+          <span style={{ color: _T.textPrimary }}>{fmt(totalSpent, 0)}원</span>
+        </div>
+      </div>
+      <CalcNote
+        how={['매수/매도 모드 선택', '1차 진입가, 총 투자금, 분할 횟수, 간격 입력', '각 단계 진입가 = 1차가 × (1 ∓ 간격% × n)']}
+        example={['1차 매수 50,000원, 1,000만원, 3회 분할, 5% 간격', '1차: 50,000원, 2차: 47,500원, 3차: 45,000원', '각 333만원씩 균등 투자', '평균단가 ≈ 47,400원']}
+        tip={['균등 분할이 기본 — 하락 확신 시 역피라미딩(후반부 비중 증가) 고려', '분할 간격이 너무 좁으면 전체 물량 소화 전 반등 가능성', '분할 횟수 3~5회가 현실적, 10회 이상은 관리 복잡', '매도 분할은 목표가까지 전량 미도달 리스크 방어에 유효']}
+      />
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// 롤오버 비용
+// ─────────────────────────────────────────────
+function RolloverCalc() {
+  const [nearPrice, setNearPrice] = useState('');
+  const [farPrice, setFarPrice] = useState('');
+  const [contracts, setContracts] = useState('');
+  const [multiplier, setMultiplier] = useState('250000');
+  const near = Number(nearPrice) || 0;
+  const far = Number(farPrice) || 0;
+  const c = Number(contracts) || 0;
+  const m = Number(multiplier) || 250000;
+  const basis = far - near;                     // 베이시스 (원/포인트)
+  const rollCost = basis * c * m;               // 롤오버 비용 (원)
+  const rollPct = near ? (basis / near) * 100 : 0;
+  return (
+    <div>
+      <CalcHeader num="26" title="롤오버 비용 계산" desc="선물 월물 교체(롤오버) 시 베이시스 비용을 계산합니다." color="#6B6B6B" />
+      <div className="grid md:grid-cols-2 gap-5 mb-8">
+        <NumInput label="근월물 가격" value={nearPrice} onChange={setNearPrice} unit="pt" placeholder="350.50" />
+        <NumInput label="원월물 가격" value={farPrice} onChange={setFarPrice} unit="pt" placeholder="352.20" hint="원월물이 높으면 콘탱고 (비용 발생)" />
+        <NumInput label="계약 수" value={contracts} onChange={setContracts} unit="계약" placeholder="5" />
+        <NumInput label="계약 승수" value={multiplier} onChange={setMultiplier} unit="원/pt" hint="코스피200선물 250,000원/pt" />
+      </div>
+      <div className="grid md:grid-cols-3 border" style={{ borderColor: _BORDER }}>
+        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="베이시스" value={fmt(basis, 2)} unit="pt" /></div>
+        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="롤오버 비용" value={fmt(rollCost, 0)} unit="원" highlight color="#6B6B6B" /></div>
+        <ResultBox label="베이시스율" value={fmt(rollPct, 3)} unit="%" />
+      </div>
+      <CalcNote
+        how={['근월물·원월물 가격 입력', '베이시스 = 원월물 − 근월물', '롤오버 비용 = 베이시스 × 계약수 × 승수']}
+        example={['코스피200 근월물 350.00, 원월물 352.00, 5계약', '베이시스 = 2.00pt', '롤오버 비용 = 2.00 × 5 × 250,000 = 250만원']}
+        tip={['콘탱고(원월물 > 근월물): 롤오버 시 비용 발생 — 장기 보유 시 누적 손실', '백워데이션(원월물 < 근월물): 롤오버 시 이익', '코스피200 선물 승수: 250,000원/pt', '미니선물 승수: 50,000원/pt', '롤오버 시기는 만기 1~2주 전 거래량 이동 시점 참고']}
+      />
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// 옵션 손익분기
+// ─────────────────────────────────────────────
+function OptionBEPCalc() {
+  const [type, setType] = useState<'call'|'put'>('call');
+  const [strike, setStrike] = useState('');
+  const [premium, setPremium] = useState('');
+  const [multiplier, setMultiplier] = useState('250000');
+  const K = Number(strike) || 0;
+  const prem = Number(premium) || 0;
+  const m = Number(multiplier) || 250000;
+  const bep = type === 'call' ? K + prem : K - prem;
+  const maxLoss = prem * m;
+  const maxProfit = type === 'call' ? Infinity : (K - prem) * m;
+
+  return (
+    <div>
+      <CalcHeader num="27" title="옵션 손익분기 계산" desc="프리미엄 반영 실제 BEP와 최대손실을 계산합니다." color="#6B6B6B" />
+      <div className="flex mb-5 border" style={{ borderColor: _BORDER }}>
+        <button onClick={() => setType('call')} className="flex-1 py-3 text-sm font-medium transition-all border-r"
+          style={{ borderColor: _BORDER, background: type === 'call' ? '#4A7045' : 'transparent', color: type === 'call' ? _T.textPrimary : _T.textMuted }}>
+          콜 옵션 매수
+        </button>
+        <button onClick={() => setType('put')} className="flex-1 py-3 text-sm font-medium transition-all"
+          style={{ background: type === 'put' ? '#A63D33' : 'transparent', color: type === 'put' ? _T.textPrimary : _T.textMuted }}>
+          풋 옵션 매수
+        </button>
+      </div>
+      <div className="grid md:grid-cols-3 gap-5 mb-8">
+        <NumInput label="행사가 (Strike)" value={strike} onChange={setStrike} unit="pt" placeholder="350.00" />
+        <NumInput label="프리미엄 (옵션가)" value={premium} onChange={setPremium} unit="pt" placeholder="2.50" />
+        <NumInput label="계약 승수" value={multiplier} onChange={setMultiplier} unit="원/pt" hint="코스피200 250,000원" />
+      </div>
+      <div className="grid md:grid-cols-3 border" style={{ borderColor: _BORDER }}>
+        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="손익분기 (BEP)" value={fmt(bep, 2)} unit="pt" highlight color="#6B6B6B" /></div>
+        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="최대 손실" value={fmt(-maxLoss, 0)} unit="원" /></div>
+        <ResultBox label={type === 'call' ? '최대 이익' : `최대 이익 (지수 0 시)`} value={type === 'call' ? '이론상 무한' : fmt(maxProfit, 0)} unit={type === 'call' ? '' : '원'} />
+      </div>
+      <CalcNote
+        how={['콜/풋 선택', '행사가와 프리미엄(옵션가) 입력', 'BEP = 행사가 ± 프리미엄 (콜: +, 풋: −)']}
+        example={['코스피200 350 콜 매수, 프리미엄 2.50pt', 'BEP = 350 + 2.50 = 352.50pt', '최대 손실 = 2.50 × 250,000 = 625,000원', '만기 시 지수가 352.50 초과해야 이익']}
+        tip={['옵션 매수자의 최대 손실 = 프리미엄 전액', '만기 전 시간가치 감소(세타) 매우 빠름 — 보유 기간 짧게', '내가격(ITM) 옵션은 BEP 달성 더 쉽지만 프리미엄 높음', '외가격(OTM) 옵션은 레버리지 크지만 손실 확률도 높음']}
+      />
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// 섹터별 비중
+// ─────────────────────────────────────────────
+function SectorWeightCalc() {
+  const SECTORS = ['반도체', 'IT/플랫폼', '금융', '에너지', '소비재', '헬스케어', '산업재', '기타'];
+  const [values, setValues] = useState<Record<string, string>>(
+    Object.fromEntries(SECTORS.map(s => [s, '']))
+  );
+  const nums = Object.entries(values).map(([s, v]) => ({ sector: s, val: Number(v) || 0 }));
+  const total = nums.reduce((s, r) => s + r.val, 0);
+  const rows = nums.map(r => ({ ...r, pct: total ? (r.val / total) * 100 : 0 })).filter(r => r.val > 0);
+
+  return (
+    <div>
+      <CalcHeader num="35" title="섹터별 비중" desc="보유 종목의 섹터별 금액과 비중을 한눈에 확인합니다." color="#6B9B6B" />
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        {SECTORS.map(s => (
+          <NumInput key={s} label={s} value={values[s]} onChange={v => setValues(prev => ({ ...prev, [s]: v }))} unit="원" placeholder="0" />
+        ))}
+      </div>
+      {total > 0 && (
+        <div className="border mb-4" style={{ borderColor: _BORDER }}>
+          <div className="grid grid-cols-3 px-4 py-2 border-b text-[12px] mono uppercase tracking-[0.15em]" style={{ borderColor: _BORDER, color: _T.textFaint, background: _T.bgCard }}>
+            <span>섹터</span><span>금액</span><span>비중</span>
+          </div>
+          {rows.sort((a, b) => b.pct - a.pct).map(r => (
+            <div key={r.sector} className="border-b" style={{ borderColor: _BORDER }}>
+              <div className="grid grid-cols-3 px-4 py-2.5 text-sm">
+                <span style={{ color: _T.textPrimary }}>{r.sector}</span>
+                <span style={{ color: _T.textMuted }}>{fmt(r.val, 0)}원</span>
+                <span style={{ color: _T.accent }} className="font-medium">{fmt(r.pct, 1)}%</span>
+              </div>
+              <div className="mx-4 mb-2.5 h-1 rounded-sm overflow-hidden" style={{ background: _T.bgCard }}>
+                <div className="h-full rounded-sm" style={{ width: `${r.pct}%`, background: '#6B9B6B' }} />
+              </div>
+            </div>
+          ))}
+          <div className="grid grid-cols-3 px-4 py-3 text-sm font-medium" style={{ background: _T.bgCard }}>
+            <span style={{ color: _T.accent }}>합계</span>
+            <span style={{ color: _T.textPrimary }}>{fmt(total, 0)}원</span>
+            <span style={{ color: _T.accent }}>100%</span>
+          </div>
+        </div>
+      )}
+      <CalcNote
+        how={['각 섹터에 보유 금액(시가 기준) 입력', '비중 = 섹터금액 / 총자산 × 100', '입력한 섹터만 표시됨']}
+        example={['반도체 5,000만, IT 2,000만, 금융 1,500만, 에너지 1,000만', '총 9,500만원', '반도체 52.6%, IT 21.1%, 금융 15.8%, 에너지 10.5%']}
+        tip={['특정 섹터 30% 초과 시 집중 리스크 — 분산 여부 재검토', '지수(코스피200) 섹터 비중과 비교해 오버웨이트/언더웨이트 파악', '반도체 편중은 한국 시장 특성상 흔하나, 글로벌 충격 시 변동성 확대']}
+      />
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// 환헷지 비율
+// ─────────────────────────────────────────────
+function FxHedgeCalc() {
+  const [foreignAmt, setForeignAmt] = useState('');
+  const [fxRate, setFxRate] = useState('');
+  const [hedgeRatio, setHedgeRatio] = useState('50');
+  const [fwdPremium, setFwdPremium] = useState('1.5');
+  const fa = Number(foreignAmt) || 0;
+  const rate = Number(fxRate) || 0;
+  const hr = Number(hedgeRatio) / 100;
+  const fp = Number(fwdPremium) / 100;
+  const krwValue = fa * rate;
+  const hedgeAmt = krwValue * hr;
+  const unhedgedAmt = krwValue * (1 - hr);
+  const hedgeCost = hedgeAmt * fp;
+
+  return (
+    <div>
+      <CalcHeader num="36" title="환헷지 비율 계산" desc="해외 투자 포지션의 환헷지 규모와 비용을 계산합니다." color="#6B9B6B" />
+      <div className="grid md:grid-cols-2 gap-5 mb-8">
+        <NumInput label="해외 투자금액" value={foreignAmt} onChange={setForeignAmt} unit="$" placeholder="100,000" />
+        <NumInput label="현재 환율" value={fxRate} onChange={setFxRate} unit="원/$" placeholder="1,350" />
+        <NumInput label="헷지 비율" value={hedgeRatio} onChange={setHedgeRatio} unit="%" hint="0%=무헷지, 100%=완전헷지" />
+        <NumInput label="선물환 프리미엄 (연)" value={fwdPremium} onChange={setFwdPremium} unit="%" hint="한미 금리차 반영, 약 1~2% 수준" />
+      </div>
+      <div className="grid md:grid-cols-4 border" style={{ borderColor: _BORDER }}>
+        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="원화 환산 총액" value={fmt(krwValue, 0)} unit="원" /></div>
+        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="헷지 금액" value={fmt(hedgeAmt, 0)} unit="원" /></div>
+        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="비헷지 금액" value={fmt(unhedgedAmt, 0)} unit="원" /></div>
+        <ResultBox label="연간 헷지 비용" value={fmt(hedgeCost, 0)} unit="원" highlight color="#6B9B6B" />
+      </div>
+      <CalcNote
+        how={['해외 투자금액(달러), 환율 입력', '헷지 비율: 전액 헷지(100%) or 부분 헷지 선택', '선물환 프리미엄: 한미 금리차 반영, 헷지 비용']}
+        example={['$100,000 투자, 환율 1,350원, 헷지 50%, 선물환 프리미엄 1.5%', '원화 환산 = 1억 3,500만원', '헷지 금액 = 6,750만원', '연간 헷지 비용 = 6,750만 × 1.5% = 101.25만원']}
+        tip={['한국 금리 > 미국 금리 시: 선물환 프리미엄 축소 or 음수(헷지가 이익)', '한국 금리 < 미국 금리 시: 선물환 프리미엄 확대(헷지 비용 증가)', '국내 ETF(환헷지형 H) 활용 시 내부적으로 선물환 헷지 자동 진행', '헷지 여부는 환율 방향 전망보다 변동성 리스크 허용 수준으로 결정']}
+      />
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// 리밸런싱 계산기
+// ─────────────────────────────────────────────
+function RebalanceCalc() {
+  const [totalAsset, setTotalAsset] = useState('');
+  const [rows, setRows] = useState([
+    { name: '국내주식', current: '', target: '30' },
+    { name: '해외주식', current: '', target: '30' },
+    { name: '채권', current: '', target: '20' },
+    { name: '현금', current: '', target: '20' },
+  ]);
+
+  const total = Number(totalAsset) || 0;
+  const computed = rows.map(r => {
+    const cur = Number(r.current) || 0;
+    const tgt = Number(r.target) || 0;
+    const curPct = total ? (cur / total) * 100 : 0;
+    const targetAmt = total * tgt / 100;
+    const diff = targetAmt - cur;
+    return { ...r, cur, tgt, curPct, targetAmt, diff };
+  });
+  const targetSum = rows.reduce((s, r) => s + (Number(r.target) || 0), 0);
+
+  const updateRow = (i: number, field: 'name'|'current'|'target', val: string) => {
+    setRows(prev => prev.map((r, idx) => idx === i ? { ...r, [field]: val } : r));
+  };
+  const addRow = () => setRows(prev => [...prev, { name: '', current: '', target: '0' }]);
+  const removeRow = (i: number) => setRows(prev => prev.filter((_, idx) => idx !== i));
+
+  return (
+    <div>
+      <CalcHeader num="37" title="리밸런싱 계산기" desc="목표 비중과 현재 비중 차이를 계산해 매수/매도 금액을 안내합니다." color="#6B9B6B" />
+      <div className="mb-6">
+        <NumInput label="총 포트폴리오 금액" value={totalAsset} onChange={setTotalAsset} unit="원" placeholder="100,000,000" />
+      </div>
+      <div className="border mb-2" style={{ borderColor: _BORDER }}>
+        <div className="grid grid-cols-5 px-3 py-2 border-b text-[11px] mono uppercase tracking-[0.1em]" style={{ borderColor: _BORDER, color: _T.textFaint, background: _T.bgCard }}>
+          <span>자산명</span><span>현재 금액</span><span>현재 %</span><span>목표 %</span><span>매수/매도</span>
+        </div>
+        {computed.map((r, i) => (
+          <div key={i} className="grid grid-cols-5 items-center px-3 py-2 border-b gap-1 text-sm" style={{ borderColor: _BORDER }}>
+            <input value={r.name} onChange={e => updateRow(i, 'name', e.target.value)}
+              className="bg-transparent border-b text-sm outline-none" style={{ borderColor: _BORDER, color: _T.textPrimary }} />
+            <input value={r.current} onChange={e => updateRow(i, 'current', e.target.value)}
+              className="bg-transparent border-b text-sm outline-none mono" style={{ borderColor: _BORDER, color: _T.textPrimary }} placeholder="0" />
+            <span className="mono text-xs" style={{ color: _T.textMuted }}>{fmt(r.curPct, 1)}%</span>
+            <input value={r.target} onChange={e => updateRow(i, 'target', e.target.value)}
+              className="bg-transparent border-b text-sm outline-none mono" style={{ borderColor: _BORDER, color: _T.accent }} />
+            <span className={`mono text-xs font-medium`} style={{ color: r.diff > 0 ? '#4A7045' : r.diff < 0 ? '#A63D33' : _T.textDimmer }}>
+              {r.diff > 0 ? '+' : ''}{fmt(r.diff, 0)}원
+            </span>
+          </div>
+        ))}
+      </div>
+      <div className="flex gap-2 mb-6">
+        <button onClick={addRow} className="text-[12px] mono px-3 py-1.5 border" style={{ borderColor: _BORDER, color: _T.textFaint }}>+ 행 추가</button>
+        {rows.length > 1 && <button onClick={() => removeRow(rows.length - 1)} className="text-[12px] mono px-3 py-1.5 border" style={{ borderColor: _BORDER, color: _T.textFaint }}>− 행 삭제</button>}
+        <span className={`ml-auto text-[12px] mono py-1.5`} style={{ color: targetSum === 100 ? '#4A7045' : '#A63D33' }}>목표 합계: {targetSum}%</span>
+      </div>
+      <CalcNote
+        how={['총 자산 입력 → 각 자산 현재 금액과 목표 비중(%) 입력', '매수/매도 = 목표금액 − 현재금액', '녹색(+): 매수 필요, 빨간색(−): 매도 필요']}
+        example={['총 1억, 국내주식 현재 4,000만 (목표 30%)', '목표금액 = 1억 × 30% = 3,000만원', '→ 1,000만원 매도 필요']}
+        tip={['리밸런싱 주기: 반기 or 연 1회, 또는 비중 5% 초과 이탈 시', '소액 자산은 추가 매수로만 리밸런싱 → 매도세 절감', '리밸런싱 자체가 고평가 자산 매도 + 저평가 자산 매수 효과']}
+      />
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// 금융소득 종합과세 시뮬레이터
+// ─────────────────────────────────────────────
+function FinIncomeTaxCalc() {
+  const [interest, setInterest] = useState('');
+  const [dividend, setDividend] = useState('');
+  const [otherIncome, setOtherIncome] = useState('');
+  const fin = (Number(interest) || 0) + (Number(dividend) || 0);
+  const other = Number(otherIncome) || 0;
+  const totalIncome = fin + other;
+  const threshold = 20000000; // 2,000만원
+
+  // 분리과세(2,000만 이하) 세금
+  const separateTax = Math.min(fin, threshold) * 0.154; // 15.4% (지방소득세 포함)
+
+  // 종합과세(2,000만 초과) 세금
+  const isComprehensive = fin > threshold;
+  const comprehensiveBase = isComprehensive ? totalIncome : 0;
+  const deduction = 1500000; // 기본공제 150만 (간이)
+
+  const taxableBase = Math.max(comprehensiveBase - deduction, 0);
+  const calcIncomeTax = (base: number) => {
+    if (base <= 14000000) return base * 0.06;
+    if (base <= 50000000) return base * 0.15 - 1260000;
+    if (base <= 88000000) return base * 0.24 - 5760000;
+    if (base <= 150000000) return base * 0.35 - 15440000;
+    if (base <= 300000000) return base * 0.38 - 19940000;
+    if (base <= 500000000) return base * 0.40 - 25940000;
+    if (base <= 1000000000) return base * 0.42 - 35940000;
+    return base * 0.45 - 65940000;
+  };
+  const comprehensiveTax = isComprehensive ? calcIncomeTax(taxableBase) * 1.1 : 0;
+  const separateTaxOnExcess = isComprehensive ? Math.min(fin, threshold) * 0.154 : separateTax;
+  const additionalTax = isComprehensive ? comprehensiveTax - separateTaxOnExcess : 0;
+  const effectiveRate = totalIncome ? ((isComprehensive ? comprehensiveTax : separateTax) / totalIncome) * 100 : 0;
+
+  return (
+    <div>
+      <CalcHeader num="44" title="금융소득 종합과세 시뮬레이터" desc="금융소득 2,000만원 초과 시 추가 세금 부담을 시뮬레이션합니다." color="#5B8DB8" />
+      <div className="grid md:grid-cols-3 gap-5 mb-8">
+        <NumInput label="이자소득 (연)" value={interest} onChange={setInterest} unit="원" placeholder="10,000,000" />
+        <NumInput label="배당소득 (연)" value={dividend} onChange={setDividend} unit="원" placeholder="15,000,000" />
+        <NumInput label="기타 종합소득 (근로·사업 등)" value={otherIncome} onChange={setOtherIncome} unit="원" placeholder="50,000,000" />
+      </div>
+      <div className="mb-4 px-4 py-3 border text-sm" style={{ borderColor: isComprehensive ? '#A63D33' : '#4A7045', color: isComprehensive ? '#A63D33' : '#4A7045' }}>
+        {isComprehensive
+          ? `⚠ 금융소득 ${fmt(fin/10000, 0)}만원 — 2,000만원 초과로 종합과세 대상입니다.`
+          : `✓ 금융소득 ${fmt(fin/10000, 0)}만원 — 2,000만원 이하로 분리과세(15.4%) 적용됩니다.`}
+      </div>
+      <div className="grid md:grid-cols-3 border" style={{ borderColor: _BORDER }}>
+        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="금융소득 합계" value={fmt(fin, 0)} unit="원" /></div>
+        <div className="border-r" style={{ borderColor: _BORDER }}>
+          <ResultBox label={isComprehensive ? '종합과세 세액' : '분리과세 세액'} value={fmt(isComprehensive ? comprehensiveTax : separateTax, 0)} unit="원" highlight color="#5B8DB8" />
+        </div>
+        <ResultBox label="실효세율" value={fmt(effectiveRate, 1)} unit="%" />
+      </div>
+      {isComprehensive && (
+        <div className="border border-t-0" style={{ borderColor: _BORDER }}>
+          <ResultBox label="분리과세 대비 추가 세부담" value={fmt(additionalTax, 0)} unit="원" />
+        </div>
+      )}
+      <CalcNote
+        how={['이자·배당소득 입력 → 합산 2,000만원 초과 여부 자동 판정', '초과 시 다른 종합소득과 합산해 누진세율 적용', '기타소득은 종합과세 시 합산 기준']}
+        example={['이자 1,000만 + 배당 1,500만 = 2,500만 → 종합과세', '기타소득(근로) 5,000만 포함 시 총 7,500만원 종합과세', '세율 24% 구간 적용 → 분리과세 대비 세부담 증가']}
+        tip={['배당소득: 국내 상장주식 배당은 Gross-up 적용 (배당세액공제)', 'ISA 계좌 활용 시 배당·이자 비과세 한도 내 종합과세 회피 가능', '금융소득 2,000만 근접 시 연말 배당 수령 시기 조정 고려', '※ 간이 추정치이며, 정확한 납세액은 세무사 확인을 권장합니다.']}
+      />
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// 절세 계좌 우선순위 추천기
+// ─────────────────────────────────────────────
+function TaxAccountCalc() {
+  const [income, setIncome] = useState('');
+  const [hasIsa, setHasIsa] = useState(true);
+  const [hasIrp, setHasIrp] = useState(true);
+  const [hasPension, setHasPension] = useState(true);
+  const [investStyle, setInvestStyle] = useState<'dividend'|'growth'|'both'>('both');
+
+  const inc = Number(income) || 0;
+  const isLowIncome = inc <= 55000000;  // 5,500만 이하
+  const creditRate = isLowIncome ? 0.165 : 0.132;
+
+  // IRP+연금저축 최대 세액공제
+  const irpPensionLimit = 9000000;
+  const pensionOnlyLimit = 6000000;
+  const maxCredit = irpPensionLimit * creditRate;
+
+  // ISA 절세 효과 (일반형 기준, 연 1,000만 수익 가정)
+  const isaAssumedReturn = 10000000;
+  const isaExempt = 2000000;
+  const isaTax = (isaAssumedReturn - isaExempt) * 0.099;
+  const generalTax = isaAssumedReturn * 0.154;
+  const isaSaving = generalTax - isaTax;
+
+  const priorities: { rank: number; name: string; reason: string; limit: string; effect: string }[] = [];
+
+  if (hasIrp || hasPension) {
+    priorities.push({
+      rank: 1,
+      name: 'IRP + 연금저축',
+      reason: `세액공제 ${(creditRate * 100).toFixed(1)}% — 납입 즉시 ${fmt(maxCredit / 10000, 0)}만원 환급`,
+      limit: `연 최대 900만원 (연금저축 단독 600만)`,
+      effect: `최대 세액공제 ${fmt(maxCredit, 0)}원/년`,
+    });
+  }
+  if (hasIsa) {
+    priorities.push({
+      rank: 2,
+      name: 'ISA',
+      reason: '이자·배당 비과세 + 초과분 9.9% 분리과세 (일반 15.4% 대비)',
+      limit: '연 2,000만원, 5년 총 1억',
+      effect: `일반 200만 비과세, 수익 1,000만 기준 절약 약 ${fmt(isaSaving, 0)}원`,
+    });
+  }
+  priorities.push({
+    rank: priorities.length + 1,
+    name: '일반 계좌',
+    reason: '절세 혜택 없음, 한도 제한 없음',
+    limit: '한도 없음',
+    effect: '배당·이자 15.4% 과세, 국내주식 매매차익 비과세(소액주주)',
+  });
+
+  const styleAdvice: Record<string, string> = {
+    dividend: 'ISA에 고배당 ETF/리츠 집중 → 배당소득세 절감 극대화. IRP는 안정적 채권형으로 운용.',
+    growth: 'IRP/연금저축에 성장주 ETF 담기. 과세이연 효과로 장기 복리 극대화.',
+    both: 'IRP에 해외 ETF(S&P500 등), ISA에 국내 배당주로 분리 운용하면 세금·수익 균형.',
+  };
+
+  return (
+    <div>
+      <CalcHeader num="45" title="절세 계좌 우선순위 추천기" desc="소득 수준과 투자 성향에 맞는 절세 계좌 활용 순서를 안내합니다." color="#5B8DB8" />
+      <div className="grid md:grid-cols-2 gap-5 mb-6">
+        <NumInput label="연간 총소득 (근로+사업+금융)" value={income} onChange={setIncome} unit="원" placeholder="60,000,000" />
+        <div>
+          <div className="text-[13px] mono uppercase tracking-[0.15em] mb-3" style={{ color: _T.textFaint }}>투자 성향</div>
+          <div className="flex gap-2">
+            {(['dividend', 'growth', 'both'] as const).map(s => (
+              <button key={s} onClick={() => setInvestStyle(s)}
+                className="flex-1 py-2 text-xs border transition-all"
+                style={{ borderColor: investStyle === s ? _T.accent : _BORDER, color: investStyle === s ? _T.accent : _T.textMuted, background: investStyle === s ? `${_T.accent}15` : 'transparent' }}>
+                {s === 'dividend' ? '배당형' : s === 'growth' ? '성장형' : '혼합형'}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+      <div className="flex gap-3 mb-8 flex-wrap">
+        {[
+          { label: 'IRP/연금저축', val: hasIrp, set: setHasIrp },
+          { label: 'ISA', val: hasIsa, set: setHasIsa },
+        ].map(({ label, val, set }) => (
+          <button key={label} onClick={() => set(!val)}
+            className="flex items-center gap-2 px-3 py-1.5 border text-sm"
+            style={{ borderColor: val ? _T.accent : _BORDER, color: val ? _T.accent : _T.textMuted }}>
+            <span className="w-3 h-3 border flex items-center justify-center" style={{ borderColor: 'currentColor' }}>
+              {val && <span className="w-1.5 h-1.5" style={{ background: 'currentColor' }} />}
+            </span>
+            {label} 가입 가능
+          </button>
+        ))}
+      </div>
+      <div className="space-y-3 mb-6">
+        {priorities.map(p => (
+          <div key={p.rank} className="border p-4" style={{ borderColor: p.rank === 1 ? _T.accent : _BORDER }}>
+            <div className="flex items-center gap-3 mb-2">
+              <span className="w-6 h-6 flex items-center justify-center text-[12px] mono font-bold"
+                style={{ background: p.rank === 1 ? _T.accent : _T.bgCard, color: p.rank === 1 ? '#0a0a0a' : _T.textFaint }}>
+                {p.rank}
+              </span>
+              <span className="font-medium" style={{ color: _T.textPrimary }}>{p.name}</span>
+              <span className="ml-auto text-[12px] mono" style={{ color: _T.accent }}>{p.effect}</span>
+            </div>
+            <div className="text-sm mb-1" style={{ color: _T.textMuted }}>{p.reason}</div>
+            <div className="text-[12px] mono" style={{ color: _T.textDimmer }}>한도: {p.limit}</div>
+          </div>
+        ))}
+      </div>
+      <div className="border p-4 mb-6" style={{ borderColor: _BORDER }}>
+        <div className="text-[12px] mono uppercase tracking-[0.15em] mb-2" style={{ color: _T.textFaint }}>성향별 운용 전략</div>
+        <p className="text-sm leading-relaxed" style={{ color: _T.textMuted }}>{styleAdvice[investStyle]}</p>
+      </div>
+      <CalcNote
+        how={['연소득 입력 → 세액공제율 자동 판정 (5,500만 이하 16.5%, 초과 13.2%)', '가입 가능 계좌 선택 → 우선순위 자동 생성', '투자 성향 선택 → 맞춤 운용 전략 제공']}
+        example={['연소득 6,000만, IRP+연금저축+ISA 모두 가능, 혼합형', '1순위: IRP+연금저축 (세액공제 13.2%, 최대 118.8만원 환급)', '2순위: ISA (배당·이자 비과세)', '3순위: 일반계좌 (잔여 투자금)']}
+        tip={['IRP는 55세 이전 중도해지 시 기타소득세 16.5% 추징 — 확실한 장기 자금만', 'ISA는 3년 의무 가입, 중도 해지 시 세제 혜택 반납', '연금저축은 IRP보다 유연 (중도 인출 가능하나 세제 혜택 환수)', '배당소득이 많다면 ISA 활용 우선, 근로소득이 크다면 IRP 우선', '※ 세법은 변경될 수 있으며, 정확한 납세액은 세무사 확인을 권장합니다.']}
       />
     </div>
   );
