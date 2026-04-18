@@ -85,6 +85,7 @@ export default function StockWiki({ features }: { features?: Features }) {
   const [toasts, setToasts] = useState<{ id: number; msg: string; type?: 'success'|'info' }[]>([]);
   const searchRef = useRef<HTMLInputElement | null>(null);
   const lastFocusRef = useRef<HTMLElement | null>(null);
+  const sidebarPanelRef = useRef<HTMLDivElement | null>(null);
 
   const showToast = (msg: string, type: 'success'|'info' = 'success') => {
     const id = Date.now();
@@ -529,46 +530,47 @@ export default function StockWiki({ features }: { features?: Features }) {
           onClick={() => setSidebarOpen(false)}
         >
           <div
+            ref={sidebarPanelRef}
             className="relative w-[85vw] max-w-[320px] h-full flex flex-col overflow-y-auto"
-            style={{ background: T.bgSurface, borderRight: `1px solid ${T.border}`, touchAction: 'pan-y' }}
+            style={{ background: T.bgSurface, borderRight: `1px solid ${T.border}` }}
             onClick={e => e.stopPropagation()}
-            onTouchStart={e => {
-              const t = e.touches[0];
-              (e.currentTarget as any)._swipeStartX = t.clientX;
-              (e.currentTarget as any)._swipeStartY = t.clientY;
-            }}
-            onTouchMove={e => {
-              const startX = (e.currentTarget as any)._swipeStartX ?? 0;
-              const startY = (e.currentTarget as any)._swipeStartY ?? 0;
-              const dx = e.touches[0].clientX - startX;
-              const dy = Math.abs(e.touches[0].clientY - startY);
-              // 수평이 수직보다 크고 오른쪽으로 30px 이상 → 트랜슬레이트
-              if (dx > 0 && dx > dy) {
-                const clamped = Math.min(dx, 280);
-                (e.currentTarget as HTMLElement).style.transform = `translateX(${clamped}px)`;
-                (e.currentTarget as HTMLElement).style.transition = 'none';
-              }
-            }}
-            onTouchEnd={e => {
-              const startX = (e.currentTarget as any)._swipeStartX ?? 0;
-              const startY = (e.currentTarget as any)._swipeStartY ?? 0;
-              const dx = e.changedTouches[0].clientX - startX;
-              const dy = Math.abs(e.changedTouches[0].clientY - startY);
-              const el = e.currentTarget as HTMLElement;
-              if (dx > 80 && dx > dy) {
-                // 충분히 스와이프 → 닫기
-                el.style.transform = 'translateX(100%)';
-                el.style.transition = 'transform 0.22s ease';
-                setTimeout(() => setSidebarOpen(false), 200);
-              } else {
-                // 복귀
-                el.style.transform = '';
-                el.style.transition = 'transform 0.2s ease';
-              }
-            }}
           >
-            {/* 사이드바 헤더 */}
-            <div className="flex items-center justify-between px-5 py-4 border-b" style={{ borderColor: T.border }}>
+            {/* 사이드바 헤더 — 오른쪽 스와이프로 닫기 */}
+            <div
+              className="flex items-center justify-between px-5 py-4 border-b select-none"
+              style={{ borderColor: T.border, touchAction: 'none' }}
+              onTouchStart={e => {
+                const panel = sidebarPanelRef.current;
+                if (!panel) return;
+                (panel as any)._swipeStartX = e.touches[0].clientX;
+                (panel as any)._swipeStartY = e.touches[0].clientY;
+              }}
+              onTouchMove={e => {
+                const panel = sidebarPanelRef.current;
+                if (!panel || (panel as any)._swipeStartX == null) return;
+                const dx = e.touches[0].clientX - (panel as any)._swipeStartX;
+                const dy = Math.abs(e.touches[0].clientY - (panel as any)._swipeStartY);
+                if (dx > 0 && dx > dy) {
+                  panel.style.transform = `translateX(${Math.min(dx, 280)}px)`;
+                  panel.style.transition = 'none';
+                }
+              }}
+              onTouchEnd={e => {
+                const panel = sidebarPanelRef.current;
+                if (!panel) return;
+                const dx = e.changedTouches[0].clientX - ((panel as any)._swipeStartX ?? 0);
+                const dy = Math.abs(e.changedTouches[0].clientY - ((panel as any)._swipeStartY ?? 0));
+                (panel as any)._swipeStartX = null;
+                if (dx > 80 && dx > dy) {
+                  panel.style.transform = 'translateX(100%)';
+                  panel.style.transition = 'transform 0.22s ease';
+                  setTimeout(() => setSidebarOpen(false), 200);
+                } else {
+                  panel.style.transform = '';
+                  panel.style.transition = 'transform 0.2s ease';
+                }
+              }}
+            >
               <button onClick={goHome} className="flex items-baseline gap-2">
                 <span className="text-lg font-light tracking-tight" style={{ color: T.textPrimary }}>
                   Stock<span style={{ color: T.accent, fontWeight: 500 }}>WiKi</span>
@@ -3773,6 +3775,7 @@ const GUIDE_SECTIONS = [
 function GuideDrawer({ onClose, T, isDark }: { onClose: () => void; T: any; isDark: boolean }) {
   const [activeSection, setActiveSection] = useState('about');
   const drawerRef = useRef<HTMLDivElement>(null);
+  const mobileSheetRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     drawerRef.current?.focus();
@@ -3896,45 +3899,49 @@ function GuideDrawer({ onClose, T, isDark }: { onClose: () => void; T: any; isDa
 
       {/* ── 모바일: 하단 모달 ── */}
       <div
+        ref={mobileSheetRef}
         className="md:hidden absolute inset-x-0 bottom-0 flex flex-col outline-none"
         style={{
           maxHeight: '90vh',
           background: T.bgSurface,
           borderTop: `1px solid ${T.border}`,
           borderRadius: '16px 16px 0 0',
-          touchAction: 'pan-x',
         }}
         onClick={e => e.stopPropagation()}
-        onTouchStart={e => {
-          const t = e.touches[0];
-          (e.currentTarget as any)._dragStartY = t.clientY;
-          (e.currentTarget as any)._dragging = true;
-        }}
-        onTouchMove={e => {
-          if (!(e.currentTarget as any)._dragging) return;
-          const dy = e.touches[0].clientY - ((e.currentTarget as any)._dragStartY ?? 0);
-          if (dy > 0) {
-            const clamped = Math.min(dy, 300);
-            (e.currentTarget as HTMLElement).style.transform = `translateY(${clamped}px)`;
-            (e.currentTarget as HTMLElement).style.transition = 'none';
-          }
-        }}
-        onTouchEnd={e => {
-          const dy = e.changedTouches[0].clientY - ((e.currentTarget as any)._dragStartY ?? 0);
-          const el = e.currentTarget as HTMLElement;
-          (el as any)._dragging = false;
-          if (dy > 100) {
-            el.style.transform = 'translateY(100%)';
-            el.style.transition = 'transform 0.25s ease';
-            setTimeout(() => onClose(), 220);
-          } else {
-            el.style.transform = '';
-            el.style.transition = 'transform 0.2s ease';
-          }
-        }}
       >
-        {/* 핸들 — 드래그 가능 표시 */}
-        <div className="flex justify-center pt-3 pb-1 shrink-0 cursor-grab active:cursor-grabbing">
+        {/* 핸들 — 이 영역에서만 드래그로 닫기 */}
+        <div
+          className="flex justify-center pt-3 pb-3 shrink-0 cursor-grab active:cursor-grabbing select-none"
+          style={{ touchAction: 'none' }}
+          onTouchStart={e => {
+            const sheet = mobileSheetRef.current;
+            if (!sheet) return;
+            (sheet as any)._dragStartY = e.touches[0].clientY;
+          }}
+          onTouchMove={e => {
+            const sheet = mobileSheetRef.current;
+            if (!sheet || (sheet as any)._dragStartY == null) return;
+            const dy = e.touches[0].clientY - (sheet as any)._dragStartY;
+            if (dy > 0) {
+              sheet.style.transform = `translateY(${Math.min(dy, 300)}px)`;
+              sheet.style.transition = 'none';
+            }
+          }}
+          onTouchEnd={e => {
+            const sheet = mobileSheetRef.current;
+            if (!sheet) return;
+            const dy = e.changedTouches[0].clientY - ((sheet as any)._dragStartY ?? 0);
+            (sheet as any)._dragStartY = null;
+            if (dy > 100) {
+              sheet.style.transform = 'translateY(100%)';
+              sheet.style.transition = 'transform 0.25s ease';
+              setTimeout(() => onClose(), 220);
+            } else {
+              sheet.style.transform = '';
+              sheet.style.transition = 'transform 0.2s ease';
+            }
+          }}
+        >
           <div className="w-10 h-1 rounded-full" style={{ background: T.borderMid }}></div>
         </div>
 
