@@ -282,16 +282,15 @@ export default function StockWiki({ features, customEvents }: { features?: Featu
     router.replace(qs ? `/?${qs}` : '/', { scroll: false });
   };
 
-  // 홈으로 돌아가기 (로고 클릭 시)
+  // 홈으로 돌아가기 (로고 클릭 시) — 항상 홈 탭으로
   const goHome = () => {
-    setActiveTab(feat.glossary ? 'glossary' : (feat.calculator ? 'calculator' : 'none'));
+    setActiveTab('home');
     setSelectedCategory('전체');
     setSearchQuery('');
     setSelectedTerm(null);
     setShowCommandK(false);
     setSidebarOpen(false);
     setSelectedCalc('');
-    // URL 파라미터 제거
     if (typeof window !== 'undefined') {
       router.replace('/', { scroll: false });
       window.scrollTo({ top: 0, behavior: 'smooth' });
