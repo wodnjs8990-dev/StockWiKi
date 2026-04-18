@@ -110,7 +110,7 @@ export default function EventsView({ T }: { T?: any }) {
   const [earnings, setEarnings] = useState<EarningItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [marketFilter, setMarketFilter] = useState<'ALL' | 'US' | 'KR'>('ALL');
+  const [indexFilter, setIndexFilter] = useState<'ALL' | 'SP500' | 'NDX100'>('ALL');
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
 
   const fetchEarnings = async () => {
@@ -134,14 +134,18 @@ export default function EventsView({ T }: { T?: any }) {
 
   useEffect(() => { fetchEarnings(); }, []);
 
-  // 어닝 → CalEvent 변환 (국내는 기업명, 미국은 티커)
+  // 어닝 → CalEvent 변환
   const earningEvents: CalEvent[] = earnings
-    .filter(e => marketFilter === 'ALL' || e.market === marketFilter)
+    .filter(e => {
+      if (indexFilter === 'SP500') return e.isSP500;
+      if (indexFilter === 'NDX100') return e.isNDX100;
+      return true; // ALL
+    })
     .map(e => ({
       dateKST: e.date,
-      label: e.market === 'KR' ? e.nameKo : e.symbol,
-      desc: e.market === 'KR' ? e.symbol : (e.nameKo + (e.timing && e.timing !== 'unknown' ? ` · ${e.timing}` : '')),
-      color: e.market === 'KR' ? '#6B8FD4' : '#C89650',
+      label: e.symbol,
+      desc: e.nameKo + (e.timing && e.timing !== 'unknown' ? ` · ${e.timing}` : ''),
+      color: '#C89650',
       earning: e,
     }));
 
@@ -164,8 +168,9 @@ export default function EventsView({ T }: { T?: any }) {
   };
 
   const selectedEvents = selectedDate ? (eventsByDate[selectedDate] ?? []) : [];
-  const usCount = earnings.filter(e => e.market === 'US').length;
-  const krCount = earnings.filter(e => e.market === 'KR').length;
+  const usCount = earnings.length;
+  const sp500Count = earnings.filter(e => e.isSP500).length;
+  const ndx100Count = earnings.filter(e => e.isNDX100).length;
 
   return (
     <div>
@@ -193,19 +198,22 @@ export default function EventsView({ T }: { T?: any }) {
         </div>
         <div className="grid grid-cols-4 gap-2 md:gap-6 py-2 mono text-[10px] uppercase tracking-[0.2em]">
           <div className="flex items-baseline gap-1 md:gap-2">
-            <span style={{ color: theme.textDimmer }}>미국</span>
+            <span style={{ color: theme.textDimmer }}>전체</span>
             <span style={{ color: loading ? theme.textDimmer : '#C89650' }}>
-              {loading ? '···' : String(usCount).padStart(3, '0')}
+              {loading ? '···' : String(usCount).padStart(4, '0')}
             </span>
           </div>
           <div className="flex items-baseline gap-1 md:gap-2">
-            <span style={{ color: theme.textDimmer }}>국내</span>
-            <span style={{ color: loading ? theme.textDimmer : '#6B8FD4' }}>
-              {loading ? '···' : String(krCount).padStart(3, '0')}
+            <span style={{ color: theme.textDimmer }}>S&P</span>
+            <span style={{ color: loading ? theme.textDimmer : '#7BAF7A' }}>
+              {loading ? '···' : String(sp500Count).padStart(3, '0')}
             </span>
           </div>
           <div className="flex items-baseline gap-1 md:gap-2">
-            <span style={{ color: theme.textDimmer }}>KST 기준</span>
+            <span style={{ color: theme.textDimmer }}>NDX</span>
+            <span style={{ color: loading ? theme.textDimmer : '#7B9FDF' }}>
+              {loading ? '···' : String(ndx100Count).padStart(3, '0')}
+            </span>
           </div>
           {error && (
             <div className="flex items-baseline gap-1" style={{ color: '#A63D33' }}>
@@ -235,16 +243,20 @@ export default function EventsView({ T }: { T?: any }) {
                 style={{ borderColor: theme.border, color: theme.textFaint }}>
                 오늘
               </button>
-              {/* 마켓 필터 */}
+              {/* 인덱스 필터 */}
               <div className="flex border" style={{ borderColor: theme.border }}>
-                {(['ALL', 'US', 'KR'] as const).map(m => (
-                  <button key={m} onClick={() => setMarketFilter(m)}
+                {([
+                  { key: 'ALL', label: 'ALL' },
+                  { key: 'SP500', label: 'S&P' },
+                  { key: 'NDX100', label: 'NDX' },
+                ] as const).map(({ key, label }) => (
+                  <button key={key} onClick={() => setIndexFilter(key)}
                     className="text-[9px] mono px-2 py-0.5 transition-colors"
                     style={{
-                      background: marketFilter === m ? theme.bgTabActive : 'transparent',
-                      color: marketFilter === m ? theme.bgPage : theme.textFaint,
+                      background: indexFilter === key ? theme.bgTabActive : 'transparent',
+                      color: indexFilter === key ? theme.bgPage : theme.textFaint,
                     }}>
-                    {m}
+                    {label}
                   </button>
                 ))}
               </div>
@@ -320,8 +332,7 @@ export default function EventsView({ T }: { T?: any }) {
             style={{ borderColor: theme.border, background: theme.bgCard }}>
             {[
               { color: '#4F7E7C', label: 'FOMC' },
-              { color: '#C89650', label: '미국 어닝' },
-              { color: '#6B8FD4', label: '국내 어닝' },
+              { color: '#C89650', label: '어닝 발표' },
               { color: '#8A8A8A', label: 'K200 선물만기' },
             ].map(({ color, label }) => (
               <div key={label} className="flex items-center gap-1.5">
@@ -377,10 +388,16 @@ export default function EventsView({ T }: { T?: any }) {
                             <div className="flex items-center gap-2">
                               <span className="text-xs font-semibold" style={{ color: ev.color }}>{ev.label}</span>
                               {e && (
-                                <span className="text-[9px] mono px-1 border"
-                                  style={{ color: theme.textDimmer, borderColor: theme.borderSoft }}>
-                                  {e.market}
-                                </span>
+                                <div className="flex gap-1">
+                                  {e.isSP500 && (
+                                    <span className="text-[9px] mono px-1 border"
+                                      style={{ color: '#7BAF7A', borderColor: '#7BAF7A50' }}>S&P</span>
+                                  )}
+                                  {e.isNDX100 && (
+                                    <span className="text-[9px] mono px-1 border"
+                                      style={{ color: '#7B9FDF', borderColor: '#7B9FDF50' }}>NDX</span>
+                                  )}
+                                </div>
                               )}
                             </div>
                             {e && (
@@ -543,7 +560,7 @@ export default function EventsView({ T }: { T?: any }) {
           </div>
 
           <p className="text-[9px] mono text-center mt-1 md:col-span-2" style={{ color: theme.textDimmer }}>
-            모든 날짜·시간 KST 기준 · 미국 어닝: Finnhub · 국내 어닝: DART
+            모든 날짜·시간 KST 기준 · 어닝 데이터: Alpha Vantage · S&P500 / Nasdaq100 필터 지원
           </p>
         </div>
       </div>

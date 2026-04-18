@@ -15,6 +15,8 @@ export type EarningItem = {
   revenueEstimate?: number | null;
   revenueActual?: number | null;
   surprise?: number | null;
+  isSP500?: boolean;
+  isNDX100?: boolean;
 };
 
 // ─── 미국 종목 한글명 (S&P500 + 나스닥100 주요 종목) ────
@@ -67,7 +69,7 @@ const US_NAME_MAP: Record<string, string> = {
   'HSY':'허쉬','MKC':'맥코믹','YUM':'얌브랜즈','CMG':'치폴레',
   'DPZ':'도미노피자','DRI':'다든레스토랑','ROST':'로스스토어즈',
   'BURL':'벌링턴','AZO':'오토존','ORLY':'오라일리','TSCO':'트랙터서플라이',
-  'DG':'달러제너럴','DLTR':'달러트리','LULU':'룰루레몬','NKE':'나이키',
+  'DG':'달러제너럴','DLTR':'달러트리','LULU':'룰루레몬',
   'XOM':'엑슨모빌','CVX':'쉐브론','COP':'코노코필립스','EOG':'EOG리소시스',
   'SLB':'슐럼버거','OXY':'옥시덴탈','MPC':'마라톤페트롤리엄',
   'VLO':'발레로에너지','PSX':'필립스66','HES':'헤스','DVN':'데본에너지',
@@ -101,7 +103,7 @@ const US_NAME_MAP: Record<string, string> = {
   'MPWR':'모노리식파워','WOLF':'울프스피드',
   'APP':'앱러빈','TTD':'트레이드데스크','MGNI':'매그나이트',
   'RDFN':'레드핀','OPEN':'오픈도어','Z':'질로우',
-  'ABNB':'에어비앤비','EXPE':'익스피디아','BKNG':'부킹홀딩스',
+  'EXPE':'익스피디아','BKNG':'부킹홀딩스',
   'MAR':'메리어트','HLT':'힐튼','H':'하얏트','IHG':'IHG',
   'CCL':'카니발','RCL':'로열캐리비안','NCLH':'노르웨지안크루즈',
   'MGM':'MGM리조트','WYNN':'윈리조트','LVS':'라스베이거스샌즈',
@@ -266,7 +268,58 @@ const KR_CORPS: { corpCode: string; name: string; symbol: string }[] = [
 ];
 
 const AV_KEY = process.env.ALPHA_VANTAGE_API_KEY ?? '';
-const DART_KEY = process.env.DART_API_KEY ?? '';
+
+// ─── S&P500 심볼 셋 ──────────────────────────────────────
+export const SP500_SYMBOLS = new Set([
+  'MMM','AOS','ABT','ABBV','ACN','ADBE','AMD','AES','AFL','A','APD','ABNB','AKAM','ALB','ARE',
+  'ALGN','ALLE','LNT','ALL','GOOGL','GOOG','MO','AMZN','AMCR','AEE','AAL','AEP','AXP','AIG',
+  'AMT','AWK','AMP','AME','AMGN','APH','ADI','ANSS','AON','APA','AAPL','AMAT','APTV','ACGL',
+  'ADM','ANET','AJG','AIZ','T','ATO','ADSK','ADP','AZO','AVB','AVY','AXON','BKR','BALL','BAC',
+  'BK','BBWI','BAX','BDX','WRB','BRK-B','BBY','TECH','BIIB','BLK','BX','BA','BCR','BMY','AVGO',
+  'BR','BRO','BF-B','BLDR','BSX','BG','CHRW','CDNS','CZR','CPT','CPB','COF','CAH','KMX','CCL',
+  'CARR','CTLT','CAT','CBOE','CBRE','CDW','CE','COR','CNC','CNP','CF','CHTR','CVX','CMG','CB',
+  'CHD','CI','CINF','CTAS','CSCO','C','CFG','CLX','CME','CMS','KO','CTSH','CL','CMCSA','CMA',
+  'CAG','COP','ED','STZ','CEG','COO','CPRT','GLW','CTVA','CSGP','COST','CTRA','CCI','CSX','CMI',
+  'CVS','DHR','DHI','DRI','DVA','DAY','DECK','DE','DAL','DVN','DXCM','FANG','DLR','DFS','DG',
+  'DLTR','D','DPZ','DOV','DOW','DHI','DTE','DUK','DD','EMN','ETN','EBAY','ECL','EIX','EW','EA',
+  'ELV','EMR','ENPH','ETR','EOG','EPAM','EQT','EFX','EQIX','EQR','ESS','EL','ETSY','EG','EVRG',
+  'ES','EXC','EXPE','EXPD','EXR','XOM','FFIV','FDS','FICO','FAST','FRT','FDX','FIS','FITB',
+  'FSLR','FE','FMC','F','FTNT','FTV','FOXA','FOX','BEN','FCX','GRMN','IT','GE','GEHC','GEN',
+  'GIS','GM','GPC','GILD','GS','HAL','HIG','HAS','HCA','DOC','HSIC','HSY','HES','HPE','HLT',
+  'HOLX','HD','HON','HRL','HST','HWM','HPQ','HUBB','HUM','HBAN','HII','IBM','IEX','IDXX','ITW',
+  'INCY','IR','PODD','INTC','ICE','IFF','IP','IPG','INTU','ISRG','IVZ','INVH','IQV','IRM','JBHT',
+  'JBL','JKHY','J','JNJ','JCI','JPM','JNPR','K','KVUE','KDP','KEY','KEYS','KMB','KIM','KMI',
+  'KLAC','KHC','KR','LHX','LH','LRCX','LW','LVS','LDOS','LEN','LLY','LIN','LYV','LKQ','LMT',
+  'L','LOW','LULU','LYB','MTB','MRO','MPC','MKTX','MAR','MMC','MLM','MAS','MA','MTCH','MKC',
+  'MCD','MCK','MDT','MET','META','MTD','MGM','MCHP','MU','MSFT','MAA','MRNA','MHK','MOH','TAP',
+  'MDLZ','MPWR','MNST','MCO','MS','MOS','MSI','MSCI','NDAQ','NTAP','NFLX','NEM','NWSA','NWS',
+  'NEE','NKE','NI','NDSN','NSC','NTRS','NOC','NCLH','NRG','NUE','NVR','NVDA','NVO','OFF','OXY',
+  'OKE','ORCL','OTIS','ON','OMC','OKE','ORLY','OGN','OI','PH','PANW','PARA','PTC','PAYX','PAYC',
+  'PYPL','PNR','PBCT','PEP','PKI','PFE','PCG','PM','PSX','PNW','PXD','PNC','POOL','PPG','PPL',
+  'PFG','PG','PGR','PRU','PLD','PRU','PEG','PSA','PHM','QRVO','PWR','QCOM','DGX','RL','RJF',
+  'RTX','O','REG','REGN','RF','RSG','RMD','RVTY','ROK','ROL','ROP','ROST','RCL','SPGI','CRM',
+  'SBAC','SLB','STX','SEE','SRE','NOW','SHW','SPG','SWKS','SJM','SNA','SOLV','SO','LUV','SWK',
+  'SBUX','STT','STLD','STE','SYK','SMCI','SYF','SNPS','SYY','TMUS','TROW','TTWO','TPR','TRGP',
+  'TGT','TEL','TDY','TFX','TER','TSLA','TXN','TXT','TMO','TJX','TT','TOL','TSCO','TDG','TRV',
+  'TRMB','TFC','TYL','TSN','USB','UBER','UDR','ULTA','UNP','UAL','UPS','URI','UNH','UHS','VLO',
+  'VTR','VRSN','VRSK','VZ','VRTX','VIAV','V','VST','VFC','VLTO','VNO','VMC','WRK','WAB','WMT',
+  'WBA','WM','WAT','WEC','WFC','WELL','WST','WDC','WRB','WHR','WMB','WTW','GWW','WYNN','XEL',
+  'XYL','YUM','ZBRA','ZBH','ZTS',
+]);
+
+// ─── 나스닥100 심볼 셋 ───────────────────────────────────
+export const NDX100_SYMBOLS = new Set([
+  'ADBE','AMD','ABNB','GOOGL','GOOG','AMZN','AMGN','AEP','ADI','ANSS','AAPL','AMAT','APP',
+  'ASML','AZN','TEAM','ADSK','ADP','AXON','BIDU','BIIB','BKNG','AVGO','CDNS','CDW','CHTR',
+  'CTAS','CSCO','CTSH','CCEP','CPRT','CSGP','COST','CRWD','CSX','DXCM','FANG','DLTR','DASH',
+  'EA','EBAY','EXC','FAST','FTNT','GEHC','GILD','GFS','HON','ILMN','INTC','INTU','ISRG','KDP',
+  'KLAC','KHC','LRCX','LIN','LOGI','MAR','MRVL','MTCH','MELI','META','MCHP','MU','MSFT','MRNA',
+  'MDB','MNST','NDAQ','NFLX','NVDA','NXPI','ODFL','ON','ORLY','PCAR','PANW','PAYX','PYPL','PDD',
+  'PEP','QCOM','REGN','ROP','ROST','SIRI','SBUX','SMCI','SNPS','TTWO','TMUS','TSLA','TXN','TTD',
+  'VRSK','VRTX','WDAY','WBD','WSCO','XEL','ZS','ZM',
+]);
+
+export type IndexFilter = 'ALL' | 'SP500' | 'NDX100';
 
 // ─── Alpha Vantage: 미국 어닝 캘린더 ─────────────────────
 async function fetchUSEarnings(): Promise<EarningItem[]> {
@@ -413,24 +466,26 @@ async function fetchKRXEarnings(): Promise<EarningItem[]> {
 }
 
 // ─── Route Handler ───────────────────────────────────────
-export async function GET(req: Request) {
-  const { searchParams } = new URL(req.url);
-  const market = searchParams.get('market');
-
+export async function GET() {
   try {
-    const [usResult, krResult] = await Promise.allSettled([
-      market !== 'KR' ? fetchUSEarnings() : Promise.resolve([]),
-      market !== 'US' ? fetchKRXEarnings() : Promise.resolve([]),
-    ]);
+    const us = await fetchUSEarnings();
 
-    const us = usResult.status === 'fulfilled' ? usResult.value : [];
-    const kr = krResult.status === 'fulfilled' ? krResult.value : [];
-    const all = [...us, ...kr].sort((a, b) => a.date.localeCompare(b.date));
+    // 각 종목에 index 태그 추가
+    const tagged = us.map(e => ({
+      ...e,
+      isSP500: SP500_SYMBOLS.has(e.symbol),
+      isNDX100: NDX100_SYMBOLS.has(e.symbol),
+    }));
+
+    const sp500Count = tagged.filter(e => e.isSP500).length;
+    const ndx100Count = tagged.filter(e => e.isNDX100).length;
+
+    tagged.sort((a, b) => a.date.localeCompare(b.date));
 
     return NextResponse.json({
       ok: true,
-      count: { us: us.length, kr: kr.length },
-      earnings: all,
+      count: { us: tagged.length, sp500: sp500Count, ndx100: ndx100Count },
+      earnings: tagged,
       updatedAt: new Date().toISOString(),
     }, {
       headers: { 'Cache-Control': 's-maxage=3600, stale-while-revalidate=300' },
