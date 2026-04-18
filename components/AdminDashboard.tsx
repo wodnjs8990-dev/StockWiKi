@@ -250,10 +250,19 @@ export default function AdminDashboard({
             >
               {dark ? <Sun size={14} /> : <Moon size={14} />}
             </button>
-            <Link href="/" target="_blank"
-              className="hidden md:flex text-[13px] mono uppercase tracking-[0.2em] px-3 py-1.5 border transition-all hover:opacity-70"
-              style={{ borderColor: T.border, color: T.textMuted }}>
-              사이트 보기 ↗
+            <Link href="/?view=desktop" target="_blank"
+              className="hidden md:flex items-center gap-1.5 text-[12px] mono uppercase tracking-[0.15em] px-2.5 py-1.5 border transition-all hover:opacity-70"
+              style={{ borderColor: T.border, color: T.textMuted }}
+              title="PC 버전으로 열기">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="3" width="20" height="14" rx="1"/><path d="M8 21h8M12 17v4"/></svg>
+              PC
+            </Link>
+            <Link href="/?view=mobile" target="_blank"
+              className="hidden md:flex items-center gap-1.5 text-[12px] mono uppercase tracking-[0.15em] px-2.5 py-1.5 border transition-all hover:opacity-70"
+              style={{ borderColor: T.border, color: T.textMuted }}
+              title="모바일 버전으로 열기">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="5" y="2" width="14" height="20" rx="2"/><circle cx="12" cy="18" r="1" fill="currentColor"/></svg>
+              Mobile
             </Link>
             <button onClick={logout}
               className="text-[12px] md:text-[13px] mono uppercase tracking-[0.15em] md:tracking-[0.2em] px-2.5 md:px-3 py-1.5 border transition-all hover:opacity-70"
@@ -262,7 +271,7 @@ export default function AdminDashboard({
             </button>
           </div>
         </div>
-        {/* 모바일: 현재 섹션 표시 */}
+        {/* 모바일: 현재 섹션 표시 + 사이트 접속 버튼 */}
         <div className="md:hidden px-4 pb-2.5 flex items-center gap-2">
           {mobileSection === 'status'   && <Activity   size={11} style={{ color: T.accent }} />}
           {mobileSection === 'features' && <ToggleLeft size={11} style={{ color: T.accent }} />}
@@ -274,6 +283,20 @@ export default function AdminDashboard({
             : mobileSection === 'monitor'  ? 'System Monitor'
             :                                'Content Statistics' }
           </span>
+          <div className="ml-auto flex items-center gap-1.5">
+            <Link href="/?view=desktop" target="_blank"
+              className="flex items-center gap-1 text-[11px] mono uppercase tracking-[0.1em] px-2 py-1 border"
+              style={{ borderColor: T.border, color: T.textDimmer }}>
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="3" width="20" height="14" rx="1"/><path d="M8 21h8M12 17v4"/></svg>
+              PC
+            </Link>
+            <Link href="/?view=mobile" target="_blank"
+              className="flex items-center gap-1 text-[11px] mono uppercase tracking-[0.1em] px-2 py-1 border"
+              style={{ borderColor: T.border, color: T.textDimmer }}>
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="5" y="2" width="14" height="20" rx="2"/><circle cx="12" cy="18" r="1" fill="currentColor"/></svg>
+              Mobile
+            </Link>
+          </div>
         </div>
       </header>
 
