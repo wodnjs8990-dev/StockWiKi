@@ -511,6 +511,7 @@ export default function StockWiki({ features }: { features?: Features }) {
             T={T}
             isDark={isDark}
             showToast={showToast}
+            setActiveTab={setActiveTab}
           />
         )}
         {activeTab === 'calculator' && feat.calculator && (
@@ -857,7 +858,7 @@ function CommandK({ terms, onClose, onSelect, T }) {
 // ─────────────────────────────────────────────
 // 용어 사전 뷰
 // ─────────────────────────────────────────────
-function GlossaryView({ terms, searchQuery, setSearchQuery, searchRef, categories, selectedCategory, setSelectedCategory, selectedTerm, setSelectedTerm, closeTerm, totalCount, categoryColors, favorites, toggleFav, favMemos, updateFavMemo, recent, T, isDark, showToast }) {
+function GlossaryView({ terms, searchQuery, setSearchQuery, searchRef, categories, selectedCategory, setSelectedCategory, selectedTerm, setSelectedTerm, closeTerm, totalCount, categoryColors, favorites, toggleFav, favMemos, updateFavMemo, recent, T, isDark, showToast, setActiveTab }) {
 
   return (
     <div>
@@ -1022,6 +1023,26 @@ function GlossaryView({ terms, searchQuery, setSearchQuery, searchRef, categorie
                 </div>
                 <div className="text-xs mono italic mb-3" style={{ color: T.textFaint }}>{term.en}</div>
                 <div className="text-sm leading-relaxed line-clamp-2" style={{ color: T.textMuted }}>{term.description}</div>
+                {/* 공식 strip */}
+                {term.formula && (
+                  <div className="mt-3 mono text-[11px] px-2 py-1.5 border-l-2 truncate" style={{ background: T.bgCard, borderColor: color?.bg || T.accent, color: T.textFaint }}>
+                    ƒ {term.formula}
+                  </div>
+                )}
+                {/* 관련 용어 chips */}
+                {term.related && term.related.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-1">
+                    {term.related.slice(0, 3).map((relId: string) => {
+                      const relTerm = TERMS.find(t => t.id === relId);
+                      if (!relTerm) return null;
+                      return (
+                        <span key={relId} className="text-[10px] mono px-1.5 py-0.5 border" style={{ borderColor: T.border, color: T.textDimmer }}>
+                          {relTerm.name}
+                        </span>
+                      );
+                    })}
+                  </div>
+                )}
                 <div className="mt-3 md:mt-4 flex items-center gap-1 text-[12px] mono uppercase tracking-wider" style={{ color: T.textDimmer }}>
                   <span>자세히</span>
                   <ArrowUpRight size={12} className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
@@ -1055,6 +1076,10 @@ function GlossaryView({ terms, searchQuery, setSearchQuery, searchRef, categorie
             const t = TERMS.find(x => x.id === id);
             if (t) setSelectedTerm(t);
           }}
+          onNavigateCalc={() => {
+            closeTerm();
+            if (setActiveTab) setActiveTab('calculator');
+          }}
           onPrev={() => {
             const idx = terms.findIndex(t => t.id === selectedTerm.id);
             if (idx > 0) setSelectedTerm(terms[idx - 1]);
@@ -1069,7 +1094,7 @@ function GlossaryView({ terms, searchQuery, setSearchQuery, searchRef, categorie
   );
 }
 
-function TermModal({ term, termList, onClose, categoryColors, favorites, toggleFav, favMemos, updateFavMemo, onNavigate, onPrev, onNext, T, showToast }: any): JSX.Element {
+function TermModal({ term, termList, onClose, categoryColors, favorites, toggleFav, favMemos, updateFavMemo, onNavigate, onNavigateCalc, onPrev, onNext, T, showToast }: any): JSX.Element {
   const isFav = favorites.has(term.id);
   const memo = favMemos?.[term.id] || '';
   const [memoText, setMemoText] = useState(memo);
@@ -1158,11 +1183,11 @@ function TermModal({ term, termList, onClose, categoryColors, favorites, toggleF
     >
       <div
         ref={modalRef}
-        className="modal-panel-in w-full md:max-w-4xl border md:max-h-[92vh] overflow-y-auto"
+        className="modal-panel-in w-full md:max-w-5xl border flex flex-col"
         style={{
           background: T.bgSurface,
           borderColor: T.border,
-          maxHeight: '90vh',
+          maxHeight: '92vh',
           borderRadius: '0',
         }}
         onClick={e => e.stopPropagation()}
@@ -1179,21 +1204,6 @@ function TermModal({ term, termList, onClose, categoryColors, favorites, toggleF
           style={{ background: categoryColors[term.category]?.bg, color: categoryColors[term.category]?.text, borderColor: T.border }}
         >
           <div className="flex items-center gap-2 md:gap-3">
-            {/* 이전 버튼 */}
-            <button
-              onClick={(e) => { e.stopPropagation(); onPrev?.(); }}
-              disabled={!hasPrev}
-              className="flex items-center justify-center w-10 h-10 md:w-7 md:h-7 border transition-all"
-              style={{
-                borderColor: hasPrev ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.08)',
-                color: hasPrev ? 'inherit' : 'rgba(255,255,255,0.25)',
-                background: 'transparent',
-                cursor: hasPrev ? 'pointer' : 'not-allowed',
-              }}
-              title="이전 용어 (←)"
-            >
-              <ChevronLeft size={14} />
-            </button>
             <span className="ball-joint hidden sm:inline-block" style={{ background: categoryColors[term.category]?.text }}></span>
             <span className="text-[12px] mono uppercase tracking-[0.3em]">{term.category}</span>
             {total > 0 && (
@@ -1236,26 +1246,15 @@ function TermModal({ term, termList, onClose, categoryColors, favorites, toggleF
             >
               <Share2 size={15} />
             </button>
-            {/* 다음 버튼 */}
-            <button
-              onClick={(e) => { e.stopPropagation(); onNext?.(); }}
-              disabled={!hasNext}
-              className="flex items-center justify-center w-10 h-10 md:w-7 md:h-7 border transition-all"
-              style={{
-                borderColor: hasNext ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.08)',
-                color: hasNext ? 'inherit' : 'rgba(255,255,255,0.25)',
-                background: 'transparent',
-                cursor: hasNext ? 'pointer' : 'not-allowed',
-              }}
-              title="다음 용어 (→)"
-            >
-              <ChevronRight size={14} />
-            </button>
             <button onClick={onClose} className="flex items-center justify-center w-10 h-10 md:w-7 md:h-7 shrink-0"><X size={18} /></button>
           </div>
         </div>
 
-        <div className="p-6 md:p-10">
+        {/* ── 2단 바디: 본문 + 사이드 (md 이상) ── */}
+        <div className="flex flex-1 min-h-0">
+
+          {/* 본문 스크롤 영역 */}
+          <div className="flex-1 overflow-y-auto p-6 md:p-10 min-w-0">
 
           {/* 비교 모드 */}
           {compareMode && (
@@ -1533,6 +1532,135 @@ function TermModal({ term, termList, onClose, categoryColors, favorites, toggleF
               <span className="text-[12px] mono" style={{ color: T.textDimmer }}>즐겨찾기 추가 시 개인 메모를 작성할 수 있습니다</span>
             </div>
           )}
+          </div>{/* /본문 스크롤 */}
+
+          {/* ── 사이드바 (PC only) ── */}
+          <aside
+            className="hidden md:flex flex-col shrink-0 border-l overflow-y-auto"
+            style={{ width: '260px', borderColor: T.border, background: T.bgCard }}
+          >
+            {/* § 목차 */}
+            <div className="px-5 pt-5 pb-3 border-b" style={{ borderColor: T.border }}>
+              <div className="text-[11px] mono uppercase tracking-[0.25em] mb-3" style={{ color: T.textFaint }}>목차 · Contents</div>
+              <div className="flex flex-col gap-1">
+                {hasEasy && (
+                  <div className="flex items-center gap-2 text-xs py-1" style={{ color: T.textMuted }}>
+                    <span className="w-4 text-right mono text-[10px]" style={{ color: T.textDimmer }}>01</span>
+                    <span>쉽게 말하면</span>
+                  </div>
+                )}
+                <div className="flex items-center gap-2 text-xs py-1" style={{ color: T.textMuted }}>
+                  <span className="w-4 text-right mono text-[10px]" style={{ color: T.textDimmer }}>02</span>
+                  <span>개요</span>
+                </div>
+                {hasDetailed && (
+                  <div className="flex items-center gap-2 text-xs py-1" style={{ color: T.textMuted }}>
+                    <span className="w-4 text-right mono text-[10px]" style={{ color: T.textDimmer }}>03</span>
+                    <span>심화 설명</span>
+                  </div>
+                )}
+                <div className="flex items-center gap-2 text-xs py-1" style={{ color: T.textMuted }}>
+                  <span className="w-4 text-right mono text-[10px]" style={{ color: T.textDimmer }}>04</span>
+                  <span>공식</span>
+                </div>
+                <div className="flex items-center gap-2 text-xs py-1" style={{ color: T.textMuted }}>
+                  <span className="w-4 text-right mono text-[10px]" style={{ color: T.textDimmer }}>05</span>
+                  <span>예시</span>
+                </div>
+                {hasRelations && (
+                  <div className="flex items-center gap-2 text-xs py-1" style={{ color: T.textMuted }}>
+                    <span className="w-4 text-right mono text-[10px]" style={{ color: T.textDimmer }}>06</span>
+                    <span>연결 관계</span>
+                  </div>
+                )}
+                {hasImpact && (
+                  <div className="flex items-center gap-2 text-xs py-1" style={{ color: T.textMuted }}>
+                    <span className="w-4 text-right mono text-[10px]" style={{ color: T.textDimmer }}>07</span>
+                    <span>시장 영향</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* § 관련 용어 */}
+            {relatedTerms.length > 0 && (
+              <div className="px-5 pt-4 pb-3 border-b" style={{ borderColor: T.border }}>
+                <div className="text-[11px] mono uppercase tracking-[0.25em] mb-3" style={{ color: T.textFaint }}>관련 용어</div>
+                <div className="flex flex-col gap-1">
+                  {relatedTerms.slice(0, 6).map(rt => {
+                    const rc = categoryColors[rt.category];
+                    return (
+                      <button
+                        key={rt.id}
+                        onClick={() => onNavigate(rt.id)}
+                        className="flex items-center gap-2 text-xs py-1.5 text-left hover:opacity-80 transition-opacity"
+                        style={{ color: T.textSecondary }}
+                      >
+                        <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: rc?.bg }}></span>
+                        <span className="font-medium truncate">{rt.name}</span>
+                        <ChevronRight size={10} className="ml-auto shrink-0" style={{ color: T.textFaint }} />
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* § 계산기 바로가기 */}
+            <div className="px-5 pt-4 pb-4 mt-auto">
+              <div className="text-[11px] mono uppercase tracking-[0.25em] mb-3" style={{ color: T.textFaint }}>계산기 바로가기</div>
+              <button
+                onClick={() => { onClose(); if (onNavigateCalc) onNavigateCalc(); }}
+                className="w-full flex items-center justify-between px-3 py-2.5 border text-xs transition-all hover:opacity-80"
+                style={{ borderColor: T.border, color: T.textMuted, background: T.bgSurface }}
+              >
+                <span>관련 계산기 보기</span>
+                <Calculator size={12} />
+              </button>
+            </div>
+          </aside>
+        </div>{/* /flex 2단 */}
+
+        {/* ── 하단 prev/next 바 ── */}
+        <div
+          className="flex items-center justify-between border-t px-5 py-3 shrink-0"
+          style={{ borderColor: T.border, background: T.bgCard }}
+        >
+          <button
+            onClick={(e) => { e.stopPropagation(); onPrev?.(); }}
+            disabled={!hasPrev}
+            className="flex items-center gap-2 text-xs mono px-3 py-2 border transition-all"
+            style={{
+              borderColor: hasPrev ? T.borderMid : T.border,
+              color: hasPrev ? T.textMuted : T.textDimmer,
+              background: 'transparent',
+              cursor: hasPrev ? 'pointer' : 'not-allowed',
+              opacity: hasPrev ? 1 : 0.4,
+            }}
+          >
+            <ChevronLeft size={12} />
+            <span>이전</span>
+          </button>
+          {total > 0 && (
+            <span className="text-[11px] mono" style={{ color: T.textDimmer }}>
+              {currentIdx + 1} / {total}
+            </span>
+          )}
+          <button
+            onClick={(e) => { e.stopPropagation(); onNext?.(); }}
+            disabled={!hasNext}
+            className="flex items-center gap-2 text-xs mono px-3 py-2 border transition-all"
+            style={{
+              borderColor: hasNext ? T.borderMid : T.border,
+              color: hasNext ? T.textMuted : T.textDimmer,
+              background: 'transparent',
+              cursor: hasNext ? 'pointer' : 'not-allowed',
+              opacity: hasNext ? 1 : 0.4,
+            }}
+          >
+            <span>다음</span>
+            <ChevronRight size={12} />
+          </button>
         </div>
       </div>
     </div>
