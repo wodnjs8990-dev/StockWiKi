@@ -8,12 +8,42 @@ import { TERMS, CATEGORIES, CATEGORY_COLORS } from '@/data/terms';
 import { CALC_CATEGORIES } from '@/data/calcs';
 import EventsView from '@/components/EventsView';
 
+// sessionStorage와 연동하는 useState 헬퍼
+function useSessionState<T>(key: string, initial: T): [T, React.Dispatch<React.SetStateAction<T>>] {
+  const [val, setVal] = useState<T>(() => {
+    try {
+      const s = typeof window !== 'undefined' ? sessionStorage.getItem(key) : null;
+      return s !== null ? JSON.parse(s) : initial;
+    } catch { return initial; }
+  });
+  useEffect(() => {
+    try { sessionStorage.setItem(key, JSON.stringify(val)); } catch {}
+  }, [key, val]);
+  return [val, setVal];
+}
+
 type Features = {
   glossary: boolean;
   calculator: boolean;
   commandK: boolean;
   events?: boolean;
 };
+
+// 검색 키워드 하이라이팅 컴포넌트
+function Highlight({ text, query, color }: { text: string; query: string; color: string }) {
+  if (!query) return <>{text}</>;
+  const idx = text.toLowerCase().indexOf(query.toLowerCase());
+  if (idx === -1) return <>{text}</>;
+  return (
+    <>
+      {text.slice(0, idx)}
+      <mark style={{ background: color, color: 'inherit', borderRadius: '2px', padding: '0 1px' }}>
+        {text.slice(idx, idx + query.length)}
+      </mark>
+      {text.slice(idx + query.length)}
+    </>
+  );
+}
 
 export default function StockWiki({ features }: { features?: Features }) {
   const feat = features ?? { glossary: true, calculator: true, commandK: true, events: true };
@@ -28,10 +58,15 @@ export default function StockWiki({ features }: { features?: Features }) {
   const fallbackTab = feat.glossary ? 'glossary' : feat.calculator ? 'calculator' : feat.events ? 'events' : 'none';
   const initialTab = isRequestedTabAvailable ? initialTabFromUrl : fallbackTab;
   const initialCalc = searchParams?.get('calc') || 'per';
+  const termFromUrl = searchParams?.get('term');
+  const catFromUrl = searchParams?.get('cat');
 
   const [activeTab, setActiveTab] = useState(initialTab);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('전체');
+  const [debouncedQuery, setDebouncedQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState(
+    catFromUrl && [...CATEGORIES, '★ 즐겨찾기'].includes(catFromUrl) ? catFromUrl : '전체'
+  );
   const [selectedCalc, setSelectedCalc] = useState(initialCalc);
   const [selectedTerm, setSelectedTerm] = useState<any>(null);
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
@@ -39,7 +74,15 @@ export default function StockWiki({ features }: { features?: Features }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showCommandK, setShowCommandK] = useState(false);
   const [isDark, setIsDark] = useState(true);
+  const [toasts, setToasts] = useState<{ id: number; msg: string; type?: 'success'|'info' }[]>([]);
   const searchRef = useRef<HTMLInputElement | null>(null);
+  const lastFocusRef = useRef<HTMLElement | null>(null);
+
+  const showToast = (msg: string, type: 'success'|'info' = 'success') => {
+    const id = Date.now();
+    setToasts(prev => [...prev, { id, msg, type }]);
+    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 2500);
+  };
 
   // 테마 초기화 (localStorage)
   useEffect(() => {
@@ -49,12 +92,70 @@ export default function StockWiki({ features }: { features?: Features }) {
     document.documentElement.classList.toggle('light', !dark);
   }, []);
 
+  // URL의 term 파라미터에서 용어 로드 (마운트 시)
+  useEffect(() => {
+    if (termFromUrl) {
+      const t = TERMS.find(x => x.id === termFromUrl);
+      if (t) openTerm(t);
+    }
+  }, []); // 마운트 1회만
+
   const toggleTheme = () => {
     const next = !isDark;
     setIsDark(next);
     document.documentElement.classList.toggle('light', !next);
     localStorage.setItem('stockwiki_theme', next ? 'dark' : 'light');
   };
+
+  // 즐겨찾기 초기화 (마운트 시)
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('stockwiki_favorites');
+      if (saved) setFavorites(new Set(JSON.parse(saved)));
+    } catch {}
+  }, []);
+
+  // 즐겨찾기 저장 (변경 시)
+  useEffect(() => {
+    try {
+      localStorage.setItem('stockwiki_favorites', JSON.stringify([...favorites]));
+    } catch {}
+  }, [favorites]);
+
+  // 최근 본 용어 초기화 (마운트 시)
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('stockwiki_recent');
+      if (saved) {
+        const ids: string[] = JSON.parse(saved);
+        const terms = ids.map(id => TERMS.find(t => t.id === id)).filter(Boolean);
+        setRecent(terms);
+      }
+    } catch {}
+  }, []);
+
+  // 최근 본 용어 저장 (변경 시)
+  useEffect(() => {
+    try {
+      localStorage.setItem('stockwiki_recent', JSON.stringify(recent.map(t => t.id)));
+    } catch {}
+  }, [recent]);
+
+  // 모달 열림/닫힘 시 배경 스크롤 제어
+  useEffect(() => {
+    if (selectedTerm) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => { document.body.style.overflow = ''; };
+  }, [selectedTerm]);
+
+  // 검색 디바운스
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedQuery(searchQuery), 150);
+    return () => clearTimeout(t);
+  }, [searchQuery]);
 
   // 키보드 단축키
   useEffect(() => {
@@ -86,11 +187,38 @@ export default function StockWiki({ features }: { features?: Features }) {
   };
 
   const openTerm = (term) => {
+    lastFocusRef.current = document.activeElement as HTMLElement;
     setSelectedTerm(term);
     setRecent(prev => {
       const filtered = prev.filter(t => t.id !== term.id);
       return [term, ...filtered].slice(0, 5);
     });
+    // URL에 term 파라미터 추가
+    const params = new URLSearchParams(window.location.search);
+    params.set('term', term.id);
+    router.replace(`/?${params.toString()}`, { scroll: false });
+  };
+
+  const closeTerm = () => {
+    setSelectedTerm(null);
+    const params = new URLSearchParams(window.location.search);
+    params.delete('term');
+    const qs = params.toString();
+    router.replace(qs ? `/?${qs}` : '/', { scroll: false });
+    // 포커스 복원
+    setTimeout(() => lastFocusRef.current?.focus(), 50);
+  };
+
+  const changeCategory = (cat: string) => {
+    setSelectedCategory(cat);
+    const params = new URLSearchParams(window.location.search);
+    if (cat === '전체') {
+      params.delete('cat');
+    } else {
+      params.set('cat', cat);
+    }
+    const qs = params.toString();
+    router.replace(qs ? `/?${qs}` : '/', { scroll: false });
   };
 
   // 홈으로 돌아가기 (로고 클릭 시)
@@ -111,7 +239,7 @@ export default function StockWiki({ features }: { features?: Features }) {
 
   const filteredTerms = useMemo(() => {
     return TERMS.filter(t => {
-      const q = searchQuery.toLowerCase();
+      const q = debouncedQuery.toLowerCase();
       const matchSearch = !q ||
         t.name.toLowerCase().includes(q) ||
         t.fullName.toLowerCase().includes(q) ||
@@ -122,7 +250,7 @@ export default function StockWiki({ features }: { features?: Features }) {
         t.category === selectedCategory;
       return matchSearch && matchCat;
     });
-  }, [searchQuery, selectedCategory, favorites]);
+  }, [debouncedQuery, selectedCategory, favorites]);
 
   const categoriesWithFav = favorites.size > 0
     ? ['전체', '★ 즐겨찾기', ...CATEGORIES.slice(1)]
@@ -311,10 +439,10 @@ export default function StockWiki({ features }: { features?: Features }) {
             searchRef={searchRef}
             categories={categoriesWithFav}
             selectedCategory={selectedCategory}
-            setSelectedCategory={setSelectedCategory}
+            setSelectedCategory={changeCategory}
             selectedTerm={selectedTerm}
             setSelectedTerm={openTerm}
-            closeTerm={() => setSelectedTerm(null)}
+            closeTerm={closeTerm}
             totalCount={TERMS.length}
             categoryColors={CATEGORY_COLORS}
             favorites={favorites}
@@ -322,6 +450,7 @@ export default function StockWiki({ features }: { features?: Features }) {
             recent={recent}
             T={T}
             isDark={isDark}
+            showToast={showToast}
           />
         )}
         {activeTab === 'calculator' && feat.calculator && (
@@ -364,6 +493,26 @@ export default function StockWiki({ features }: { features?: Features }) {
           </div>
         </div>
       </footer>
+
+      {/* 전역 토스트 */}
+      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] flex flex-col gap-2 items-center pointer-events-none">
+        {toasts.map(toast => (
+          <div
+            key={toast.id}
+            className="toast-in px-4 py-2.5 text-sm mono flex items-center gap-2 shadow-lg"
+            style={{
+              background: T.bgTabActive,
+              color: T.textTabActive,
+              minWidth: '180px',
+              textAlign: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Check size={13} />
+            {toast.msg}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -375,9 +524,31 @@ function CommandK({ terms, onClose, onSelect, T }) {
   const [q, setQ] = useState('');
   const [idx, setIdx] = useState(0);
   const inputRef = useRef(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     inputRef.current?.focus();
+  }, []);
+
+  // 포커스 트랩
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const focusable = el.querySelectorAll<HTMLElement>(
+      'input, button, [tabindex]:not([tabindex="-1"])'
+    );
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    const trap = (e: KeyboardEvent) => {
+      if (e.key !== 'Tab') return;
+      if (e.shiftKey) {
+        if (document.activeElement === first) { e.preventDefault(); last.focus(); }
+      } else {
+        if (document.activeElement === last) { e.preventDefault(); first.focus(); }
+      }
+    };
+    el.addEventListener('keydown', trap);
+    return () => el.removeEventListener('keydown', trap);
   }, []);
 
   const results = useMemo(() => {
@@ -400,7 +571,7 @@ function CommandK({ terms, onClose, onSelect, T }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center pt-[10vh] p-4" style={{ background: T.bgOverlay2 }} onClick={onClose}>
-      <div className="w-full max-w-2xl border" style={{ background: T.bgSurface, borderColor: T.border }} onClick={e => e.stopPropagation()}>
+      <div ref={containerRef} className="commandk-in w-full max-w-2xl border" style={{ background: T.bgSurface, borderColor: T.border }} onClick={e => e.stopPropagation()}>
         <div className="flex items-center gap-3 px-5 py-4 border-b" style={{ borderColor: T.border }}>
           <Search size={16} style={{ color: T.textFaint }} />
           <input
@@ -449,7 +620,7 @@ function CommandK({ terms, onClose, onSelect, T }) {
 // ─────────────────────────────────────────────
 // 용어 사전 뷰
 // ─────────────────────────────────────────────
-function GlossaryView({ terms, searchQuery, setSearchQuery, searchRef, categories, selectedCategory, setSelectedCategory, selectedTerm, setSelectedTerm, closeTerm, totalCount, categoryColors, favorites, toggleFav, recent, T, isDark }) {
+function GlossaryView({ terms, searchQuery, setSearchQuery, searchRef, categories, selectedCategory, setSelectedCategory, selectedTerm, setSelectedTerm, closeTerm, totalCount, categoryColors, favorites, toggleFav, recent, T, isDark, showToast }) {
 
   return (
     <div>
@@ -581,7 +752,9 @@ function GlossaryView({ terms, searchQuery, setSearchQuery, searchRef, categorie
                 onClick={() => setSelectedTerm(term)}
                 className="w-full text-left px-5 md:px-6 pb-5 md:pb-6"
               >
-                <div className="text-xl md:text-2xl font-medium tracking-tight leading-tight mb-1" style={{ color: T.textPrimary }}>{term.name}</div>
+                <div className="text-xl md:text-2xl font-medium tracking-tight leading-tight mb-1" style={{ color: T.textPrimary }}>
+                  <Highlight text={term.name} query={searchQuery} color={T.accent + '55'} />
+                </div>
                 <div className="text-xs mono italic mb-3" style={{ color: T.textFaint }}>{term.en}</div>
                 <div className="text-sm leading-relaxed line-clamp-2" style={{ color: T.textMuted }}>{term.description}</div>
                 <div className="mt-4 flex items-center gap-1 text-[10px] mono uppercase tracking-wider" style={{ color: T.textDimmer }}>
@@ -610,6 +783,7 @@ function GlossaryView({ terms, searchQuery, setSearchQuery, searchRef, categorie
           favorites={favorites}
           toggleFav={toggleFav}
           T={T}
+          showToast={showToast}
           onNavigate={(id) => {
             const t = TERMS.find(x => x.id === id);
             if (t) setSelectedTerm(t);
@@ -628,7 +802,7 @@ function GlossaryView({ terms, searchQuery, setSearchQuery, searchRef, categorie
   );
 }
 
-function TermModal({ term, termList, onClose, categoryColors, favorites, toggleFav, onNavigate, onPrev, onNext, T }: any): JSX.Element {
+function TermModal({ term, termList, onClose, categoryColors, favorites, toggleFav, onNavigate, onPrev, onNext, T, showToast }: any): JSX.Element {
   const isFav = favorites.has(term.id);
   const relatedTerms = term.related?.map(id => TERMS.find(t => t.id === id)).filter(Boolean) || [];
   const hasDetailed = !!term.detailed;
@@ -653,12 +827,12 @@ function TermModal({ term, termList, onClose, categoryColors, favorites, toggleF
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-2 md:p-4"
+      className="modal-overlay-in fixed inset-0 z-50 flex items-center justify-center p-2 md:p-4"
       style={{ background: T.bgOverlay }}
       onClick={onClose}
     >
       <div
-        className="max-w-4xl w-full border max-h-[92vh] overflow-y-auto"
+        className="modal-panel-in max-w-4xl w-full border max-h-[92vh] overflow-y-auto"
         style={{ background: T.bgSurface, borderColor: T.border }}
         onClick={e => e.stopPropagation()}
       >
@@ -691,8 +865,24 @@ function TermModal({ term, termList, onClose, categoryColors, favorites, toggleF
             )}
           </div>
           <div className="flex items-center gap-2 md:gap-3">
-            <button onClick={() => toggleFav(term.id)} style={{ color: 'inherit' }}>
+            <button onClick={() => toggleFav(term.id)} style={{ color: 'inherit' }} title="이 용어 즐겨찾기">
               <Star size={16} fill={isFav ? 'currentColor' : 'none'} />
+            </button>
+            <button
+              onClick={async (e) => {
+                e.stopPropagation();
+                const url = `${window.location.origin}/?term=${term.id}`;
+                if (navigator.share && /Mobi/i.test(navigator.userAgent)) {
+                  await navigator.share({ title: term.name, text: term.fullName, url });
+                } else {
+                  await navigator.clipboard.writeText(url);
+                  showToast?.('링크 복사됨');
+                }
+              }}
+              style={{ color: 'inherit' }}
+              title="이 용어 공유"
+            >
+              <Share2 size={15} />
             </button>
             {/* 다음 버튼 */}
             <button
@@ -1203,6 +1393,9 @@ function NumInput({ label, value, onChange, unit, placeholder, hint }: any) {
       )}
       {hint && !koreanUnit && <div className="text-[10px] mt-1" style={{ color: _T.textFooter }}>{hint}</div>}
       {hint && koreanUnit && <div className="text-[10px] mt-0.5" style={{ color: _T.textFooter }}>{hint}</div>}
+      {Number(value) < 0 && (
+        <div className="text-[10px] mt-1" style={{ color: '#A63D33' }}>⚠ 음수 입력됨</div>
+      )}
     </div>
   );
 }
@@ -1356,9 +1549,9 @@ function fmt(n, d = 2) {
 // 계산기들 (기존 + 신규)
 // ─────────────────────────────────────────────
 function PERCalc() {
-  const [price, setPrice] = useState('');
-  const [netIncome, setNetIncome] = useState('');
-  const [shares, setShares] = useState('');
+  const [price, setPrice] = useSessionState('calc_per_price', '');
+  const [netIncome, setNetIncome] = useSessionState('calc_per_netIncome', '');
+  const [shares, setShares] = useSessionState('calc_per_shares', '');
   const eps = netIncome && shares ? Number(netIncome) / Number(shares) : 0;
   const per = price && eps ? Number(price) / eps : 0;
   return (
@@ -1397,9 +1590,9 @@ function PERCalc() {
 }
 
 function PSRCalc() {
-  const [price, setPrice] = useState('');
-  const [sales, setSales] = useState('');
-  const [shares, setShares] = useState('');
+  const [price, setPrice] = useSessionState('calc_psr_price', '');
+  const [sales, setSales] = useSessionState('calc_psr_sales', '');
+  const [shares, setShares] = useSessionState('calc_psr_shares', '');
   const sps = sales && shares ? Number(sales) / Number(shares) : 0;
   const psr = price && sps ? Number(price) / sps : 0;
   const marketCap = price && shares ? Number(price) * Number(shares) : 0;
@@ -1441,9 +1634,9 @@ function PSRCalc() {
 }
 
 function PBRCalc() {
-  const [price, setPrice] = useState('');
-  const [equity, setEquity] = useState('');
-  const [shares, setShares] = useState('');
+  const [price, setPrice] = useSessionState('calc_pbr_price', '');
+  const [equity, setEquity] = useSessionState('calc_pbr_equity', '');
+  const [shares, setShares] = useSessionState('calc_pbr_shares', '');
   const bps = equity && shares ? Number(equity) / Number(shares) : 0;
   const pbr = price && bps ? Number(price) / bps : 0;
   return (
