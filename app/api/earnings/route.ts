@@ -198,17 +198,14 @@ const KR_CORPS: { corpCode: string; name: string; symbol: string }[] = [
   { corpCode: '00102447', name: '넷마블', symbol: '251270' },
   { corpCode: '00163557', name: '크래프톤', symbol: '259960' },
   { corpCode: '00126558', name: '셀트리온제약', symbol: '068760' },
-  { corpCode: '00104216', name: '한화에어로스페이스', symbol: '012450' },
   { corpCode: '00113386', name: '동아에스티', symbol: '170900' },
   { corpCode: '00113171', name: '종근당', symbol: '185750' },
   { corpCode: '00104648', name: '대웅제약', symbol: '069620' },
   { corpCode: '00113649', name: '리노공업', symbol: '058470' },
-  { corpCode: '00101624', name: 'HD한국조선해양', symbol: '009540' },
   { corpCode: '00164835', name: 'SK바이오팜', symbol: '326030' },
   { corpCode: '00164775', name: 'SK바이오사이언스', symbol: '302440' },
   { corpCode: '00179433', name: '카카오페이', symbol: '377300' },
   { corpCode: '00184599', name: '카카오게임즈', symbol: '293490' },
-  { corpCode: '00140516', name: '메리츠금융지주', symbol: '138040' },
   { corpCode: '00130413', name: '현대위아', symbol: '011210' },
   { corpCode: '00101594', name: '한국타이어앤테크놀로지', symbol: '161390' },
   { corpCode: '00108760', name: '금호석유화학', symbol: '011780' },
@@ -242,8 +239,7 @@ const KR_CORPS: { corpCode: string; name: string; symbol: string }[] = [
   { corpCode: '00102337', name: '제넥신', symbol: '095700' },
   { corpCode: '00139456', name: '셀트리온헬스케어', symbol: '091990' },
   { corpCode: '00102031', name: '파라다이스', symbol: '034230' },
-  { corpCode: '00113649', name: '리노공업', symbol: '058470' },
-  { corpCode: '00164649', name: '카카오뱅크', symbol: '323410' },
+  { corpCode: '00160160', name: '에이피알', symbol: '278470' },
   { corpCode: '00160479', name: '성일하이텍', symbol: '365340' },
   { corpCode: '00163226', name: '원익IPS', symbol: '240810' },
   { corpCode: '00149655', name: '파크시스템스', symbol: '140860' },
@@ -261,7 +257,6 @@ const KR_CORPS: { corpCode: string; name: string; symbol: string }[] = [
   { corpCode: '00165535', name: '이녹스첨단소재', symbol: '272290' },
   { corpCode: '00118797', name: '오스템임플란트', symbol: '048260' },
   { corpCode: '00156535', name: '덴티움', symbol: '145720' },
-  { corpCode: '00128696', name: '셀바스AI', symbol: '108860' },
   { corpCode: '00104215', name: '한글과컴퓨터', symbol: '030520' },
   { corpCode: '00141028', name: '비에이치', symbol: '090460' },
   { corpCode: '00149030', name: '엠씨넥스', symbol: '097520' },
@@ -336,33 +331,43 @@ async function fetchDartEarnings(): Promise<EarningItem[]> {
 
   const today = new Date(Date.now() + 9 * 3600 * 1000);
   const currentYear = today.getUTCFullYear();
-  const bgn = `${currentYear}0101`;
-  const end = today.toISOString().slice(0, 10).replace(/-/g, '');
+  const prevYear = currentYear - 1;
+  // 전년도 10월부터 ~ 올해 말까지 (연간/분기 실적 모두 커버)
+  const bgn = `${prevYear}1001`;
+  const futureDate = new Date(today);
+  futureDate.setMonth(futureDate.getMonth() + 3);
+  const end = futureDate.toISOString().slice(0, 10).replace(/-/g, '');
 
   const fetchOneCorp = async (corp: typeof KR_CORPS[0]): Promise<EarningItem | null> => {
+    // A003=분기보고서, A002=반기보고서, A001=사업보고서(연간) 순으로 시도
+    // 가장 최근 날짜의 것을 반환
+    const allItems: { date: string; reportType: string }[] = [];
     for (const pType of ['A003', 'A002', 'A001']) {
       try {
-        const url = `https://opendart.fss.or.kr/api/list.json?crtfc_key=${DART_KEY}&corp_code=${corp.corpCode}&bgn_de=${bgn}&end_de=${end}&pblntf_ty=A&pblntf_detail_ty=${pType}&page_count=5`;
+        const url = `https://opendart.fss.or.kr/api/list.json?crtfc_key=${DART_KEY}&corp_code=${corp.corpCode}&bgn_de=${bgn}&end_de=${end}&pblntf_ty=A&pblntf_detail_ty=${pType}&page_count=10`;
         const res = await fetch(url, { next: { revalidate: 3600 } });
         if (!res.ok) continue;
         const data = await res.json();
         if (data.status !== '000') continue;
         const list: any[] = data.list ?? [];
-        if (list.length === 0) continue;
-        const latest = list.reduce((a: any, b: any) => a.rcept_dt > b.rcept_dt ? a : b);
-        const rdt = latest.rcept_dt as string;
-        return {
-          symbol: corp.symbol,
-          nameKo: corp.name,
-          date: `${rdt.slice(0, 4)}-${rdt.slice(4, 6)}-${rdt.slice(6, 8)}`,
-          market: 'KR',
-          timing: undefined,
-          epsEstimate: null, epsActual: null,
-          revenueEstimate: null, revenueActual: null, surprise: null,
-        };
+        for (const item of list) {
+          allItems.push({ date: item.rcept_dt as string, reportType: pType });
+        }
       } catch { /* 무시 */ }
     }
-    return null;
+    if (allItems.length === 0) return null;
+    // 가장 최근 날짜
+    const latest = allItems.reduce((a, b) => a.date > b.date ? a : b);
+    const rdt = latest.date;
+    return {
+      symbol: corp.symbol,
+      nameKo: corp.name,
+      date: `${rdt.slice(0, 4)}-${rdt.slice(4, 6)}-${rdt.slice(6, 8)}`,
+      market: 'KR',
+      timing: undefined,
+      epsEstimate: null, epsActual: null,
+      revenueEstimate: null, revenueActual: null, surprise: null,
+    };
   };
 
   const settled = await Promise.allSettled(KR_CORPS.map(fetchOneCorp));
