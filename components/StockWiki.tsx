@@ -1695,6 +1695,12 @@ function CalculatorView({ selectedCalc, setSelectedCalc, T, isDark }) {
       case 'fx': return <FXCalc />;
       case 'realrate': return <RealRateCalc />;
       case 'bondprice': return <BondPriceCalc />;
+      case 'capitalgain': return <CapitalGainCalc />;
+      case 'healthinsurance': return <HealthInsuranceCalc />;
+      case 'incometax': return <IncomeTaxCalc />;
+      case 'gifttax': return <GiftTaxCalc />;
+      case 'pension': return <PensionCalc />;
+      case 'taxsaving': return <TaxSavingCalc />;
       default: return null;
     }
   };
@@ -3758,6 +3764,518 @@ function BondPriceCalc() {
           '금리 하락 시 채권가격이 상승하는 역관계입니다. 채권 투자자에게는 호재입니다.',
           '듀레이션 길수록 금리민감도 큼 · 장기채가 단기채보다 변동성 큼',
           '한국 국고채·미국 국채가 대표적 안전자산',
+        ]}
+      />
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// 세금 · 절세 계산기 (2024~2025년 한국 현행 세법)
+// ─────────────────────────────────────────────
+
+function CapitalGainCalc() {
+  const [type, setType] = useState('domestic');
+  const [buyPrice, setBuyPrice] = useState('');
+  const [qty, setQty] = useState('');
+  const [sellPrice, setSellPrice] = useState('');
+  const [tradeCost, setTradeCost] = useState('');
+
+  const bp = Number(buyPrice) || 0;
+  const sp = Number(sellPrice) || 0;
+  const q = Number(qty) || 0;
+  const tc = Number(tradeCost) || 0;
+  const purchaseAmount = bp * q;
+  const saleAmount = sp * q;
+  const gain = saleAmount - purchaseAmount - tc;
+
+  let taxAmount = 0;
+  let taxRate = 0;
+  let taxableIncome = 0;
+
+  if (type === 'domestic') {
+    taxableIncome = Math.max(0, gain);
+    if (taxableIncome <= 30000000) {
+      taxRate = 20;
+      taxAmount = taxableIncome * 0.20;
+    } else {
+      taxRate = 25;
+      taxAmount = 30000000 * 0.20 + (taxableIncome - 30000000) * 0.25;
+    }
+    taxAmount += taxAmount * 0.1;
+  } else if (type === 'foreign') {
+    const basedGain = Math.max(0, gain - 2500000);
+    taxableIncome = basedGain;
+    taxRate = 22;
+    taxAmount = basedGain * 0.22;
+  } else {
+    taxableIncome = Math.max(0, gain);
+    taxRate = 20;
+    taxAmount = taxableIncome * 0.20;
+  }
+
+  const netProceeds = saleAmount - purchaseAmount - taxAmount;
+
+  return (
+    <div>
+      <CalcHeader num="30" title="양도소득세" desc="국내·해외·비상장주식 양도소득세를 계산합니다. 2024년 기준." color="#5B8DB8" />
+      <div className="flex mb-5 border" style={{ borderColor: _BORDER }}>
+        <button onClick={() => setType('domestic')} className="flex-1 py-3 text-sm font-medium transition-all border-r" style={{ borderColor: _BORDER, background: type === 'domestic' ? '#4A7045' : 'transparent', color: type === 'domestic' ? _T.textPrimary : _T.textMuted }}>국내대주주</button>
+        <button onClick={() => setType('foreign')} className="flex-1 py-3 text-sm font-medium transition-all border-r" style={{ borderColor: _BORDER, background: type === 'foreign' ? '#5B8DB8' : 'transparent', color: type === 'foreign' ? _T.textPrimary : _T.textMuted }}>해외주식</button>
+        <button onClick={() => setType('unlisted')} className="flex-1 py-3 text-sm font-medium transition-all" style={{ background: type === 'unlisted' ? '#C89650' : 'transparent', color: type === 'unlisted' ? _T.textPrimary : _T.textMuted }}>비상장</button>
+      </div>
+      <div className="grid md:grid-cols-2 gap-5 mb-8">
+        <NumInput label="매수가" value={buyPrice} onChange={setBuyPrice} unit="원" placeholder="50,000" />
+        <NumInput label="수량" value={qty} onChange={setQty} unit="주" placeholder="100" />
+        <NumInput label="매도가" value={sellPrice} onChange={setSellPrice} unit="원" placeholder="70,000" />
+        <NumInput label="취득비용 (수수료 등)" value={tradeCost} onChange={setTradeCost} unit="원" placeholder="50,000" />
+      </div>
+      <div className="grid md:grid-cols-3 border" style={{ borderColor: _BORDER }}>
+        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="양도차익" value={fmt(gain, 0)} unit="원" /></div>
+        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="세율" value={fmt(taxRate)} unit="%" /></div>
+        <ResultBox label="산출세액" value={fmt(taxAmount, 0)} unit="원" highlight color="#5B8DB8" />
+      </div>
+      <CalcNote
+        how={[
+          '국내대주주: 총가액 10억 이상 또는 지분율 기준 (코스피 1%, 코스닥 2%)',
+          '해외주식: 연간 250만원 기본공제 후 22% (지방소득세 포함)',
+          '비상장주식: 중소기업 10%, 일반 20%, 대주호 20~25%',
+          '양도차익 = (매도가 - 취득비용) - (매수가 + 거래비용)',
+        ]}
+        example={[
+          '국내대주주: 삼성전자 5만원 × 100주 = 500만원 구매 → 7만원 × 100주 = 700만원 판매',
+          '양도차익 = 700만 - 500만 = 200만원',
+          '세금 = 200만 × 20% × 1.1 (지방소득세) = 440만원',
+          '해외주식: 50만원 이익 → (50만 - 25만) × 22% = 5.5만원',
+        ]}
+        tip={[
+          '비상장주식은 중소기업 여부, 거래 사유에 따라 세율 다름',
+          '손실 통산: 2년 이내 다른 양도소득으로 손실 상쇄 가능',
+          '기본공제 (해외): 연간 250만원 (부부 합산시 500만원)',
+          '국내 상장주식 소액주주는 일반적으로 비과세 (대주주 제외)',
+          '※ 세법은 변경될 수 있으며, 정확한 납세액은 세무사 확인을 권장합니다.',
+        ]}
+      />
+    </div>
+  );
+}
+
+function HealthInsuranceCalc() {
+  const [financialIncome, setFinancialIncome] = useState('');
+  const [otherIncome, setOtherIncome] = useState('');
+  const [dependentStatus, setDependentStatus] = useState('independent');
+
+  const fi = Number(financialIncome) || 0;
+  const oi = Number(otherIncome) || 0;
+  const totalIncome = fi + oi;
+
+  const isGrossIncome = fi > 20000000;
+  const isDependentLost = totalIncome > 20000000;
+
+  const monthlyIncome = totalIncome / 12;
+  const insurancePremium = monthlyIncome * 0.0709;
+  const longTermCareRate = 0.1295;
+  const totalMonthlyPremium = insurancePremium * (1 + longTermCareRate);
+
+  return (
+    <div>
+      <CalcHeader num="31" title="건강보험료 (금융소득 피부양자)" desc="금융소득 2천만원 초과 시 피부양자 탈락. 2024년 기준." color="#5B8DB8" />
+      <div className="grid md:grid-cols-2 gap-5 mb-8">
+        <NumInput label="금융소득 (이자+배당)" value={financialIncome} onChange={setFinancialIncome} unit="원" placeholder="30,000,000" />
+        <NumInput label="기타소득 (근로·사업·기타)" value={otherIncome} onChange={setOtherIncome} unit="원" placeholder="0" />
+      </div>
+      <div className="grid md:grid-cols-2 border" style={{ borderColor: _BORDER }}>
+        <div className="border-r" style={{ borderColor: _BORDER }}>
+          <ResultBox label="종합과세 여부" value={isGrossIncome ? '과세' : '비과세'} unit="" />
+        </div>
+        <ResultBox label="피부양자 탈락" value={isDependentLost ? '예' : '아니오'} unit="" />
+      </div>
+      <div className="mt-5 border" style={{ borderColor: _BORDER }}>
+        <ResultBox label="예상 월 보험료 (건강+장기요양)" value={fmt(totalMonthlyPremium, 0)} unit="원" highlight color="#5B8DB8" />
+      </div>
+      <CalcNote
+        how={[
+          '금융소득(이자+배당) 2,000만원 초과 시 종합과세 대상',
+          '금융소득 포함 연 합산소득 2,000만원 초과 시 피부양자 탈락',
+          '건강보험료 = 소득월액 × 7.09% (2024년)',
+          '장기요양보험료 = 건강보험료 × 12.95%',
+        ]}
+        example={[
+          '금융소득 3,000만원, 근로소득 0원 → 종합과세, 피부양자 탈락',
+          '월소득 = 3,000만 ÷ 12 = 250만원',
+          '건강보험료 = 250만 × 7.09% ≈ 17.7만원',
+          '장기요양료 = 17.7만 × 12.95% ≈ 2.3만원',
+          '총 월보험료 ≈ 20만원',
+        ]}
+        tip={[
+          '피부양자 탈락 시 자영업자 기준으로 지역가입자 보험료 전액 부담',
+          '부부합산소득: 배우자 소득도 함께 계산 (기본공제 후)',
+          'ISA 계좌 이자·배당은 피부양자 판정에서 제외됨',
+          '건강보험료 산정 시 최소금액(약 12만원)이 적용될 수 있음',
+          '※ 세법은 변경될 수 있으며, 정확한 납세액은 세무사 확인을 권장합니다.',
+        ]}
+      />
+    </div>
+  );
+}
+
+function IncomeTaxCalc() {
+  const [incomeType, setIncomeType] = useState('employment');
+  const [annualIncome, setAnnualIncome] = useState('');
+  const [dependents, setDependents] = useState('0');
+  const [otherDeductions, setOtherDeductions] = useState('');
+
+  const income = Number(annualIncome) || 0;
+  const deps = Number(dependents) || 0;
+  const otherDed = Number(otherDeductions) || 0;
+
+  let laborDeduction = 0;
+  if (incomeType === 'employment') {
+    if (income <= 15000000) laborDeduction = income * 0.5;
+    else if (income <= 45000000) laborDeduction = 7500000 + (income - 15000000) * 0.3;
+    else if (income <= 100000000) laborDeduction = 16500000 + (income - 45000000) * 0.15;
+    else laborDeduction = 24750000 + (income - 100000000) * 0.05;
+  }
+
+  const basicDeduction = 1500000 * deps;
+  const taxableIncome = Math.max(0, income - laborDeduction - basicDeduction - otherDed);
+
+  let tax = 0;
+  let bracket = 0;
+  if (taxableIncome <= 14000000) {
+    tax = taxableIncome * 0.06;
+    bracket = 6;
+  } else if (taxableIncome <= 50000000) {
+    tax = 14000000 * 0.06 + (taxableIncome - 14000000) * 0.15 - 1260000;
+    bracket = 15;
+  } else if (taxableIncome <= 88000000) {
+    tax = 14000000 * 0.06 + 36000000 * 0.15 + (taxableIncome - 50000000) * 0.24 - 5760000;
+    bracket = 24;
+  } else if (taxableIncome <= 150000000) {
+    tax = 14000000 * 0.06 + 36000000 * 0.15 + 38000000 * 0.24 + (taxableIncome - 88000000) * 0.35 - 15440000;
+    bracket = 35;
+  } else if (taxableIncome <= 300000000) {
+    tax = 14000000 * 0.06 + 36000000 * 0.15 + 38000000 * 0.24 + 62000000 * 0.35 + (taxableIncome - 150000000) * 0.38 - 19940000;
+    bracket = 38;
+  } else if (taxableIncome <= 500000000) {
+    tax = 14000000 * 0.06 + 36000000 * 0.15 + 38000000 * 0.24 + 62000000 * 0.35 + 150000000 * 0.38 + (taxableIncome - 300000000) * 0.4 - 25940000;
+    bracket = 40;
+  } else if (taxableIncome <= 1000000000) {
+    tax = 14000000 * 0.06 + 36000000 * 0.15 + 38000000 * 0.24 + 62000000 * 0.35 + 150000000 * 0.38 + 200000000 * 0.4 + (taxableIncome - 500000000) * 0.42 - 35940000;
+    bracket = 42;
+  } else {
+    tax = 14000000 * 0.06 + 36000000 * 0.15 + 38000000 * 0.24 + 62000000 * 0.35 + 150000000 * 0.38 + 200000000 * 0.4 + 500000000 * 0.42 + (taxableIncome - 1000000000) * 0.45 - 65940000;
+    bracket = 45;
+  }
+
+  const localTax = tax * 0.1;
+  const totalTax = tax + localTax;
+  const effectiveRate = income > 0 ? (totalTax / income) * 100 : 0;
+
+  return (
+    <div>
+      <CalcHeader num="32" title="종합소득세 간이" desc="근로소득 기준 연간 소득세를 추정합니다. 2024년 기준." color="#5B8DB8" />
+      <div className="grid md:grid-cols-2 gap-5 mb-8">
+        <NumInput label="연소득" value={annualIncome} onChange={setAnnualIncome} unit="원" placeholder="50,000,000" />
+        <NumInput label="부양가족 수 (본인제외)" value={dependents} onChange={setDependents} unit="명" placeholder="2" />
+        <NumInput label="기타공제액" value={otherDeductions} onChange={setOtherDeductions} unit="원" placeholder="0" />
+      </div>
+      <div className={`grid ${incomeType === 'employment' ? 'md:grid-cols-3' : 'md:grid-cols-2'} border`} style={{ borderColor: _BORDER }}>
+        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="과세표준" value={fmt(taxableIncome, 0)} unit="원" /></div>
+        <div className={incomeType === 'employment' ? 'border-r' : ''} style={{ borderColor: _BORDER }}><ResultBox label="산출세액" value={fmt(tax, 0)} unit="원" /></div>
+        {incomeType === 'employment' && <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="지방소득세" value={fmt(localTax, 0)} unit="원" /></div>}
+        <ResultBox label="세율" value={fmt(bracket)} unit="%" highlight color="#5B8DB8" />
+      </div>
+      <div className="mt-5 border" style={{ borderColor: _BORDER }}>
+        <ResultBox label="실효세율" value={fmt(effectiveRate, 2)} unit="%" />
+      </div>
+      <CalcNote
+        how={[
+          '근로소득공제: 소득 구간별로 차등 적용 (최대 25,000만원)',
+          '기본공제: 본인 기본, 부양가족 150만원 × 명수',
+          '과세표준 = 소득 - 근로공제 - 기본공제 - 기타공제',
+          '2024년 8단계 누진세율 적용 (6% ~ 45%)',
+          '지방소득세 10% 추가 (국세 기준)',
+        ]}
+        example={[
+          '연소득 5,000만원, 부양가족 2명',
+          '근로공제 = 2,250만원 (5,000 - 1,500 × 0.3)',
+          '기본공제 = 2,250만원 (150 × 15)',
+          '과세표준 = 5,000 - 2,250 - 2,250 = 500만원',
+          '산출세액 = 500만 × 6% = 30만원, 지방소득세 3만원',
+        ]}
+        tip={[
+          '2024년 8구간: 1,400/5,000/8,800/15,000/30,000/50,000/100,000만원',
+          '근로소득은 원천징수로 대부분 미리 떼어감',
+          '부양가족 추가 시 기본공제로 세금 크게 감소',
+          '연말정산으로 초과납부분 환급 또는 추가 납부',
+          '※ 세법은 변경될 수 있으며, 정확한 납세액은 세무사 확인을 권장합니다.',
+        ]}
+      />
+    </div>
+  );
+}
+
+function GiftTaxCalc() {
+  const [giftAmount, setGiftAmount] = useState('');
+  const [relationship, setRelationship] = useState('spouse');
+  const [isMinor, setIsMinor] = useState(false);
+  const [priorGifts, setPriorGifts] = useState('');
+
+  const gift = Number(giftAmount) || 0;
+  const prior = Number(priorGifts) || 0;
+
+  let deduction = 0;
+  if (relationship === 'spouse') deduction = 600000000;
+  else if (relationship === 'parents') deduction = isMinor ? 20000000 : 50000000;
+  else if (relationship === 'children') deduction = 50000000;
+  else deduction = 10000000;
+
+  const taxableGift = Math.max(0, gift + prior - deduction);
+
+  let taxRate = 0;
+  let tax = 0;
+  if (taxableGift <= 100000000) {
+    taxRate = 10;
+    tax = taxableGift * 0.10;
+  } else if (taxableGift <= 500000000) {
+    taxRate = 20;
+    tax = 100000000 * 0.10 + (taxableGift - 100000000) * 0.20 - 10000000;
+  } else if (taxableGift <= 1000000000) {
+    taxRate = 30;
+    tax = 100000000 * 0.10 + 400000000 * 0.20 + (taxableGift - 500000000) * 0.30 - 60000000;
+  } else if (taxableGift <= 3000000000) {
+    taxRate = 40;
+    tax = 100000000 * 0.10 + 400000000 * 0.20 + 500000000 * 0.30 + (taxableGift - 1000000000) * 0.40 - 160000000;
+  } else {
+    taxRate = 50;
+    tax = 100000000 * 0.10 + 400000000 * 0.20 + 500000000 * 0.30 + 2000000000 * 0.40 + (taxableGift - 3000000000) * 0.50 - 460000000;
+  }
+
+  const creditTax = Math.floor(tax * 0.03);
+  const payableTax = Math.max(0, tax - creditTax);
+
+  return (
+    <div>
+      <CalcHeader num="33" title="증여세" desc="배우자·직계존속·직계비속별 공제 및 세율을 적용합니다. 2024년 기준." color="#5B8DB8" />
+      <div className="grid md:grid-cols-2 gap-5 mb-8">
+        <NumInput label="증여재산가액" value={giftAmount} onChange={setGiftAmount} unit="원" placeholder="200,000,000" />
+        <NumInput label="10년 내 기증여액" value={priorGifts} onChange={setPriorGifts} unit="원" placeholder="0" />
+      </div>
+      <div className="flex mb-5 gap-2 border" style={{ borderColor: _BORDER }}>
+        {['spouse', 'parents', 'children', 'other'].map((rel) => {
+          const labels = { spouse: '배우자', parents: '직계존속', children: '직계비속', other: '기타친족' };
+          return (
+            <button key={rel} onClick={() => setRelationship(rel)} className="flex-1 py-2.5 text-xs font-medium transition-all border-r" style={{ borderColor: _BORDER, background: relationship === rel ? '#5B8DB8' : 'transparent', color: relationship === rel ? _T.textPrimary : _T.textMuted }} >
+              {labels[rel as keyof typeof labels]}
+            </button>
+          );
+        })}
+      </div>
+      {relationship === 'parents' && (
+        <div className="mb-5 flex items-center gap-3 p-3 border" style={{ borderColor: _BORDER }}>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" checked={isMinor} onChange={(e) => setIsMinor(e.target.checked)} className="w-4 h-4" />
+            <span className="text-sm" style={{ color: _T.textSecondary }}>미성년자</span>
+          </label>
+        </div>
+      )}
+      <div className="grid md:grid-cols-3 border" style={{ borderColor: _BORDER }}>
+        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="공제후 과세표준" value={fmt(taxableGift, 0)} unit="원" /></div>
+        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="세율" value={fmt(taxRate)} unit="%" /></div>
+        <ResultBox label="산출세액" value={fmt(tax, 0)} unit="원" highlight color="#5B8DB8" />
+      </div>
+      <div className="mt-5 border" style={{ borderColor: _BORDER }}>
+        <ResultBox label="납부세액 (신고공제 3% 적용)" value={fmt(payableTax, 0)} unit="원" />
+      </div>
+      <CalcNote
+        how={[
+          '증여공제 (10년 합산): 배우자 6억, 직계존속→자녀 5,000만, 직계비속→부모 5,000만, 기타친족 1,000만',
+          '미성년자 직계존속: 2,000만원만 공제',
+          '5단계 누진세율: 10%, 20%, 30%, 40%, 50%',
+          '신고공제: 자진 신고 시 산출세액의 3% 감면',
+        ]}
+        example={[
+          '자녀에게 10억원 증여, 직계존속',
+          '공제 = 5,000만, 과세표준 = 10억 - 5,000만 = 9,500만',
+          '세금 = 9,500만 × 10% = 950만원',
+          '신고공제 3% = 28.5만, 납부액 = 921.5만원',
+        ]}
+        tip={[
+          '증여공제는 10년 롤링(매년 초기화 아님)',
+          '부부 간 증여는 공제가 크므로 절세 수단',
+          '생명보험 사망보험금은 증여세 대상 (과세 기준)',
+          '주택·금융자산 증여 시 별도 조정지표 적용',
+          '※ 세법은 변경될 수 있으며, 정확한 납세액은 세무사 확인을 권장합니다.',
+        ]}
+      />
+    </div>
+  );
+}
+
+function PensionCalc() {
+  const [pensionType, setPensionType] = useState('national');
+  const [monthlyIncome, setMonthlyIncome] = useState('');
+  const [yearsContributed, setYearsContributed] = useState('');
+  const [withdrawalAge, setWithdrawalAge] = useState('65');
+  const [principalAmount, setPrincipalAmount] = useState('');
+  const [expectedReturn, setExpectedReturn] = useState('3');
+  const [withdrawalYears, setWithdrawalYears] = useState('20');
+
+  let monthlyPension = 0;
+  let totalAmount = 0;
+
+  if (pensionType === 'national') {
+    const mi = Number(monthlyIncome) || 0;
+    const yc = Number(yearsContributed) || 0;
+    const aValue = 2989237;
+    const baseAmount = 1.2 * (aValue + mi) * (1 + (Math.max(0, yc * 12 - 240) / 12) * 0.05 / 12);
+    if (yc >= 20) {
+      monthlyPension = baseAmount;
+    } else {
+      monthlyPension = baseAmount * (yc * 12 / 240);
+    }
+    totalAmount = monthlyPension * 12;
+  } else {
+    const principal = Number(principalAmount) || 0;
+    const rate = Number(expectedReturn) / 100;
+    const years = Number(withdrawalYears) || 1;
+    const monthlyRate = Math.pow(1 + rate, 1 / 12) - 1;
+    const months = years * 12;
+    const futureValue = principal * Math.pow(1 + rate, years);
+    monthlyPension = futureValue / months;
+    totalAmount = futureValue;
+  }
+
+  return (
+    <div>
+      <CalcHeader num="34" title="연금 수령액" desc="국민연금 또는 퇴직·개인연금의 예상 월 수령액을 계산합니다." color="#5B8DB8" />
+      <div className="flex mb-5 border" style={{ borderColor: _BORDER }}>
+        <button onClick={() => setPensionType('national')} className="flex-1 py-3 text-sm font-medium transition-all border-r" style={{ borderColor: _BORDER, background: pensionType === 'national' ? '#5B8DB8' : 'transparent', color: pensionType === 'national' ? _T.textPrimary : _T.textMuted }}>국민연금</button>
+        <button onClick={() => setPensionType('retirement')} className="flex-1 py-3 text-sm font-medium transition-all" style={{ background: pensionType === 'retirement' ? '#C89650' : 'transparent', color: pensionType === 'retirement' ? _T.textPrimary : _T.textMuted }}>퇴직·개인연금</button>
+      </div>
+      {pensionType === 'national' ? (
+        <div className="grid md:grid-cols-2 gap-5 mb-8">
+          <NumInput label="현재 월소득" value={monthlyIncome} onChange={setMonthlyIncome} unit="원" placeholder="3,000,000" />
+          <NumInput label="가입기간" value={yearsContributed} onChange={setYearsContributed} unit="년" placeholder="30" />
+        </div>
+      ) : (
+        <div className="grid md:grid-cols-2 gap-5 mb-8">
+          <NumInput label="납입총액" value={principalAmount} onChange={setPrincipalAmount} unit="원" placeholder="300,000,000" />
+          <NumInput label="예상수익률" value={expectedReturn} onChange={setExpectedReturn} unit="%" placeholder="3" />
+          <NumInput label="수령기간" value={withdrawalYears} onChange={setWithdrawalYears} unit="년" placeholder="20" />
+        </div>
+      )}
+      <div className="grid md:grid-cols-2 border" style={{ borderColor: _BORDER }}>
+        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="예상 월 연금액" value={fmt(monthlyPension, 0)} unit="원" highlight color="#5B8DB8" /></div>
+        <ResultBox label="연간 수령액" value={fmt(monthlyPension * 12, 0)} unit="원" />
+      </div>
+      <CalcNote
+        how={[
+          '국민연금: 기본연금액 = 1.2 × (A값 + 본인 평균소득) × 가산금리',
+          '2024년 A값 = 2,989,237원',
+          '20년 초과 가입 시: 기본연금액 × (1 + 0.05 × 초과월수/12)',
+          '20년 미만 시: 기본연금액 × (가입월수 / 240)',
+          '퇴직연금: 납입원금과 수익률로 단순 계산',
+        ]}
+        example={[
+          '국민연금: 월소득 300만, 30년 가입',
+          'A값 299만 + 본인 300만 = 599만 기준',
+          '기본연금액 = 1.2 × 599만 × 1.05 ≈ 755만원',
+          '월 약 62.9만원, 연 754.8만원',
+        ]}
+        tip={[
+          '국민연금은 20년 이상 가입해야 노령연금 수급 가능',
+          '연금 수령은 65세부터 가능 (조기 60세 가능하나 감액)',
+          '부부 모두 수급 시 합산으로 큰 생활비 확보',
+          'IRP나 연금저축으로 추가 수령 가능',
+          '※ 세법은 변경될 수 있으며, 정확한 납세액은 세무사 확인을 권장합니다.',
+        ]}
+      />
+    </div>
+  );
+}
+
+function TaxSavingCalc() {
+  const [savingType, setSavingType] = useState('isa');
+  const [expectedProfit, setExpectedProfit] = useState('');
+  const [accountType, setAccountType] = useState('general');
+  const [annualIncome, setAnnualIncome] = useState('');
+  const [irpContribution, setIrpContribution] = useState('');
+  const [pensionContribution, setPensionContribution] = useState('');
+
+  let taxSavings = 0;
+  let effectiveReturn = 0;
+
+  if (savingType === 'isa') {
+    const profit = Number(expectedProfit) || 0;
+    const nonTaxLimit = accountType === 'general' ? 2000000 : 4000000;
+    const taxablePortion = Math.max(0, profit - nonTaxLimit);
+    const taxOnExcess = taxablePortion * 0.099;
+    const generalTax = profit * 0.154;
+    taxSavings = Math.max(0, generalTax - taxOnExcess);
+    effectiveReturn = profit > 0 ? ((profit - taxOnExcess) / profit) * 100 : 0;
+  } else {
+    const income = Number(annualIncome) || 0;
+    const irp = Number(irpContribution) || 0;
+    const pension = Number(pensionContribution) || 0;
+    const totalContribution = irp + pension;
+    const rate = income <= 55000000 ? 0.165 : 0.132;
+    taxSavings = totalContribution * rate;
+    effectiveReturn = 100;
+  }
+
+  return (
+    <div>
+      <CalcHeader num="35" title="ISA · IRP · 연금저축 절세" desc="2024년 기준 절세 효과와 실제 수익률을 비교합니다." color="#5B8DB8" />
+      <div className="flex mb-5 border" style={{ borderColor: _BORDER }}>
+        <button onClick={() => setSavingType('isa')} className="flex-1 py-3 text-sm font-medium transition-all border-r" style={{ borderColor: _BORDER, background: savingType === 'isa' ? '#5B8DB8' : 'transparent', color: savingType === 'isa' ? _T.textPrimary : _T.textMuted }}>ISA</button>
+        <button onClick={() => setSavingType('irp')} className="flex-1 py-3 text-sm font-medium transition-all" style={{ background: savingType === 'irp' ? '#C89650' : 'transparent', color: savingType === 'irp' ? _T.textPrimary : _T.textMuted }}>IRP + 연금저축</button>
+      </div>
+      {savingType === 'isa' ? (
+        <div className="grid md:grid-cols-2 gap-5 mb-8">
+          <NumInput label="예상 수익" value={expectedProfit} onChange={setExpectedProfit} unit="원" placeholder="10,000,000" />
+          <div className="flex gap-2 items-end">
+            <div className="flex-1">
+              <label className="block text-sm mb-2" style={{ color: _T.textSecondary }}>계좌 유형</label>
+              <select value={accountType} onChange={(e) => setAccountType(e.target.value)} className="w-full px-3 py-2 border" style={{ borderColor: _BORDER, background: _T.bgCard, color: _T.textSecondary }}>
+                <option value="general">일반형 (200만 비과세)</option>
+                <option value="common">서민형 (400만 비과세)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="grid md:grid-cols-2 gap-5 mb-8">
+          <NumInput label="연소득" value={annualIncome} onChange={setAnnualIncome} unit="원" placeholder="50,000,000" />
+          <NumInput label="IRP 납입" value={irpContribution} onChange={setIrpContribution} unit="원" placeholder="5,000,000" />
+          <NumInput label="연금저축 납입" value={pensionContribution} onChange={setPensionContribution} unit="원" placeholder="4,000,000" />
+        </div>
+      )}
+      <div className={`grid ${savingType === 'isa' ? 'md:grid-cols-2' : 'md:grid-cols-3'} border`} style={{ borderColor: _BORDER }}>
+        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="절세액" value={fmt(taxSavings, 0)} unit="원" /></div>
+        {savingType === 'isa' && <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="일반계좌 대비 절약" value={fmt(expectedProfit > 0 ? (expectedProfit * 0.154 - expectedProfit * 0.099) : 0, 0)} unit="원" /></div>}
+        <ResultBox label={savingType === 'isa' ? '실효수익률' : '세액공제율'} value={fmt(effectiveReturn, 2)} unit="%" highlight color="#5B8DB8" />
+      </div>
+      <CalcNote
+        how={[
+          'ISA: 연 2,000만원 납입 한도, 비과세 200만~400만원 한도',
+          '초과분 9.9% 분리과세 (일반세율 15.4% 대비)',
+          'IRP + 연금저축: 합산 900만원 세액공제',
+          '공제율: 5,500만 이하 16.5%, 초과 13.2%',
+        ]}
+        example={[
+          'ISA 일반형: 1,000만 수익',
+          '비과세 200만, 과세 800만',
+          '세금 = 800만 × 9.9% = 79.2만원',
+          '일반계좌: 1,000만 × 15.4% = 154만 → 절약 74.8만원',
+        ]}
+        tip={[
+          'ISA는 5년 단위 계약, 중도 해지 시 세제 혜택 상실',
+          'IRP는 원금 공제 + 수익 과세 (연금 수령 시 과세)',
+          'FIRE족이나 고배당 포트폴리오에 ISA 최적화',
+          '연금저축은 부부 각각 600만원 한도 (별도)',
+          '※ 세법은 변경될 수 있으며, 정확한 납세액은 세무사 확인을 권장합니다.',
         ]}
       />
     </div>

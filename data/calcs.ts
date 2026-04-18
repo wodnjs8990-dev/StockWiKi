@@ -66,4 +66,15 @@ export const CALC_CATEGORIES: CalcCategory[] = [
       { id: 'bondprice', name: '채권 가격', num: '29' },
     ],
   },
+  {
+    name: '세금 · 절세', color: '#5B8DB8',
+    calcs: [
+      { id: 'capitalgain', name: '양도소득세', num: '30' },
+      { id: 'healthinsurance', name: '건강보험료 (금융소득)', num: '31' },
+      { id: 'incometax', name: '종합소득세 간이', num: '32' },
+      { id: 'gifttax', name: '증여세', num: '33' },
+      { id: 'pension', name: '연금 수령액', num: '34' },
+      { id: 'taxsaving', name: 'ISA · IRP · 연금저축 절세', num: '35' },
+    ],
+  },
 ];
