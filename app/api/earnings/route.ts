@@ -4,10 +4,23 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 // ─── 타입 ───────────────────────────────────────────────
+export type Sector =
+  | 'Tech'        // 기술
+  | 'Finance'     // 금융
+  | 'Healthcare'  // 헬스케어
+  | 'Consumer'    // 소비재
+  | 'Energy'      // 에너지
+  | 'Industrial'  // 산업재
+  | 'Telecom'     // 통신
+  | 'Utility'     // 유틸리티
+  | 'Material'    // 소재
+  | 'RealEstate'  // 부동산
+  | 'Other';      // 기타
+
 export type EarningItem = {
   symbol: string;
   nameKo: string;
-  date: string;         // YYYY-MM-DD (KST)
+  date: string;
   market: 'US' | 'KR';
   timing?: 'BMO' | 'AMC' | 'unknown';
   epsEstimate?: number | null;
@@ -17,6 +30,7 @@ export type EarningItem = {
   surprise?: number | null;
   isSP500?: boolean;
   isNDX100?: boolean;
+  sector?: Sector;
 };
 
 // ─── 미국 종목 한글명 (S&P500 + 나스닥100 주요 종목) ────
@@ -110,162 +124,115 @@ const US_NAME_MAP: Record<string, string> = {
   'CZR':'시저스엔터테인먼트',
 };
 
-// ─── 국내 종목 (코스피200 + 코스닥150 주요 종목) ──────────
-const KR_CORPS: { corpCode: string; name: string; symbol: string }[] = [
-  // ── 코스피 ──
-  { corpCode: '00126380', name: '삼성전자', symbol: '005930' },
-  { corpCode: '00164779', name: 'SK하이닉스', symbol: '000660' },
-  { corpCode: '00401731', name: 'LG에너지솔루션', symbol: '373220' },
-  { corpCode: '00104426', name: '삼성바이오로직스', symbol: '207940' },
-  { corpCode: '00113495', name: '현대자동차', symbol: '005380' },
-  { corpCode: '00164742', name: '삼성SDI', symbol: '006400' },
-  { corpCode: '00126860', name: '기아', symbol: '000270' },
-  { corpCode: '00157556', name: 'POSCO홀딩스', symbol: '005490' },
-  { corpCode: '00164400', name: 'LG화학', symbol: '051910' },
-  { corpCode: '00138345', name: '셀트리온', symbol: '068270' },
-  { corpCode: '00105564', name: 'NAVER', symbol: '035420' },
-  { corpCode: '00359757', name: '카카오', symbol: '035720' },
-  { corpCode: '00113526', name: '현대모비스', symbol: '012330' },
-  { corpCode: '00117008', name: 'KB금융', symbol: '105560' },
-  { corpCode: '00111722', name: '신한지주', symbol: '055550' },
-  { corpCode: '00259454', name: '삼성물산', symbol: '028260' },
-  { corpCode: '00164588', name: 'LG전자', symbol: '066570' },
-  { corpCode: '00102027', name: '하나금융지주', symbol: '086790' },
-  { corpCode: '00164523', name: 'LG', symbol: '003550' },
-  { corpCode: '00113028', name: '두산에너빌리티', symbol: '034020' },
-  { corpCode: '00143361', name: '한국전력', symbol: '015760' },
-  { corpCode: '00102476', name: 'SK텔레콤', symbol: '017670' },
-  { corpCode: '00159193', name: 'KT', symbol: '030200' },
-  { corpCode: '00113846', name: '삼성생명', symbol: '032830' },
-  { corpCode: '00156631', name: '삼성화재', symbol: '000810' },
-  { corpCode: '00126929', name: '고려아연', symbol: '010130' },
-  { corpCode: '00148064', name: 'S-Oil', symbol: '010950' },
-  { corpCode: '00101521', name: '한국조선해양', symbol: '009540' },
-  { corpCode: '00115821', name: 'HD현대중공업', symbol: '329180' },
-  { corpCode: '00251685', name: '카카오뱅크', symbol: '323410' },
-  { corpCode: '00164711', name: 'SK이노베이션', symbol: '096770' },
-  { corpCode: '00126186', name: 'SK', symbol: '034730' },
-  { corpCode: '00126623', name: '삼성증권', symbol: '016360' },
-  { corpCode: '00108921', name: '우리금융지주', symbol: '316140' },
-  { corpCode: '00159290', name: 'HD현대', symbol: '267250' },
-  { corpCode: '00164530', name: 'LG디스플레이', symbol: '034220' },
-  { corpCode: '00164401', name: 'LG이노텍', symbol: '011070' },
-  { corpCode: '00160694', name: '현대글로비스', symbol: '086280' },
-  { corpCode: '00120182', name: '현대제철', symbol: '004020' },
-  { corpCode: '00104216', name: '한화에어로스페이스', symbol: '012450' },
-  { corpCode: '00131791', name: '한화솔루션', symbol: '009830' },
-  { corpCode: '00113584', name: '삼성엔지니어링', symbol: '028050' },
-  { corpCode: '00126953', name: '현대건설', symbol: '000720' },
-  { corpCode: '00108532', name: 'GS건설', symbol: '006360' },
-  { corpCode: '00140516', name: '메리츠금융지주', symbol: '138040' },
-  { corpCode: '00113067', name: '두산밥캣', symbol: '241560' },
-  { corpCode: '00126676', name: '삼성중공업', symbol: '010140' },
-  { corpCode: '00126215', name: '대한항공', symbol: '003490' },
-  { corpCode: '00108398', name: 'GS홀딩스', symbol: '078930' },
-  { corpCode: '00114099', name: '롯데케미칼', symbol: '011170' },
-  { corpCode: '00126124', name: '롯데쇼핑', symbol: '023530' },
-  { corpCode: '00113988', name: '한국가스공사', symbol: '036460' },
-  { corpCode: '00155227', name: '미래에셋증권', symbol: '006800' },
-  { corpCode: '00128570', name: '한국투자금융지주', symbol: '071050' },
-  { corpCode: '00131313', name: 'NH투자증권', symbol: '005940' },
-  { corpCode: '00126230', name: '기업은행', symbol: '024110' },
-  { corpCode: '00264904', name: 'BNK금융지주', symbol: '138930' },
-  { corpCode: '00258801', name: 'DGB금융지주', symbol: '139130' },
-  { corpCode: '00257439', name: 'JB금융지주', symbol: '175330' },
-  { corpCode: '00113120', name: '현대해상', symbol: '001450' },
-  { corpCode: '00126620', name: 'DB손해보험', symbol: '005830' },
-  { corpCode: '00104531', name: '한화생명', symbol: '088350' },
-  { corpCode: '00101929', name: '롯데지주', symbol: '004990' },
-  { corpCode: '00112009', name: 'CJ제일제당', symbol: '097950' },
-  { corpCode: '00108377', name: 'CJ', symbol: '001040' },
-  { corpCode: '00109080', name: '이마트', symbol: '139480' },
-  { corpCode: '00115418', name: 'BGF리테일', symbol: '282330' },
-  { corpCode: '00156024', name: 'GS리테일', symbol: '007070' },
-  { corpCode: '00115564', name: 'KT&G', symbol: '033780' },
-  { corpCode: '00117628', name: '오리온', symbol: '271560' },
-  { corpCode: '00113531', name: '아모레퍼시픽', symbol: '090430' },
-  { corpCode: '00226413', name: 'LG생활건강', symbol: '051900' },
-  { corpCode: '00109708', name: 'HMM', symbol: '011200' },
-  { corpCode: '00104062', name: 'SK가스', symbol: '018670' },
-  { corpCode: '00122498', name: '두산', symbol: '000150' },
-  { corpCode: '00101559', name: 'OCI홀딩스', symbol: '010060' },
-  { corpCode: '00166997', name: '효성첨단소재', symbol: '298050' },
-  { corpCode: '00155276', name: '코오롱인더', symbol: '120110' },
-  { corpCode: '00113097', name: '한진칼', symbol: '180640' },
-  { corpCode: '00115145', name: '아시아나항공', symbol: '020560' },
-  { corpCode: '00108866', name: '유한양행', symbol: '000100' },
-  { corpCode: '00126115', name: '한미약품', symbol: '128940' },
-  { corpCode: '00113891', name: '녹십자', symbol: '006280' },
-  { corpCode: '00109002', name: 'NCSoft', symbol: '036570' },
-  { corpCode: '00102447', name: '넷마블', symbol: '251270' },
-  { corpCode: '00163557', name: '크래프톤', symbol: '259960' },
-  { corpCode: '00126558', name: '셀트리온제약', symbol: '068760' },
-  { corpCode: '00113386', name: '동아에스티', symbol: '170900' },
-  { corpCode: '00113171', name: '종근당', symbol: '185750' },
-  { corpCode: '00104648', name: '대웅제약', symbol: '069620' },
-  { corpCode: '00113649', name: '리노공업', symbol: '058470' },
-  { corpCode: '00164835', name: 'SK바이오팜', symbol: '326030' },
-  { corpCode: '00164775', name: 'SK바이오사이언스', symbol: '302440' },
-  { corpCode: '00179433', name: '카카오페이', symbol: '377300' },
-  { corpCode: '00184599', name: '카카오게임즈', symbol: '293490' },
-  { corpCode: '00130413', name: '현대위아', symbol: '011210' },
-  { corpCode: '00101594', name: '한국타이어앤테크놀로지', symbol: '161390' },
-  { corpCode: '00108760', name: '금호석유화학', symbol: '011780' },
-  { corpCode: '00126928', name: '영풍', symbol: '000670' },
-  { corpCode: '00126512', name: '한진중공업홀딩스', symbol: '003480' },
-  { corpCode: '00115384', name: '태광산업', symbol: '003160' },
-  { corpCode: '00108374', name: 'CJ대한통운', symbol: '000120' },
-  { corpCode: '00155228', name: '미래에셋생명', symbol: '085620' },
-  { corpCode: '00101535', name: '대한유화', symbol: '006650' },
-  { corpCode: '00101055', name: '한화', symbol: '000880' },
-  { corpCode: '00126847', name: '삼성전기', symbol: '009150' },
-  { corpCode: '00164534', name: 'LG유플러스', symbol: '032640' },
-  { corpCode: '00101246', name: 'SKC', symbol: '011790' },
-  { corpCode: '00114814', name: '롯데에너지머티리얼즈', symbol: '020150' },
-  { corpCode: '00104635', name: '한국항공우주', symbol: '047810' },
-  { corpCode: '00113525', name: '현대오토에버', symbol: '307950' },
-  { corpCode: '00126875', name: '삼성SDS', symbol: '018260' },
-  { corpCode: '00108396', name: 'GS에너지', symbol: '093050' },
-  // ── 코스닥 ──
-  { corpCode: '00155872', name: '에코프로비엠', symbol: '247540' },
-  { corpCode: '00160984', name: '에코프로', symbol: '086520' },
-  { corpCode: '00260374', name: '포스코퓨처엠', symbol: '003670' },
-  { corpCode: '00131129', name: '알테오젠', symbol: '196170' },
-  { corpCode: '00235225', name: '엘앤에프', symbol: '066970' },
-  { corpCode: '00401121', name: 'HLB', symbol: '028300' },
-  { corpCode: '00184038', name: 'HPSP', symbol: '403870' },
-  { corpCode: '00127639', name: '솔브레인', symbol: '357780' },
-  { corpCode: '00145210', name: '펄어비스', symbol: '263750' },
-  { corpCode: '00143885', name: '컴투스', symbol: '078340' },
-  { corpCode: '00130507', name: '위메이드', symbol: '112040' },
-  { corpCode: '00102337', name: '제넥신', symbol: '095700' },
-  { corpCode: '00139456', name: '셀트리온헬스케어', symbol: '091990' },
-  { corpCode: '00102031', name: '파라다이스', symbol: '034230' },
-  { corpCode: '00160160', name: '에이피알', symbol: '278470' },
-  { corpCode: '00160479', name: '성일하이텍', symbol: '365340' },
-  { corpCode: '00163226', name: '원익IPS', symbol: '240810' },
-  { corpCode: '00149655', name: '파크시스템스', symbol: '140860' },
-  { corpCode: '00136655', name: '레인보우로보틱스', symbol: '277810' },
-  { corpCode: '00155489', name: '씨에스윈드', symbol: '112610' },
-  { corpCode: '00128185', name: '동진쎄미켐', symbol: '005290' },
-  { corpCode: '00113270', name: '리가켐바이오', symbol: '141080' },
-  { corpCode: '00124629', name: '클래시스', symbol: '214150' },
-  { corpCode: '00165019', name: '케어젠', symbol: '214370' },
-  { corpCode: '00124488', name: '메가스터디교육', symbol: '215200' },
-  { corpCode: '00157932', name: '에스티팜', symbol: '237690' },
-  { corpCode: '00140571', name: '피에스케이홀딩스', symbol: '319400' },
-  { corpCode: '00168345', name: '유니드', symbol: '014830' },
-  { corpCode: '00143059', name: '더블유씨피', symbol: '393890' },
-  { corpCode: '00165535', name: '이녹스첨단소재', symbol: '272290' },
-  { corpCode: '00118797', name: '오스템임플란트', symbol: '048260' },
-  { corpCode: '00156535', name: '덴티움', symbol: '145720' },
-  { corpCode: '00104215', name: '한글과컴퓨터', symbol: '030520' },
-  { corpCode: '00141028', name: '비에이치', symbol: '090460' },
-  { corpCode: '00149030', name: '엠씨넥스', symbol: '097520' },
-  { corpCode: '00129128', name: '테크트로닉스', symbol: '053610' },
-  { corpCode: '00165813', name: '에코앤드림', symbol: '101360' },
-  { corpCode: '00132100', name: '제일기획', symbol: '030000' },
-];
+// ─── 섹터 맵 ────────────────────────────────────────────
+export const SECTOR_MAP: Record<string, Sector> = {
+  // ── Tech ──
+  'AAPL':'Tech','MSFT':'Tech','NVDA':'Tech','AMD':'Tech','INTC':'Tech','QCOM':'Tech',
+  'AVGO':'Tech','TXN':'Tech','MU':'Tech','AMAT':'Tech','LRCX':'Tech','KLAC':'Tech',
+  'MRVL':'Tech','SNPS':'Tech','CDNS':'Tech','MCHP':'Tech','ON':'Tech','STX':'Tech',
+  'WDC':'Tech','HPQ':'Tech','HPE':'Tech','DELL':'Tech','IBM':'Tech','CSCO':'Tech',
+  'ORCL':'Tech','CRM':'Tech','ADBE':'Tech','NOW':'Tech','SNOW':'Tech','PLTR':'Tech',
+  'NET':'Tech','DDOG':'Tech','ZS':'Tech','OKTA':'Tech','MDB':'Tech','TEAM':'Tech',
+  'WDAY':'Tech','VEEV':'Tech','INTU':'Tech','HUBS':'Tech','ANSS':'Tech','ADSK':'Tech',
+  'FTNT':'Tech','PANW':'Tech','CRWD':'Tech','CTSH':'Tech','ACN':'Tech','ANET':'Tech',
+  'KEYS':'Tech','CDW':'Tech','JNPR':'Tech','GLW':'Tech','TEL':'Tech','APH':'Tech',
+  'FFIV':'Tech','NTAP':'Tech','SMCI':'Tech','APP':'Tech','TTD':'Tech','ARM':'Tech',
+  'ASML':'Tech','TSM':'Tech','NXPI':'Tech','MPWR':'Tech',
+  // ── Finance ──
+  'JPM':'Finance','BAC':'Finance','WFC':'Finance','C':'Finance','GS':'Finance',
+  'MS':'Finance','BLK':'Finance','SCHW':'Finance','AXP':'Finance','V':'Finance',
+  'MA':'Finance','PYPL':'Finance','COF':'Finance','DFS':'Finance','USB':'Finance',
+  'PNC':'Finance','TFC':'Finance','FITB':'Finance','RF':'Finance','KEY':'Finance',
+  'BK':'Finance','STT':'Finance','ICE':'Finance','CME':'Finance','SPGI':'Finance',
+  'MCO':'Finance','MSCI':'Finance','FIS':'Finance','FISV':'Finance','GPN':'Finance',
+  'CB':'Finance','PGR':'Finance','MET':'Finance','PRU':'Finance','AFL':'Finance',
+  'TRV':'Finance','ALL':'Finance','AIG':'Finance','BRK-B':'Finance','HBAN':'Finance',
+  'MTB':'Finance','CFG':'Finance','SYF':'Finance','AMP':'Finance','RJF':'Finance',
+  'TROW':'Finance','BEN':'Finance','IVZ':'Finance','MKTX':'Finance','CBOE':'Finance',
+  'NDAQ':'Finance','COIN':'Finance','HOOD':'Finance','SQ':'Finance','AFRM':'Finance',
+  'SOFI':'Finance','NU':'Finance',
+  // ── Healthcare ──
+  'UNH':'Healthcare','JNJ':'Healthcare','LLY':'Healthcare','ABBV':'Healthcare',
+  'MRK':'Healthcare','PFE':'Healthcare','TMO':'Healthcare','ABT':'Healthcare',
+  'DHR':'Healthcare','BMY':'Healthcare','AMGN':'Healthcare','GILD':'Healthcare',
+  'ISRG':'Healthcare','VRTX':'Healthcare','REGN':'Healthcare','CVS':'Healthcare',
+  'CI':'Healthcare','HUM':'Healthcare','ELV':'Healthcare','CNC':'Healthcare',
+  'ZBH':'Healthcare','SYK':'Healthcare','BSX':'Healthcare','MDT':'Healthcare',
+  'BDX':'Healthcare','ZTS':'Healthcare','IDXX':'Healthcare','IQV':'Healthcare',
+  'HCA':'Healthcare','A':'Healthcare','BAX':'Healthcare','BIIB':'Healthcare',
+  'MRNA':'Healthcare','HOLX':'Healthcare','DXCM':'Healthcare','PODD':'Healthcare',
+  'INCY':'Healthcare','TECH':'Healthcare','MOH':'Healthcare','DVA':'Healthcare',
+  'HSIC':'Healthcare','RVTY':'Healthcare','MTD':'Healthcare','WAT':'Healthcare',
+  'PKI':'Healthcare','ALGN':'Healthcare','EW':'Healthcare','RMD':'Healthcare',
+  'STE':'Healthcare','COO':'Healthcare',
+  // ── Consumer (소비재/임의·필수) ──
+  'AMZN':'Consumer','TSLA':'Consumer','MCD':'Consumer','SBUX':'Consumer',
+  'NKE':'Consumer','TJX':'Consumer','PG':'Consumer','KO':'Consumer','PEP':'Consumer',
+  'PM':'Consumer','MO':'Consumer','CL':'Consumer','EL':'Consumer','KMB':'Consumer',
+  'GIS':'Consumer','MDLZ':'Consumer','HSY':'Consumer','MKC':'Consumer','YUM':'Consumer',
+  'CMG':'Consumer','DPZ':'Consumer','DRI':'Consumer','ROST':'Consumer','BURL':'Consumer',
+  'AZO':'Consumer','ORLY':'Consumer','TSCO':'Consumer','DG':'Consumer','DLTR':'Consumer',
+  'LULU':'Consumer','WMT':'Consumer','COST':'Consumer','HD':'Consumer','LOW':'Consumer',
+  'TGT':'Consumer','EBAY':'Consumer','ETSY':'Consumer','SHOP':'Consumer','PINS':'Consumer',
+  'SNAP':'Consumer','RBLX':'Consumer','SPOT':'Consumer','MTCH':'Consumer','NFLX':'Consumer',
+  'DIS':'Consumer','CMCSA':'Consumer','EA':'Consumer','TTWO':'Consumer','ATVI':'Consumer',
+  'BKNG':'Consumer','EXPE':'Consumer','MAR':'Consumer','HLT':'Consumer','CCL':'Consumer',
+  'RCL':'Consumer','NCLH':'Consumer','MGM':'Consumer','WYNN':'Consumer','LVS':'Consumer',
+  'F':'Consumer','GM':'Consumer','KMX':'Consumer','APTV':'Consumer',
+  'GRMN':'Consumer','PHM':'Consumer','LEN':'Consumer','TOL':'Consumer',
+  'TPR':'Consumer','RL':'Consumer','ULTA':'Consumer','BBWI':'Consumer',
+  'KHC':'Consumer','TAP':'Consumer','CPB':'Consumer','CAG':'Consumer','SJM':'Consumer',
+  'HRL':'Consumer','LW':'Consumer','K':'Consumer','KVUE':'Consumer','KDP':'Consumer',
+  'MNST':'Consumer','BG':'Consumer',
+  // ── Energy ──
+  'XOM':'Energy','CVX':'Energy','COP':'Energy','EOG':'Energy','SLB':'Energy',
+  'OXY':'Energy','MPC':'Energy','VLO':'Energy','PSX':'Energy','HES':'Energy',
+  'DVN':'Energy','FANG':'Energy','HAL':'Energy','BKR':'Energy','KMI':'Energy',
+  'WMB':'Energy','OKE':'Energy','TRGP':'Energy','APA':'Energy','MRO':'Energy',
+  'CTRA':'Energy','EQT':'Energy','NRG':'Energy','VST':'Energy',
+  'FSLR':'Energy','ENPH':'Energy','CEG':'Energy','PCG':'Energy',
+  // ── Industrial ──
+  'CAT':'Industrial','DE':'Industrial','HON':'Industrial','RTX':'Industrial',
+  'LMT':'Industrial','GE':'Industrial','BA':'Industrial','UPS':'Industrial',
+  'FDX':'Industrial','MMM':'Industrial','EMR':'Industrial','ETN':'Industrial',
+  'PH':'Industrial','ROK':'Industrial','ITW':'Industrial','GWW':'Industrial',
+  'FAST':'Industrial','NOC':'Industrial','GD':'Industrial','LHX':'Industrial',
+  'CARR':'Industrial','OTIS':'Industrial','DAL':'Industrial','UAL':'Industrial',
+  'AAL':'Industrial','LUV':'Industrial','CSX':'Industrial','NSC':'Industrial',
+  'UNP':'Industrial','JBHT':'Industrial','CHRW':'Industrial','EXPD':'Industrial',
+  'XYL':'Industrial','NDSN':'Industrial','IR':'Industrial','TT':'Industrial',
+  'TDG':'Industrial','HWM':'Industrial','TXT':'Industrial','L':'Industrial',
+  'LDOS':'Industrial','HII':'Industrial','TDY':'Industrial','TFX':'Industrial',
+  'SWK':'Industrial','SNA':'Industrial','ROL':'Industrial','ROP':'Industrial',
+  'HUBB':'Industrial','AME':'Industrial','FTV':'Industrial','AXON':'Industrial',
+  'PWR':'Industrial','WAB':'Industrial','BLDR':'Industrial',
+  // ── Telecom ──
+  'T':'Telecom','VZ':'Telecom','TMUS':'Telecom','CHTR':'Telecom',
+  'FOXA':'Telecom','FOX':'Telecom','NWSA':'Telecom','NWS':'Telecom',
+  'PARA':'Telecom','WBD':'Telecom','LUMN':'Telecom','ERIC':'Telecom',
+  // ── Utility ──
+  'NEE':'Utility','DUK':'Utility','SO':'Utility','D':'Utility','AEP':'Utility',
+  'EXC':'Utility','SRE':'Utility','XEL':'Utility','ED':'Utility','EIX':'Utility',
+  'DTE':'Utility','ETR':'Utility','FE':'Utility','PPL':'Utility','AEE':'Utility',
+  'CMS':'Utility','CNP':'Utility','NI':'Utility','LNT':'Utility','EVRG':'Utility',
+  'PNW':'Utility','AWK':'Utility','ES':'Utility','WEC':'Utility','PEG':'Utility',
+  // ── Material ──
+  'LIN':'Material','APD':'Material','ECL':'Material','SHW':'Material','PPG':'Material',
+  'NUE':'Material','FCX':'Material','NEM':'Material','AA':'Material','ALB':'Material',
+  'CF':'Material','MOS':'Material','FMC':'Material','CE':'Material','LYB':'Material',
+  'DD':'Material','DOW':'Material','EMN':'Material','IFF':'Material','IP':'Material',
+  'PKG':'Material','SEE':'Material','BALL':'Material','AMCR':'Material','AVY':'Material',
+  'MLM':'Material','VMC':'Material','STLD':'Material',
+  // ── RealEstate ──
+  'AMT':'RealEstate','PLD':'RealEstate','EQIX':'RealEstate','CCI':'RealEstate',
+  'SPG':'RealEstate','O':'RealEstate','DLR':'RealEstate','PSA':'RealEstate',
+  'EQR':'RealEstate','AVB':'RealEstate','WELL':'RealEstate','VTR':'RealEstate',
+  'ARE':'RealEstate','MAA':'RealEstate','UDR':'RealEstate','EXR':'RealEstate',
+  'INVH':'RealEstate','SBAC':'RealEstate','IRM':'RealEstate','HST':'RealEstate',
+  'REG':'RealEstate','FRT':'RealEstate','KIM':'RealEstate','CPT':'RealEstate',
+  'ESS':'RealEstate','CBRE':'RealEstate','CSGP':'RealEstate',
+  'VNO':'RealEstate','SLG':'RealEstate','DOC':'RealEstate',
+};
 
 const AV_KEY = process.env.ALPHA_VANTAGE_API_KEY ?? '';
 
@@ -378,103 +345,18 @@ async function fetchUSEarnings(): Promise<EarningItem[]> {
   return Array.from(bySymbol.values());
 }
 
-// ─── KRX: 국내 종목 실적 발표 일정 ──────────────────────
-// KRX 데이터포털 실적 발표 일정 (날짜 범위로 전체 시장 한번에)
-async function fetchKRXEarnings(): Promise<EarningItem[]> {
-  const today = new Date(Date.now() + 9 * 3600 * 1000);
-  const currentYear = today.getUTCFullYear();
-
-  // 올해 1월 1일 ~ 12월 31일
-  const fromDate = `${currentYear}0101`;
-  const toDate = `${currentYear}1231`;
-
-  // KRX 종목 심볼→이름 맵 (KR_CORPS 기반)
-  const symbolNameMap: Record<string, string> = {};
-  for (const c of KR_CORPS) symbolNameMap[c.symbol] = c.name;
-
-  const fetchRange = async (strtDd: string, endDd: string): Promise<EarningItem[]> => {
-    try {
-      const body = new URLSearchParams({
-        bld: 'dbms/MDC/STAT/standard/MDCSTAT23901',
-        locale: 'ko_KR',
-        strtDd,
-        endDd,
-        share: '1',
-        money: '1',
-        csvxls_isNo: 'false',
-      });
-      const res = await fetch('https://data.krx.co.kr/comm/bldAttendant/getJsonData.cmd', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-          'Referer': 'https://data.krx.co.kr/',
-          'User-Agent': 'Mozilla/5.0',
-        },
-        body: body.toString(),
-        next: { revalidate: 3600 },
-      });
-      if (!res.ok) return [];
-      const data = await res.json();
-      const list: any[] = data.output ?? data.OutBlock_1 ?? [];
-      const results: EarningItem[] = [];
-
-      for (const item of list) {
-        // KRX 필드: ISU_SRT_CD(종목코드), ISU_NM(종목명), ANNC_TM(발표일), EPS, SALES 등
-        const rawCode = (item.ISU_SRT_CD ?? item.shrt_isu_cd ?? '').replace(/^A/, '');
-        const rawName = item.ISU_NM ?? item.isu_nm ?? '';
-        const rawDate = item.ANNC_TM ?? item.annc_tm ?? item.ANN_DT ?? '';
-        if (!rawDate || rawDate.length < 8) continue;
-
-        const dateStr = rawDate.length === 8
-          ? `${rawDate.slice(0,4)}-${rawDate.slice(4,6)}-${rawDate.slice(6,8)}`
-          : rawDate.slice(0, 10);
-
-        const nameKo = symbolNameMap[rawCode] ?? rawName;
-
-        results.push({
-          symbol: rawCode,
-          nameKo,
-          date: dateStr,
-          market: 'KR',
-          timing: undefined,
-          epsEstimate: parseFloat(item.EPS ?? item.eps ?? '') || null,
-          epsActual: parseFloat(item.ADJ_EPS ?? '') || null,
-          revenueEstimate: null,
-          revenueActual: parseFloat(item.SALES ?? item.sales ?? '') || null,
-          surprise: null,
-        });
-      }
-      return results;
-    } catch {
-      return [];
-    }
-  };
-
-  // 상반기 + 하반기 나눠서 요청 (KRX 한 번에 너무 많으면 짤릴 수 있음)
-  const [h1, h2] = await Promise.all([
-    fetchRange(fromDate, `${currentYear}0630`),
-    fetchRange(`${currentYear}0701`, toDate),
-  ]);
-
-  // symbol 중복 제거 (최신 날짜 우선)
-  const bySymbol = new Map<string, EarningItem>();
-  for (const e of [...h1, ...h2]) {
-    const existing = bySymbol.get(e.symbol);
-    if (!existing || e.date > existing.date) bySymbol.set(e.symbol, e);
-  }
-  return Array.from(bySymbol.values());
-}
 
 // ─── Route Handler ───────────────────────────────────────
 export async function GET() {
   try {
     const us = await fetchUSEarnings();
 
-    // 각 종목에 index 태그 추가
+    // 각 종목에 index + sector 태그 추가
     const tagged = us.map(e => ({
       ...e,
       isSP500: SP500_SYMBOLS.has(e.symbol),
       isNDX100: NDX100_SYMBOLS.has(e.symbol),
+      sector: (SECTOR_MAP[e.symbol] ?? 'Other') as Sector,
     }));
 
     const sp500Count = tagged.filter(e => e.isSP500).length;

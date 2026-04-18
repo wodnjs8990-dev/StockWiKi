@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, RefreshCw, TrendingUp, TrendingDown, Minus } from 'lucide-react';
-import type { EarningItem } from '@/app/api/earnings/route';
+import type { EarningItem, Sector } from '@/app/api/earnings/route';
 
 // ── FOMC 2026 (KST 기준)
 const FOMC_2026 = [
@@ -111,6 +111,7 @@ export default function EventsView({ T }: { T?: any }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [indexFilter, setIndexFilter] = useState<'ALL' | 'SP500' | 'NDX100'>('ALL');
+  const [sectorFilter, setSectorFilter] = useState<Sector | 'ALL'>('ALL');
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
 
   const fetchEarnings = async () => {
@@ -134,18 +135,36 @@ export default function EventsView({ T }: { T?: any }) {
 
   useEffect(() => { fetchEarnings(); }, []);
 
-  // 어닝 → CalEvent 변환
+  // 섹터별 색상
+  const SECTOR_COLOR: Record<string, string> = {
+    Tech: '#7B9FDF', Finance: '#C89650', Healthcare: '#7BAF7A',
+    Consumer: '#D4956A', Energy: '#C4A84F', Industrial: '#8A8A8A',
+    Telecom: '#9B7FD4', Utility: '#5FA8A0', Material: '#B07A5A',
+    RealEstate: '#7A9FA0', Other: '#6A6A6A',
+  };
+  const SECTOR_LABEL: Record<string, string> = {
+    Tech: '기술', Finance: '금융', Healthcare: '헬스케어',
+    Consumer: '소비재', Energy: '에너지', Industrial: '산업재',
+    Telecom: '통신', Utility: '유틸리티', Material: '소재',
+    RealEstate: '부동산', Other: '기타',
+  };
+  const ALL_SECTORS: (Sector | 'ALL')[] = [
+    'ALL','Tech','Finance','Healthcare','Consumer','Energy',
+    'Industrial','Telecom','Utility','Material','RealEstate','Other',
+  ];
+
+  // 어닝 → CalEvent 변환 (인덱스 + 섹터 동시 필터)
   const earningEvents: CalEvent[] = earnings
     .filter(e => {
-      if (indexFilter === 'SP500') return e.isSP500;
-      if (indexFilter === 'NDX100') return e.isNDX100;
-      return true; // ALL
+      const passIndex = indexFilter === 'ALL' || (indexFilter === 'SP500' && e.isSP500) || (indexFilter === 'NDX100' && e.isNDX100);
+      const passSector = sectorFilter === 'ALL' || e.sector === sectorFilter;
+      return passIndex && passSector;
     })
     .map(e => ({
       dateKST: e.date,
       label: e.symbol,
       desc: e.nameKo + (e.timing && e.timing !== 'unknown' ? ` · ${e.timing}` : ''),
-      color: '#C89650',
+      color: SECTOR_COLOR[e.sector ?? 'Other'] ?? '#C89650',
       earning: e,
     }));
 
@@ -234,7 +253,7 @@ export default function EventsView({ T }: { T?: any }) {
             <button onClick={prevMonth} className="p-1.5 hover:opacity-70 transition-opacity" style={{ color: theme.textMuted }}>
               <ChevronLeft size={16} />
             </button>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 flex-wrap justify-center">
               <span className="text-base font-medium tracking-tight" style={{ color: theme.textPrimary }}>
                 {year}년 {month}월
               </span>
@@ -264,6 +283,26 @@ export default function EventsView({ T }: { T?: any }) {
             <button onClick={nextMonth} className="p-1.5 hover:opacity-70 transition-opacity" style={{ color: theme.textMuted }}>
               <ChevronRight size={16} />
             </button>
+          </div>
+
+          {/* 섹터 필터 */}
+          <div className="px-3 py-2 border-b flex flex-wrap gap-1"
+            style={{ borderColor: theme.border, background: theme.bgCard }}>
+            {ALL_SECTORS.map(s => {
+              const isActive = sectorFilter === s;
+              const color = s === 'ALL' ? theme.accent : SECTOR_COLOR[s];
+              return (
+                <button key={s} onClick={() => setSectorFilter(s)}
+                  className="text-[9px] mono px-2 py-0.5 border transition-all"
+                  style={{
+                    borderColor: isActive ? color : theme.borderSoft,
+                    background: isActive ? `${color}25` : 'transparent',
+                    color: isActive ? color : theme.textDimmer,
+                  }}>
+                  {s === 'ALL' ? 'ALL' : SECTOR_LABEL[s]}
+                </button>
+              );
+            })}
           </div>
 
           {/* 요일 헤더 */}
@@ -332,8 +371,12 @@ export default function EventsView({ T }: { T?: any }) {
             style={{ borderColor: theme.border, background: theme.bgCard }}>
             {[
               { color: '#4F7E7C', label: 'FOMC' },
-              { color: '#C89650', label: '어닝 발표' },
-              { color: '#8A8A8A', label: 'K200 선물만기' },
+              { color: '#7B9FDF', label: 'Tech' },
+              { color: '#C89650', label: 'Finance' },
+              { color: '#7BAF7A', label: 'Healthcare' },
+              { color: '#D4956A', label: 'Consumer' },
+              { color: '#C4A84F', label: 'Energy' },
+              { color: '#8A8A8A', label: 'K200만기' },
             ].map(({ color, label }) => (
               <div key={label} className="flex items-center gap-1.5">
                 <span className="w-2.5 h-2.5 rounded-sm"
@@ -388,7 +431,13 @@ export default function EventsView({ T }: { T?: any }) {
                             <div className="flex items-center gap-2">
                               <span className="text-xs font-semibold" style={{ color: ev.color }}>{ev.label}</span>
                               {e && (
-                                <div className="flex gap-1">
+                                <div className="flex gap-1 flex-wrap">
+                                  {e.sector && e.sector !== 'Other' && (
+                                    <span className="text-[9px] mono px-1 border"
+                                      style={{ color: SECTOR_COLOR[e.sector], borderColor: `${SECTOR_COLOR[e.sector]}50` }}>
+                                      {SECTOR_LABEL[e.sector]}
+                                    </span>
+                                  )}
                                   {e.isSP500 && (
                                     <span className="text-[9px] mono px-1 border"
                                       style={{ color: '#7BAF7A', borderColor: '#7BAF7A50' }}>S&P</span>
