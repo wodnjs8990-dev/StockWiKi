@@ -1,6 +1,9 @@
 'use client';
 
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect, useRef, createContext, useContext } from 'react';
+
+// 계산기 세션 key prefix — 비교 모드에서 B 패널이 독립적인 state를 갖도록
+const CalcPrefixContext = createContext<string>('');
 import { Search, Calculator, BookOpen, ChevronRight, ChevronLeft, X, ArrowUpRight, Star, Clock, Menu, Link as LinkIcon, Copy, Check, Share2, CalendarDays } from 'lucide-react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -8,12 +11,45 @@ import { TERMS, CATEGORIES, CATEGORY_COLORS } from '@/data/terms';
 import { CALC_CATEGORIES } from '@/data/calcs';
 import EventsView from '@/components/EventsView';
 
+// sessionStorage와 연동하는 useState 헬퍼
+// CalcPrefixContext가 있으면 key에 prefix를 붙여 A/B 시나리오 독립 state 보장
+function useSessionState<T>(key: string, initial: T): [T, React.Dispatch<React.SetStateAction<T>>] {
+  const prefix = useContext(CalcPrefixContext);
+  const fullKey = prefix ? `${prefix}_${key}` : key;
+  const [val, setVal] = useState<T>(() => {
+    try {
+      const s = typeof window !== 'undefined' ? sessionStorage.getItem(fullKey) : null;
+      return s !== null ? JSON.parse(s) : initial;
+    } catch { return initial; }
+  });
+  useEffect(() => {
+    try { sessionStorage.setItem(fullKey, JSON.stringify(val)); } catch {}
+  }, [fullKey, val]);
+  return [val, setVal];
+}
+
 type Features = {
   glossary: boolean;
   calculator: boolean;
   commandK: boolean;
   events?: boolean;
 };
+
+// 검색 키워드 하이라이팅 컴포넌트
+function Highlight({ text, query, color }: { text: string; query: string; color: string }) {
+  if (!query) return <>{text}</>;
+  const idx = text.toLowerCase().indexOf(query.toLowerCase());
+  if (idx === -1) return <>{text}</>;
+  return (
+    <>
+      {text.slice(0, idx)}
+      <mark style={{ background: color, color: 'inherit', borderRadius: '2px', padding: '0 1px' }}>
+        {text.slice(idx, idx + query.length)}
+      </mark>
+      {text.slice(idx + query.length)}
+    </>
+  );
+}
 
 export default function StockWiki({ features }: { features?: Features }) {
   const feat = features ?? { glossary: true, calculator: true, commandK: true, events: true };
@@ -28,18 +64,32 @@ export default function StockWiki({ features }: { features?: Features }) {
   const fallbackTab = feat.glossary ? 'glossary' : feat.calculator ? 'calculator' : feat.events ? 'events' : 'none';
   const initialTab = isRequestedTabAvailable ? initialTabFromUrl : fallbackTab;
   const initialCalc = searchParams?.get('calc') || 'per';
+  const termFromUrl = searchParams?.get('term');
+  const catFromUrl = searchParams?.get('cat');
 
   const [activeTab, setActiveTab] = useState(initialTab);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('전체');
+  const [debouncedQuery, setDebouncedQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState(
+    catFromUrl && [...CATEGORIES, '★ 즐겨찾기'].includes(catFromUrl) ? catFromUrl : '전체'
+  );
   const [selectedCalc, setSelectedCalc] = useState(initialCalc);
   const [selectedTerm, setSelectedTerm] = useState<any>(null);
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
+  const [favMemos, setFavMemos] = useState<Record<string, string>>({}); // 즐겨찾기 메모
   const [recent, setRecent] = useState<any[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showCommandK, setShowCommandK] = useState(false);
   const [isDark, setIsDark] = useState(true);
+  const [toasts, setToasts] = useState<{ id: number; msg: string; type?: 'success'|'info' }[]>([]);
   const searchRef = useRef<HTMLInputElement | null>(null);
+  const lastFocusRef = useRef<HTMLElement | null>(null);
+
+  const showToast = (msg: string, type: 'success'|'info' = 'success') => {
+    const id = Date.now();
+    setToasts(prev => [...prev, { id, msg, type }]);
+    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 2500);
+  };
 
   // 테마 초기화 (localStorage)
   useEffect(() => {
@@ -49,6 +99,14 @@ export default function StockWiki({ features }: { features?: Features }) {
     document.documentElement.classList.toggle('light', !dark);
   }, []);
 
+  // URL의 term 파라미터에서 용어 로드 (마운트 시)
+  useEffect(() => {
+    if (termFromUrl) {
+      const t = TERMS.find(x => x.id === termFromUrl);
+      if (t) openTerm(t);
+    }
+  }, []); // 마운트 1회만
+
   const toggleTheme = () => {
     const next = !isDark;
     setIsDark(next);
@@ -56,14 +114,79 @@ export default function StockWiki({ features }: { features?: Features }) {
     localStorage.setItem('stockwiki_theme', next ? 'dark' : 'light');
   };
 
+  // 즐겨찾기 초기화 (마운트 시)
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('stockwiki_favorites');
+      if (saved) setFavorites(new Set(JSON.parse(saved)));
+    } catch {}
+    try {
+      const memos = localStorage.getItem('stockwiki_fav_memos');
+      if (memos) setFavMemos(JSON.parse(memos));
+    } catch {}
+  }, []);
+
+  // 즐겨찾기 저장 (변경 시)
+  useEffect(() => {
+    try {
+      localStorage.setItem('stockwiki_favorites', JSON.stringify([...favorites]));
+    } catch {}
+  }, [favorites]);
+
+  // 즐겨찾기 메모 저장
+  useEffect(() => {
+    try {
+      localStorage.setItem('stockwiki_fav_memos', JSON.stringify(favMemos));
+    } catch {}
+  }, [favMemos]);
+
+  const updateFavMemo = (id: string, memo: string) => {
+    setFavMemos(prev => ({ ...prev, [id]: memo }));
+  };
+
+  // 최근 본 용어 초기화 (마운트 시)
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('stockwiki_recent');
+      if (saved) {
+        const ids: string[] = JSON.parse(saved);
+        const terms = ids.map(id => TERMS.find(t => t.id === id)).filter(Boolean);
+        setRecent(terms);
+      }
+    } catch {}
+  }, []);
+
+  // 최근 본 용어 저장 (변경 시)
+  useEffect(() => {
+    try {
+      localStorage.setItem('stockwiki_recent', JSON.stringify(recent.map(t => t.id)));
+    } catch {}
+  }, [recent]);
+
+  // 모달 열림/닫힘 시 배경 스크롤 제어
+  useEffect(() => {
+    if (selectedTerm) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => { document.body.style.overflow = ''; };
+  }, [selectedTerm]);
+
+  // 검색 디바운스
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedQuery(searchQuery), 150);
+    return () => clearTimeout(t);
+  }, [searchQuery]);
+
   // 키보드 단축키
   useEffect(() => {
-    const handler = (e) => {
+    const handler = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault();
-        if (feat.commandK) setShowCommandK(true);
+        if (feat.commandK) setShowCommandK(prev => !prev);
       }
-      if (e.key === '/' && document.activeElement.tagName !== 'INPUT') {
+      if (e.key === '/' && (document.activeElement as HTMLElement)?.tagName !== 'INPUT' && (document.activeElement as HTMLElement)?.tagName !== 'TEXTAREA') {
         e.preventDefault();
         searchRef.current?.focus();
       }
@@ -75,6 +198,8 @@ export default function StockWiki({ features }: { features?: Features }) {
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
+  // feat은 안정적인 객체이므로 ref 패턴 없이 feat.commandK만 의존
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [feat.commandK]);
 
   const toggleFav = (id) => {
@@ -86,11 +211,38 @@ export default function StockWiki({ features }: { features?: Features }) {
   };
 
   const openTerm = (term) => {
+    lastFocusRef.current = document.activeElement as HTMLElement;
     setSelectedTerm(term);
     setRecent(prev => {
       const filtered = prev.filter(t => t.id !== term.id);
       return [term, ...filtered].slice(0, 5);
     });
+    // URL에 term 파라미터 추가
+    const params = new URLSearchParams(window.location.search);
+    params.set('term', term.id);
+    router.replace(`/?${params.toString()}`, { scroll: false });
+  };
+
+  const closeTerm = () => {
+    setSelectedTerm(null);
+    const params = new URLSearchParams(window.location.search);
+    params.delete('term');
+    const qs = params.toString();
+    router.replace(qs ? `/?${qs}` : '/', { scroll: false });
+    // 포커스 복원
+    setTimeout(() => lastFocusRef.current?.focus(), 50);
+  };
+
+  const changeCategory = (cat: string) => {
+    setSelectedCategory(cat);
+    const params = new URLSearchParams(window.location.search);
+    if (cat === '전체') {
+      params.delete('cat');
+    } else {
+      params.set('cat', cat);
+    }
+    const qs = params.toString();
+    router.replace(qs ? `/?${qs}` : '/', { scroll: false });
   };
 
   // 홈으로 돌아가기 (로고 클릭 시)
@@ -111,18 +263,19 @@ export default function StockWiki({ features }: { features?: Features }) {
 
   const filteredTerms = useMemo(() => {
     return TERMS.filter(t => {
-      const q = searchQuery.toLowerCase();
+      const q = debouncedQuery.toLowerCase();
       const matchSearch = !q ||
         t.name.toLowerCase().includes(q) ||
         t.fullName.toLowerCase().includes(q) ||
         t.description.toLowerCase().includes(q) ||
-        t.en.toLowerCase().includes(q);
+        t.en.toLowerCase().includes(q) ||
+        t.category.toLowerCase().includes(q);
       const matchCat = selectedCategory === '전체' ||
         (selectedCategory === '★ 즐겨찾기' && favorites.has(t.id)) ||
         t.category === selectedCategory;
       return matchSearch && matchCat;
     });
-  }, [searchQuery, selectedCategory, favorites]);
+  }, [debouncedQuery, selectedCategory, favorites]);
 
   const categoriesWithFav = favorites.size > 0
     ? ['전체', '★ 즐겨찾기', ...CATEGORIES.slice(1)]
@@ -218,6 +371,13 @@ export default function StockWiki({ features }: { features?: Features }) {
               <span className="hidden lg:inline-block w-px h-4" style={{ background: T.border }}></span>
               <span className="hidden lg:inline-block text-[10px] tracking-[0.3em] mono uppercase" style={{ color: T.textFaint }}>Terms & Calculators</span>
             </button>
+            {/* 모바일: 현재 탭 표시 */}
+            <div className="flex md:hidden items-center gap-1.5 text-[10px] mono uppercase tracking-wider" style={{ color: T.textFaint }}>
+              <span className="w-px h-3" style={{ background: T.border }}></span>
+              <span>
+                {activeTab === 'glossary' ? '금융 사전' : activeTab === 'calculator' ? '계산기' : activeTab === 'events' ? '이벤트' : ''}
+              </span>
+            </div>
           </div>
           <div className="flex items-center gap-2">
             {feat.commandK && (
@@ -251,10 +411,20 @@ export default function StockWiki({ features }: { features?: Features }) {
             <div className="hidden lg:flex items-center gap-4 text-[11px] mono uppercase tracking-wider" style={{ color: T.textFaint }}>
               <span>{new Date().toLocaleDateString('ko-KR')}</span>
             </div>
+            {/* 모바일 메뉴 버튼 */}
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="flex md:hidden items-center justify-center w-8 h-8 border"
+              style={{ borderColor: T.border, color: T.textFaint }}
+              title="메뉴"
+              aria-label="메뉴 열기"
+            >
+              <Menu size={16} />
+            </button>
           </div>
         </div>
 
-        <div className="max-w-[1400px] mx-auto px-4 md:px-8 flex border-t overflow-x-auto scroll-hide" style={{ borderColor: T.border }}>
+        <div className="max-w-[1400px] mx-auto px-4 md:px-8 hidden md:flex border-t overflow-x-auto scroll-hide" style={{ borderColor: T.border }}>
           {[
             { id: 'glossary', label: '금융 사전', icon: BookOpen, idx: '01', count: TERMS.length },
             { id: 'calculator', label: '계산기', icon: Calculator, idx: '02', count: CALC_CATEGORIES.reduce((s, c) => s + c.calcs.length, 0) },
@@ -311,17 +481,20 @@ export default function StockWiki({ features }: { features?: Features }) {
             searchRef={searchRef}
             categories={categoriesWithFav}
             selectedCategory={selectedCategory}
-            setSelectedCategory={setSelectedCategory}
+            setSelectedCategory={changeCategory}
             selectedTerm={selectedTerm}
             setSelectedTerm={openTerm}
-            closeTerm={() => setSelectedTerm(null)}
+            closeTerm={closeTerm}
             totalCount={TERMS.length}
             categoryColors={CATEGORY_COLORS}
             favorites={favorites}
             toggleFav={toggleFav}
+            favMemos={favMemos}
+            updateFavMemo={updateFavMemo}
             recent={recent}
             T={T}
             isDark={isDark}
+            showToast={showToast}
           />
         )}
         {activeTab === 'calculator' && feat.calculator && (
@@ -333,9 +506,160 @@ export default function StockWiki({ features }: { features?: Features }) {
           />
         )}
         {activeTab === 'events' && feat.events !== false && (
-          <EventsView />
+          <EventsView T={T} />
         )}
       </main>
+
+      {/* 모바일 사이드바 */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-50 flex"
+          style={{ background: T.bgOverlay2 }}
+          onClick={() => setSidebarOpen(false)}
+        >
+          <div
+            className="relative w-[85vw] max-w-[320px] h-full flex flex-col overflow-y-auto"
+            style={{ background: T.bgSurface, borderRight: `1px solid ${T.border}` }}
+            onClick={e => e.stopPropagation()}
+          >
+            {/* 사이드바 헤더 */}
+            <div className="flex items-center justify-between px-5 py-4 border-b" style={{ borderColor: T.border }}>
+              <button onClick={goHome} className="flex items-baseline gap-2">
+                <span className="text-lg font-light tracking-tight" style={{ color: T.textPrimary }}>
+                  Stock<span style={{ color: T.accent, fontWeight: 500 }}>WiKi</span>
+                </span>
+                <span className="text-xs mono" style={{ color: T.textFaint }}>.kr</span>
+              </button>
+              <button
+                onClick={() => setSidebarOpen(false)}
+                className="flex items-center justify-center w-8 h-8"
+                style={{ color: T.textFaint }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* 탭 네비게이션 */}
+            <div className="px-4 py-3 border-b" style={{ borderColor: T.border }}>
+              <div className="text-[10px] mono uppercase tracking-[0.2em] mb-2" style={{ color: T.textFaint }}>Navigation</div>
+              {[
+                { id: 'glossary', label: '금융 사전', icon: BookOpen, count: TERMS.length },
+                { id: 'calculator', label: '계산기', icon: Calculator, count: CALC_CATEGORIES.reduce((s, c) => s + c.calcs.length, 0) },
+                { id: 'events', label: '이벤트', icon: CalendarDays, count: null },
+              ].filter(tab => feat[tab.id as keyof Features] !== false).map(tab => {
+                const active = activeTab === tab.id;
+                const Icon = tab.icon;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => { setActiveTab(tab.id); setSidebarOpen(false); }}
+                    className="w-full flex items-center gap-3 px-3 py-2.5 mb-1 text-sm transition-all"
+                    style={{
+                      background: active ? T.bgTabActive : 'transparent',
+                      color: active ? T.textTabActive : T.textMuted,
+                    }}
+                  >
+                    <Icon size={14} />
+                    <span className="font-medium">{tab.label}</span>
+                    {tab.count !== null && <span className="ml-auto text-[10px] mono opacity-50">{tab.count}</span>}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* 즐겨찾기 카테고리 (금융 사전 탭일 때) */}
+            {activeTab === 'glossary' && (
+              <div className="px-4 py-3 border-b" style={{ borderColor: T.border }}>
+                <div className="text-[10px] mono uppercase tracking-[0.2em] mb-2" style={{ color: T.textFaint }}>카테고리</div>
+                <div className="flex flex-col gap-0.5">
+                  {categoriesWithFav.map(cat => {
+                    const active = selectedCategory === cat;
+                    const isFav = cat === '★ 즐겨찾기';
+                    const color = CATEGORY_COLORS[cat];
+                    return (
+                      <button
+                        key={cat}
+                        onClick={() => { changeCategory(cat); setSidebarOpen(false); }}
+                        className="flex items-center gap-2 px-3 py-2 text-xs transition-all text-left"
+                        style={{
+                          background: active ? (isFav ? T.accent : (color?.bg || T.bgTabActive)) : 'transparent',
+                          color: active ? (isFav ? '#0a0a0a' : (color?.text || T.textTabActive)) : T.textMuted,
+                        }}
+                      >
+                        {!isFav && cat !== '전체' && (
+                          <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: active ? (color?.text || '#1a1a1a') : (color?.bg || '#8a8a8a') }}></span>
+                        )}
+                        <span>{cat}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* 최근 본 용어 */}
+            {recent.length > 0 && (
+              <div className="px-4 py-3 border-b" style={{ borderColor: T.border }}>
+                <div className="flex items-center gap-2 mb-2">
+                  <Clock size={11} style={{ color: T.textFaint }} />
+                  <div className="text-[10px] mono uppercase tracking-[0.2em]" style={{ color: T.textFaint }}>최근 본 용어</div>
+                </div>
+                <div className="flex flex-col gap-0.5">
+                  {recent.slice(0, 5).map(t => {
+                    const color = CATEGORY_COLORS[t.category];
+                    return (
+                      <button
+                        key={t.id}
+                        onClick={() => { openTerm(t); setActiveTab('glossary'); setSidebarOpen(false); }}
+                        className="flex items-center gap-2 px-2 py-2 text-xs text-left hover:bg-white/5 transition-colors"
+                        style={{ color: T.textSecondary }}
+                      >
+                        <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: color?.bg }}></span>
+                        <span className="font-medium">{t.name}</span>
+                        <span className="ml-1" style={{ color: T.textFaint }}>{t.fullName}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* 빠른 검색 */}
+            {feat.commandK && (
+              <div className="px-4 py-3">
+                <button
+                  onClick={() => { setSidebarOpen(false); setShowCommandK(true); }}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 border text-sm"
+                  style={{ borderColor: T.border, color: T.textFaint }}
+                >
+                  <Search size={14} />
+                  <span>빠른 검색 (⌘K)</span>
+                </button>
+              </div>
+            )}
+
+            {/* 테마 토글 */}
+            <div className="mt-auto px-4 py-4 border-t" style={{ borderColor: T.border }}>
+              <button
+                onClick={() => { toggleTheme(); }}
+                className="w-full flex items-center gap-3 px-3 py-2.5 border text-sm"
+                style={{ borderColor: T.border, color: T.textFaint }}
+              >
+                {isDark ? (
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+                  </svg>
+                ) : (
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                  </svg>
+                )}
+                <span>{isDark ? '라이트 모드' : '다크 모드'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showCommandK && feat.commandK && (
         <CommandK
@@ -364,6 +688,26 @@ export default function StockWiki({ features }: { features?: Features }) {
           </div>
         </div>
       </footer>
+
+      {/* 전역 토스트 */}
+      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] flex flex-col gap-2 items-center pointer-events-none">
+        {toasts.map(toast => (
+          <div
+            key={toast.id}
+            className="toast-in px-4 py-2.5 text-sm mono flex items-center gap-2 shadow-lg"
+            style={{
+              background: T.bgTabActive,
+              color: T.textTabActive,
+              minWidth: '180px',
+              textAlign: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Check size={13} />
+            {toast.msg}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -375,9 +719,31 @@ function CommandK({ terms, onClose, onSelect, T }) {
   const [q, setQ] = useState('');
   const [idx, setIdx] = useState(0);
   const inputRef = useRef(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     inputRef.current?.focus();
+  }, []);
+
+  // 포커스 트랩
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const focusable = el.querySelectorAll<HTMLElement>(
+      'input, button, [tabindex]:not([tabindex="-1"])'
+    );
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    const trap = (e: KeyboardEvent) => {
+      if (e.key !== 'Tab') return;
+      if (e.shiftKey) {
+        if (document.activeElement === first) { e.preventDefault(); last.focus(); }
+      } else {
+        if (document.activeElement === last) { e.preventDefault(); first.focus(); }
+      }
+    };
+    el.addEventListener('keydown', trap);
+    return () => el.removeEventListener('keydown', trap);
   }, []);
 
   const results = useMemo(() => {
@@ -386,7 +752,8 @@ function CommandK({ terms, onClose, onSelect, T }) {
     return terms.filter(t =>
       t.name.toLowerCase().includes(lower) ||
       t.fullName.toLowerCase().includes(lower) ||
-      t.en.toLowerCase().includes(lower)
+      t.en.toLowerCase().includes(lower) ||
+      t.category.toLowerCase().includes(lower)
     ).slice(0, 10);
   }, [q, terms]);
 
@@ -400,7 +767,7 @@ function CommandK({ terms, onClose, onSelect, T }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center pt-[10vh] p-4" style={{ background: T.bgOverlay2 }} onClick={onClose}>
-      <div className="w-full max-w-2xl border" style={{ background: T.bgSurface, borderColor: T.border }} onClick={e => e.stopPropagation()}>
+      <div ref={containerRef} className="commandk-in w-full max-w-2xl border" style={{ background: T.bgSurface, borderColor: T.border }} onClick={e => e.stopPropagation()}>
         <div className="flex items-center gap-3 px-5 py-4 border-b" style={{ borderColor: T.border }}>
           <Search size={16} style={{ color: T.textFaint }} />
           <input
@@ -449,7 +816,7 @@ function CommandK({ terms, onClose, onSelect, T }) {
 // ─────────────────────────────────────────────
 // 용어 사전 뷰
 // ─────────────────────────────────────────────
-function GlossaryView({ terms, searchQuery, setSearchQuery, searchRef, categories, selectedCategory, setSelectedCategory, selectedTerm, setSelectedTerm, closeTerm, totalCount, categoryColors, favorites, toggleFav, recent, T, isDark }) {
+function GlossaryView({ terms, searchQuery, setSearchQuery, searchRef, categories, selectedCategory, setSelectedCategory, selectedTerm, setSelectedTerm, closeTerm, totalCount, categoryColors, favorites, toggleFav, favMemos, updateFavMemo, recent, T, isDark, showToast }) {
 
   return (
     <div>
@@ -581,7 +948,9 @@ function GlossaryView({ terms, searchQuery, setSearchQuery, searchRef, categorie
                 onClick={() => setSelectedTerm(term)}
                 className="w-full text-left px-5 md:px-6 pb-5 md:pb-6"
               >
-                <div className="text-xl md:text-2xl font-medium tracking-tight leading-tight mb-1" style={{ color: T.textPrimary }}>{term.name}</div>
+                <div className="text-xl md:text-2xl font-medium tracking-tight leading-tight mb-1" style={{ color: T.textPrimary }}>
+                  <Highlight text={term.name} query={searchQuery} color={T.accent + '55'} />
+                </div>
                 <div className="text-xs mono italic mb-3" style={{ color: T.textFaint }}>{term.en}</div>
                 <div className="text-sm leading-relaxed line-clamp-2" style={{ color: T.textMuted }}>{term.description}</div>
                 <div className="mt-4 flex items-center gap-1 text-[10px] mono uppercase tracking-wider" style={{ color: T.textDimmer }}>
@@ -609,7 +978,10 @@ function GlossaryView({ terms, searchQuery, setSearchQuery, searchRef, categorie
           categoryColors={categoryColors}
           favorites={favorites}
           toggleFav={toggleFav}
+          favMemos={favMemos}
+          updateFavMemo={updateFavMemo}
           T={T}
+          showToast={showToast}
           onNavigate={(id) => {
             const t = TERMS.find(x => x.id === id);
             if (t) setSelectedTerm(t);
@@ -628,8 +1000,18 @@ function GlossaryView({ terms, searchQuery, setSearchQuery, searchRef, categorie
   );
 }
 
-function TermModal({ term, termList, onClose, categoryColors, favorites, toggleFav, onNavigate, onPrev, onNext, T }) {
+function TermModal({ term, termList, onClose, categoryColors, favorites, toggleFav, favMemos, updateFavMemo, onNavigate, onPrev, onNext, T, showToast }: any): JSX.Element {
   const isFav = favorites.has(term.id);
+  const memo = favMemos?.[term.id] || '';
+  const [memoText, setMemoText] = useState(memo);
+  const [memoSaved, setMemoSaved] = useState(false);
+
+  const saveMemo = () => {
+    updateFavMemo?.(term.id, memoText);
+    setMemoSaved(true);
+    setTimeout(() => setMemoSaved(false), 1500);
+    showToast?.('메모 저장됨');
+  };
   const relatedTerms = term.related?.map(id => TERMS.find(t => t.id === id)).filter(Boolean) || [];
   const hasDetailed = !!term.detailed;
   const hasRelations = term.relations && Object.keys(term.relations).length > 0;
@@ -641,24 +1023,38 @@ function TermModal({ term, termList, onClose, categoryColors, favorites, toggleF
   const hasNext = termList && currentIdx < termList.length - 1;
   const total = termList ? termList.length : 0;
 
+  // 용어 비교 상태
+  const [compareMode, setCompareMode] = useState(false);
+  const [compareTerm, setCompareTerm] = useState<any>(null);
+  const [compareSearch, setCompareSearch] = useState('');
+  const compareResults = useMemo(() => {
+    if (!compareSearch) return relatedTerms.slice(0, 6);
+    const q = compareSearch.toLowerCase();
+    return TERMS.filter(t =>
+      t.id !== term.id &&
+      (t.name.toLowerCase().includes(q) || t.fullName.toLowerCase().includes(q) || t.en.toLowerCase().includes(q))
+    ).slice(0, 8);
+  }, [compareSearch, term.id, relatedTerms]);
+
   // 키보드 ← → 네비게이션
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
+      if (compareMode) return; // 비교 모드에서는 화살표 비활성
       if (e.key === 'ArrowLeft' && hasPrev) onPrev?.();
       if (e.key === 'ArrowRight' && hasNext) onNext?.();
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [hasPrev, hasNext, onPrev, onNext]);
+  }, [hasPrev, hasNext, onPrev, onNext, compareMode]);
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-2 md:p-4"
+      className="modal-overlay-in fixed inset-0 z-50 flex items-center justify-center p-2 md:p-4"
       style={{ background: T.bgOverlay }}
       onClick={onClose}
     >
       <div
-        className="max-w-4xl w-full border max-h-[92vh] overflow-y-auto"
+        className="modal-panel-in max-w-4xl w-full border max-h-[92vh] overflow-y-auto"
         style={{ background: T.bgSurface, borderColor: T.border }}
         onClick={e => e.stopPropagation()}
       >
@@ -690,9 +1086,39 @@ function TermModal({ term, termList, onClose, categoryColors, favorites, toggleF
               </span>
             )}
           </div>
-          <div className="flex items-center gap-2 md:gap-3">
-            <button onClick={() => toggleFav(term.id)} style={{ color: 'inherit' }}>
-              <Star size={16} fill={isFav ? 'currentColor' : 'none'} />
+          <div className="flex items-center gap-1.5 md:gap-3">
+            <button onClick={() => toggleFav(term.id)} style={{ color: 'inherit' }} title="이 용어 즐겨찾기">
+              <Star size={15} fill={isFav ? 'currentColor' : 'none'} />
+            </button>
+            {/* 비교 버튼 */}
+            <button
+              onClick={() => { setCompareMode(m => !m); setCompareTerm(null); setCompareSearch(''); }}
+              className="flex items-center gap-1 text-[10px] mono px-1.5 md:px-2 py-1 border transition-all"
+              style={{
+                borderColor: compareMode ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.2)',
+                background: compareMode ? 'rgba(255,255,255,0.15)' : 'transparent',
+                color: 'inherit',
+              }}
+              title="다른 용어와 비교"
+            >
+              <span className="hidden sm:inline">비교</span>
+              <span className="sm:hidden">≡</span>
+            </button>
+            <button
+              onClick={async (e) => {
+                e.stopPropagation();
+                const url = `${window.location.origin}/?term=${term.id}`;
+                if (navigator.share && /Mobi/i.test(navigator.userAgent)) {
+                  await navigator.share({ title: term.name, text: term.fullName, url });
+                } else {
+                  await navigator.clipboard.writeText(url);
+                  showToast?.('링크 복사됨');
+                }
+              }}
+              style={{ color: 'inherit' }}
+              title="이 용어 공유"
+            >
+              <Share2 size={15} />
             </button>
             {/* 다음 버튼 */}
             <button
@@ -709,11 +1135,137 @@ function TermModal({ term, termList, onClose, categoryColors, favorites, toggleF
             >
               <ChevronRight size={14} />
             </button>
-            <button onClick={onClose}><X size={18} /></button>
+            <button onClick={onClose} className="flex items-center justify-center w-7 h-7 shrink-0"><X size={18} /></button>
           </div>
         </div>
 
         <div className="p-6 md:p-10">
+
+          {/* 비교 모드 */}
+          {compareMode && (
+            <div className="mb-8 pb-8 border-b" style={{ borderColor: T.border }}>
+              <div className="flex items-center gap-2 mb-4">
+                <span className="text-[10px] mono uppercase tracking-[0.2em]" style={{ color: T.textFaint }}>용어 비교 · Compare Terms</span>
+                <button
+                  onClick={() => { setCompareMode(false); setCompareTerm(null); }}
+                  className="ml-auto text-[10px] mono px-2 py-0.5 border"
+                  style={{ borderColor: T.border, color: T.textFaint }}
+                >
+                  비교 종료
+                </button>
+              </div>
+
+              {!compareTerm ? (
+                /* 비교 용어 선택 */
+                <div>
+                  <div className="flex border mb-3" style={{ borderColor: T.border }}>
+                    <div className="px-3 py-2 border-r flex items-center" style={{ borderColor: T.border, background: T.bgCard }}>
+                      <Search size={12} style={{ color: T.textFaint }} />
+                    </div>
+                    <input
+                      value={compareSearch}
+                      onChange={e => setCompareSearch(e.target.value)}
+                      placeholder="비교할 용어 검색..."
+                      className="flex-1 px-3 py-2 text-sm bg-transparent"
+                      style={{ color: T.textPrimary }}
+                      autoFocus
+                    />
+                  </div>
+                  <div className="text-[10px] mono mb-2" style={{ color: T.textFaint }}>
+                    {compareSearch ? '검색 결과' : '관련 용어'}
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {compareResults.map((rt: any) => {
+                      const rc = categoryColors[rt.category];
+                      return (
+                        <button
+                          key={rt.id}
+                          onClick={() => setCompareTerm(rt)}
+                          className="flex items-center gap-2 px-3 py-1.5 text-xs border transition-all hover:bg-white/5"
+                          style={{ borderColor: T.border, color: T.textSecondary }}
+                        >
+                          <span className="w-1.5 h-1.5 rounded-full" style={{ background: rc?.bg }}></span>
+                          <span className="font-medium">{rt.name}</span>
+                          <span style={{ color: T.textFaint }}>{rt.fullName}</span>
+                        </button>
+                      );
+                    })}
+                    {compareResults.length === 0 && (
+                      <div className="text-xs" style={{ color: T.textDimmer }}>결과 없음</div>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                /* 나란히 비교 */
+                <div>
+                  <div className="grid grid-cols-2 gap-4">
+                    {/* 현재 용어 */}
+                    <div className="border p-4" style={{ borderColor: categoryColors[term.category]?.bg || T.border, background: T.bgCard }}>
+                      <div className="flex items-center gap-2 mb-3">
+                        <span className="text-[9px] mono px-2 py-0.5" style={{ background: categoryColors[term.category]?.bg, color: categoryColors[term.category]?.text }}>{term.category}</span>
+                        <span className="text-[10px] mono" style={{ color: T.textFaint }}>현재</span>
+                      </div>
+                      <div className="text-2xl font-medium mb-1" style={{ color: T.textPrimary }}>{term.name}</div>
+                      <div className="text-xs mb-3" style={{ color: T.textFaint }}>{term.fullName}</div>
+                      <div className="text-xs leading-relaxed mb-4" style={{ color: T.textMuted }}>{term.description}</div>
+                      {term.formula && (
+                        <div className="mono text-xs px-3 py-2 border-l-2 mb-3" style={{ background: T.bgSurface, borderColor: categoryColors[term.category]?.bg, color: T.textPrimary }}>
+                          {term.formula}
+                        </div>
+                      )}
+                    </div>
+                    {/* 비교 용어 */}
+                    <div className="border p-4" style={{ borderColor: categoryColors[compareTerm.category]?.bg || T.border, background: T.bgCard }}>
+                      <div className="flex items-center gap-2 mb-3">
+                        <span className="text-[9px] mono px-2 py-0.5" style={{ background: categoryColors[compareTerm.category]?.bg, color: categoryColors[compareTerm.category]?.text }}>{compareTerm.category}</span>
+                        <button
+                          onClick={() => setCompareTerm(null)}
+                          className="ml-auto text-[10px] mono px-1.5 py-0.5 border"
+                          style={{ borderColor: T.border, color: T.textFaint }}
+                        >변경</button>
+                      </div>
+                      <div className="text-2xl font-medium mb-1" style={{ color: T.textPrimary }}>{compareTerm.name}</div>
+                      <div className="text-xs mb-3" style={{ color: T.textFaint }}>{compareTerm.fullName}</div>
+                      <div className="text-xs leading-relaxed mb-4" style={{ color: T.textMuted }}>{compareTerm.description}</div>
+                      {compareTerm.formula && (
+                        <div className="mono text-xs px-3 py-2 border-l-2 mb-3" style={{ background: T.bgSurface, borderColor: categoryColors[compareTerm.category]?.bg, color: T.textPrimary }}>
+                          {compareTerm.formula}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  {/* 항목별 비교표 */}
+                  <div className="mt-4 border" style={{ borderColor: T.border }}>
+                    {[
+                      { key: 'category', label: '카테고리' },
+                      { key: 'en', label: '영문' },
+                    ].map(row => (
+                      <div key={row.key} className="grid grid-cols-[120px_1fr_1fr] border-b last:border-b-0" style={{ borderColor: T.border }}>
+                        <div className="px-3 py-2 text-[10px] mono uppercase flex items-center" style={{ background: T.bgCard, color: T.textFaint, borderRight: `1px solid ${T.border}` }}>{row.label}</div>
+                        <div className="px-3 py-2 text-xs border-r" style={{ borderColor: T.border, color: T.textSecondary }}>{term[row.key]}</div>
+                        <div className="px-3 py-2 text-xs" style={{ color: T.textSecondary }}>{compareTerm[row.key]}</div>
+                      </div>
+                    ))}
+                    <div className="grid grid-cols-[120px_1fr_1fr] border-b" style={{ borderColor: T.border }}>
+                      <div className="px-3 py-2 text-[10px] mono uppercase flex items-center" style={{ background: T.bgCard, color: T.textFaint, borderRight: `1px solid ${T.border}` }}>예시</div>
+                      <div className="px-3 py-2 text-xs border-r italic" style={{ borderColor: T.border, color: T.textMuted }}>{term.example?.slice(0, 80)}{term.example?.length > 80 ? '…' : ''}</div>
+                      <div className="px-3 py-2 text-xs italic" style={{ color: T.textMuted }}>{compareTerm.example?.slice(0, 80)}{compareTerm.example?.length > 80 ? '…' : ''}</div>
+                    </div>
+                  </div>
+                  <div className="mt-3 flex gap-2">
+                    <button
+                      onClick={() => onNavigate(compareTerm.id)}
+                      className="text-xs px-3 py-1.5 border transition-all hover:bg-white/5"
+                      style={{ borderColor: T.border, color: T.textMuted }}
+                    >
+                      {compareTerm.name} 상세 보기 →
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* 타이틀 */}
           <div className="mb-8 pb-6 border-b" style={{ borderColor: T.border }}>
             <div className="text-4xl md:text-6xl font-light tracking-tight mb-3" style={{ color: T.textPrimary }}>{term.name}</div>
@@ -779,7 +1331,7 @@ function TermModal({ term, termList, onClose, categoryColors, favorites, toggleF
                         </div>
                         {matchTerm && <ArrowUpRight size={12} style={{ color: T.textFaint }} />}
                       </div>
-                      <p className="text-xs leading-relaxed" style={{ color: T.textMuted }}>{value}</p>
+                      <p className="text-xs leading-relaxed" style={{ color: T.textMuted } as any}>{value as React.ReactNode}</p>
                     </div>
                   );
                 })}
@@ -819,13 +1371,59 @@ function TermModal({ term, termList, onClose, categoryColors, favorites, toggleF
               </div>
             </div>
           )}
+
+          {/* 즐겨찾기 메모 */}
+          {isFav && (
+            <div className="mt-6 pt-6 border-t" style={{ borderColor: T.border }}>
+              <div className="flex items-center gap-2 mb-3">
+                <Star size={11} fill={T.accent} stroke={T.accent} />
+                <div className="text-[10px] mono uppercase tracking-[0.2em]" style={{ color: T.textFaint }}>내 메모 · My Note</div>
+                {memoText !== memo && (
+                  <span className="text-[9px] mono ml-1" style={{ color: T.accent }}>● 미저장</span>
+                )}
+              </div>
+              <div className="relative border" style={{ borderColor: T.border }}>
+                <textarea
+                  value={memoText}
+                  onChange={e => setMemoText(e.target.value)}
+                  placeholder="이 용어에 대한 메모를 남겨보세요 (예: 투자 전략, 참고 사항 등)"
+                  rows={3}
+                  className="w-full px-4 py-3 text-sm bg-transparent resize-none"
+                  style={{ color: T.textPrimary, fontFamily: 'inherit' }}
+                />
+              </div>
+              <div className="flex items-center justify-between mt-2">
+                <span className="text-[10px] mono" style={{ color: T.textFaint }}>
+                  {memoText.length > 0 ? `${memoText.length}자` : ''}
+                </span>
+                <button
+                  onClick={saveMemo}
+                  disabled={memoText === memo}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs mono transition-all"
+                  style={{
+                    background: memoSaved ? T.accentGreen : (memoText !== memo ? T.accent : T.borderMid),
+                    color: memoText !== memo ? (memoSaved ? '#fff' : '#0a0a0a') : T.textFaint,
+                    cursor: memoText !== memo ? 'pointer' : 'not-allowed',
+                  }}
+                >
+                  {memoSaved ? <><Check size={11} /><span>저장됨</span></> : <span>저장</span>}
+                </button>
+              </div>
+            </div>
+          )}
+          {!isFav && (
+            <div className="mt-6 pt-6 border-t flex items-center gap-2" style={{ borderColor: T.border }}>
+              <Star size={11} style={{ color: T.textDimmer }} />
+              <span className="text-[10px] mono" style={{ color: T.textDimmer }}>즐겨찾기 추가 시 개인 메모를 작성할 수 있습니다</span>
+            </div>
+          )}
         </div>
       </div>
     </div>
   );
 }
 
-function Section({ label, color, children, T }) {
+function Section({ label, color, children, T }: { label: any; color: any; children: React.ReactNode; T: any }): JSX.Element {
   return (
     <div className="mb-6 md:mb-8">
       <div className="flex items-center gap-2 mb-3">
@@ -840,9 +1438,57 @@ function Section({ label, color, children, T }) {
 // ─────────────────────────────────────────────
 // 계산기 뷰
 // ─────────────────────────────────────────────
+
+// 계산기 히스토리 타입
+type CalcHistoryEntry = {
+  id: string; // calcId
+  label: string; // 계산기 이름
+  results: { label: string; value: string; unit?: string }[];
+  ts: number; // timestamp
+};
+
+// 계산기 히스토리 이벤트 (ResultBox → CalculatorView 통신)
+const CALC_HISTORY_EVENT = 'stockwiki:calc_history';
+
 function CalculatorView({ selectedCalc, setSelectedCalc, T, isDark }) {
+  // 테마 싱글톤 동기화
+  _T = T;
+  _BORDER = T.border;
+  const BORDER_LOCAL = T.border;
+
   const allCalcs = CALC_CATEGORIES.flatMap(cat => cat.calcs.map(c => ({ ...c, category: cat.name, color: cat.color })));
   const currentCalc = allCalcs.find(c => c.id === selectedCalc);
+
+  // 계산기 히스토리 (계산기별 최근 5개)
+  const [calcHistory, setCalcHistory] = useState<CalcHistoryEntry[]>([]);
+  const [showHistory, setShowHistory] = useState(false);
+
+  // 계산기 비교 모드
+  const [compareCalcMode, setCompareCalcMode] = useState(false);
+  const [compareCalcId, setCompareCalcId] = useState('');
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('stockwiki_calc_history');
+      if (saved) setCalcHistory(JSON.parse(saved));
+    } catch {}
+  }, []);
+
+  // 히스토리 이벤트 수신
+  useEffect(() => {
+    const handler = (e: CustomEvent) => {
+      const entry: CalcHistoryEntry = e.detail;
+      setCalcHistory(prev => {
+        // 같은 계산기 최대 5개 유지
+        const filtered = prev.filter(h => !(h.id === entry.id));
+        const next = [entry, ...filtered].slice(0, 20); // 전체 최대 20개
+        try { localStorage.setItem('stockwiki_calc_history', JSON.stringify(next)); } catch {}
+        return next;
+      });
+    };
+    window.addEventListener(CALC_HISTORY_EVENT, handler as EventListener);
+    return () => window.removeEventListener(CALC_HISTORY_EVENT, handler as EventListener);
+  }, []);
 
   // 선택된 계산기 패널로 자동 스크롤 (id 기반 — 루프 내 ref 중복 문제 해결)
   useEffect(() => {
@@ -943,20 +1589,34 @@ function CalculatorView({ selectedCalc, setSelectedCalc, T, isDark }) {
             <span className="w-4 h-px hidden md:inline-block" style={{ background: T.borderMid }}></span>
             <span className="hidden md:inline">Index / 002</span>
           </div>
-          {selectedCalc && (
-            <button
-              onClick={handleShareUrl}
-              className="flex items-center gap-1.5 px-2 py-1 border transition-all hover:bg-white/5"
-              style={{ borderColor: T.border, color: urlCopied ? T.accent : T.textMuted }}
-              title="이 계산기 링크 복사"
-            >
-              {urlCopied ? (
-                <><Check size={10} /><span>링크 복사됨</span></>
-              ) : (
-                <><Share2 size={10} /><span>링크 공유</span></>
-              )}
-            </button>
-          )}
+          <div className="flex items-center gap-2">
+            {/* 히스토리 버튼 */}
+            {calcHistory.length > 0 && (
+              <button
+                onClick={() => setShowHistory(h => !h)}
+                className="flex items-center gap-1.5 px-2 py-1 border transition-all hover:bg-white/5"
+                style={{ borderColor: T.border, color: showHistory ? T.accent : T.textMuted }}
+                title="계산 히스토리"
+              >
+                <Clock size={10} />
+                <span>히스토리 {calcHistory.length}</span>
+              </button>
+            )}
+            {selectedCalc && (
+              <button
+                onClick={handleShareUrl}
+                className="flex items-center gap-1.5 px-2 py-1 border transition-all hover:bg-white/5"
+                style={{ borderColor: T.border, color: urlCopied ? T.accent : T.textMuted }}
+                title="이 계산기 링크 복사"
+              >
+                {urlCopied ? (
+                  <><Check size={10} /><span>링크 복사됨</span></>
+                ) : (
+                  <><Share2 size={10} /><span>링크 공유</span></>
+                )}
+              </button>
+            )}
+          </div>
         </div>
         <div className="grid grid-cols-3 gap-2 md:gap-6 py-2 mono text-[10px] uppercase tracking-[0.2em]">
           <div className="flex items-baseline gap-1 md:gap-2"><span style={{ color: T.textDimmer }}>Groups</span><span style={{ color: T.textPrimary }}>{String(CALC_CATEGORIES.length).padStart(3, '0')}</span></div>
@@ -1030,24 +1690,15 @@ function CalculatorView({ selectedCalc, setSelectedCalc, T, isDark }) {
                           <span className="text-[10px] mono opacity-50 w-4 shrink-0">{calc.num}</span>
                           <span className="font-medium truncate">{calc.name}</span>
                         </button>
-                        {/* 즐겨찾기 별 */}
+                        {/* 즐겨찾기 별 — hover + 이미 즐겨찾기된 경우 항상 표시 */}
                         <button
                           onClick={(e) => toggleFavCalc(calc.id, e)}
-                          className="absolute top-1/2 right-1 -translate-y-1/2 p-1 transition-opacity"
-                          style={{ opacity: isFav ? 1 : 0, color: active ? '#0a0a0a' : T.accent }}
+                          className="absolute top-1/2 right-1 -translate-y-1/2 p-1 transition-opacity group-hover:opacity-100"
+                          style={{ opacity: isFav ? 1 : 0, color: active ? '#0a0a0a' : (isFav ? T.accent : T.textFaint) }}
                           title={isFav ? '즐겨찾기 해제' : '즐겨찾기 추가'}
                         >
                           <Star size={10} fill={isFav ? 'currentColor' : 'none'} />
                         </button>
-                        {!isFav && (
-                          <button
-                            onClick={(e) => toggleFavCalc(calc.id, e)}
-                            className="absolute top-1/2 right-1 -translate-y-1/2 p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                            style={{ color: active ? '#0a0a0a' : T.textFaint }}
-                          >
-                            <Star size={10} />
-                          </button>
-                        )}
                       </div>
                     );
                   })}
@@ -1055,7 +1706,7 @@ function CalculatorView({ selectedCalc, setSelectedCalc, T, isDark }) {
 
                 {/* 모바일: 인라인 패널 (lg 이상에서는 숨김) */}
                 {cat.calcs.some(c => c.id === selectedCalc) && (
-                  <div className="lg:hidden border-t p-5" style={{ borderColor: T.border, background: isDark ? '#161616' : '#ede5d7' }}>
+                  <div className="lg:hidden border-t p-5" style={{ borderColor: T.border, background: T.bgSurface }}>
                     {renderCalcComponent(selectedCalc)}
                   </div>
                 )}
@@ -1072,7 +1723,7 @@ function CalculatorView({ selectedCalc, setSelectedCalc, T, isDark }) {
               className="border overflow-y-auto"
               style={{
                 borderColor: T.border,
-                background: isDark ? '#161616' : '#ede5d7',
+                background: T.bgSurface,
                 maxHeight: 'calc(100vh - 110px)',
               }}
             >
@@ -1082,6 +1733,43 @@ function CalculatorView({ selectedCalc, setSelectedCalc, T, isDark }) {
                   M—{currentCalc?.num}
                 </span>
                 <span className="text-sm font-medium" style={{ color: T.textPrimary }}>{currentCalc?.name}</span>
+                {/* 시나리오 비교 버튼 */}
+                <button
+                  onClick={() => { setCompareCalcMode(m => !m); setCompareCalcId(selectedCalc); }}
+                  className="flex items-center gap-1 text-[10px] mono px-2 py-1 border transition-all hover:bg-white/5"
+                  style={{
+                    borderColor: compareCalcMode ? T.accent : T.border,
+                    color: compareCalcMode ? T.accent : T.textFaint,
+                  }}
+                  title="A/B 시나리오 비교"
+                >
+                  <span>A/B 비교</span>
+                </button>
+                {/* 결과 저장 버튼 */}
+                <button
+                  onClick={() => {
+                    const panel = document.getElementById(`calc-panel-${selectedCalc}`);
+                    if (!panel) return;
+                    const boxes = panel.querySelectorAll('[data-result-label]');
+                    const results: { label: string; value: string; unit?: string }[] = [];
+                    boxes.forEach(box => {
+                      const label = box.getAttribute('data-result-label') || '';
+                      const value = box.getAttribute('data-result-value') || '';
+                      const unit = box.getAttribute('data-result-unit') || undefined;
+                      if (value && value !== '—' && value !== '') results.push({ label, value, unit });
+                    });
+                    if (results.length > 0 && currentCalc) {
+                      dispatchCalcHistory(selectedCalc, currentCalc.name, results);
+                      setShowHistory(true);
+                    }
+                  }}
+                  className="flex items-center gap-1 text-[10px] mono px-2 py-1 border transition-all hover:bg-white/5"
+                  style={{ borderColor: T.border, color: T.textFaint }}
+                  title="현재 결과를 히스토리에 저장"
+                >
+                  <Clock size={10} />
+                  <span>저장</span>
+                </button>
                 <button
                   onClick={() => setSelectedCalc('')}
                   className="ml-auto p-1 hover:bg-white/5 transition-colors"
@@ -1091,9 +1779,35 @@ function CalculatorView({ selectedCalc, setSelectedCalc, T, isDark }) {
                   <X size={14} />
                 </button>
               </div>
+
+              {/* A/B 비교 모드 */}
+              {compareCalcMode ? (
+                <div className="grid grid-cols-2 overflow-y-auto" style={{ borderColor: T.border, maxHeight: 'calc(100vh - 160px)' }}>
+                  <div className="p-5" style={{ borderRight: `1px solid ${T.border}` }}>
+                    <div className="text-[10px] mono uppercase tracking-[0.2em] mb-4 flex items-center gap-2" style={{ color: T.textFaint }}>
+                      <span className="px-1.5 py-0.5 text-[9px]" style={{ background: T.accent, color: '#0a0a0a' }}>A</span>
+                      <span>시나리오 A</span>
+                    </div>
+                    <CalcPrefixContext.Provider value="scenarioA">
+                      {renderCalcComponent(selectedCalc)}
+                    </CalcPrefixContext.Provider>
+                  </div>
+                  <div className="p-5">
+                    <div className="text-[10px] mono uppercase tracking-[0.2em] mb-4 flex items-center gap-2" style={{ color: T.textFaint }}>
+                      <span className="px-1.5 py-0.5 text-[9px]" style={{ background: T.accentGreen, color: '#fff' }}>B</span>
+                      <span>시나리오 B</span>
+                      <span className="ml-auto text-[9px]" style={{ color: T.textDimmer }}>독립 입력</span>
+                    </div>
+                    <CalcPrefixContext.Provider value="scenarioB">
+                      {renderCalcComponent(selectedCalc)}
+                    </CalcPrefixContext.Provider>
+                  </div>
+                </div>
+              ) : (
               <div className="p-6 md:p-10">
                 {renderCalcComponent(selectedCalc)}
               </div>
+              )}
             </div>
           ) : (
             <div className="border flex flex-col items-center justify-center py-24" style={{ borderColor: T.border, background: T.bgCard }}>
@@ -1104,11 +1818,82 @@ function CalculatorView({ selectedCalc, setSelectedCalc, T, isDark }) {
         </div>
 
       </div>
+
+      {/* 히스토리 패널 */}
+      {showHistory && calcHistory.length > 0 && (
+        <div className="mt-6 border" style={{ borderColor: T.border, background: T.bgSurface }}>
+          <div className="px-5 py-3 border-b flex items-center gap-3" style={{ borderColor: T.border, background: T.bgCard }}>
+            <Clock size={12} style={{ color: T.accent }} />
+            <span className="text-[11px] mono uppercase tracking-[0.2em]" style={{ color: T.textMuted }}>계산 히스토리 · Calculation History</span>
+            <button
+              onClick={() => {
+                setCalcHistory([]);
+                try { localStorage.removeItem('stockwiki_calc_history'); } catch {}
+                setShowHistory(false);
+              }}
+              className="ml-auto text-[10px] mono px-2 py-1 border transition-all hover:bg-white/5"
+              style={{ borderColor: T.border, color: T.textFaint }}
+            >
+              전체 삭제
+            </button>
+            <button onClick={() => setShowHistory(false)} style={{ color: T.textFaint }}>
+              <X size={14} />
+            </button>
+          </div>
+          <div style={{ borderColor: T.border }}>
+            {calcHistory.map((entry, i) => {
+              const calcInfo = allCalcs.find(c => c.id === entry.id);
+              return (
+                <div key={i} className="px-5 py-4 transition-colors" style={{ borderTop: i > 0 ? `1px solid ${T.border}` : 'none', background: 'transparent' }}
+                  onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = T.bgHover}
+                  onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
+                >
+                  <div className="flex items-center gap-3 mb-2">
+                    <span className="w-1.5 h-1.5 rounded-full" style={{ background: calcInfo?.color || T.accent }}></span>
+                    <span className="text-xs font-medium" style={{ color: T.textPrimary }}>{entry.label}</span>
+                    <span className="ml-auto text-[10px] mono" style={{ color: T.textFaint }}>
+                      {new Date(entry.ts).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                    <button
+                      onClick={() => setSelectedCalc(entry.id)}
+                      className="text-[10px] mono px-2 py-0.5 border"
+                      style={{ borderColor: T.border, color: T.textMuted }}
+                    >
+                      다시 열기
+                    </button>
+                  </div>
+                  <div className="flex flex-wrap gap-3">
+                    {entry.results.map((r, j) => (
+                      <div key={j} className="flex items-baseline gap-1.5">
+                        <span className="text-[10px] mono" style={{ color: T.textFaint }}>{r.label}:</span>
+                        <span className="text-sm mono font-medium" style={{ color: T.accent }}>{r.value}</span>
+                        {r.unit && <span className="text-[10px] mono" style={{ color: T.textDimmer }}>{r.unit}</span>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-const BORDER = '#2a2a2a';
+// 테마 싱글톤 — CalculatorView 렌더 시 동기화
+let _T: any = {
+  bgPage:'#1a1a1a', bgSurface:'#141414', bgCard:'#0f0f0f',
+  bgTabActive:'#e8e4d6', textPrimary:'#e8e4d6', textSecondary:'#d4d0c4',
+  textMuted:'#a8a49a', textFaint:'#7a7a7a', textDimmer:'#5a5a5a',
+  textFooter:'#6a6a6a', textTabActive:'#1a1a1a', border:'#2a2a2a',
+  borderSoft:'#252525', borderMid:'#3a3a3a', accent:'#C89650',
+  accentGreen:'#4A7045', accentGreenBg:'#0d1f0d', accentGreenText:'#c8d4c8',
+  placeholder:'#5a5a5a', commandKSelected:'#1f1f1f', marketImpactBg:'#0f0f0f',
+  bgHeader:'rgba(20,20,20,0.95)', bgOverlay:'rgba(0,0,0,0.8)',
+  bgOverlay2:'rgba(0,0,0,0.7)', bgHover:'rgba(255,255,255,0.04)',
+};
+let _BORDER = '#2a2a2a';
 
 // 숫자를 한국어 단위로 변환 (100000000 → "1억")
 function formatKoreanUnit(value: string | number): string {
@@ -1136,7 +1921,7 @@ function formatKoreanUnit(value: string | number): string {
   return '';
 }
 
-function NumInput({ label, value, onChange, unit, placeholder, hint }) {
+function NumInput({ label, value, onChange, unit, placeholder, hint }: any) {
   const [isFocused, setIsFocused] = useState(false);
 
   // 포커스 중: 원본값 표시 (소수점 입력 가능하도록)
@@ -1161,8 +1946,8 @@ function NumInput({ label, value, onChange, unit, placeholder, hint }) {
 
   return (
     <div>
-      <label className="block text-[10px] mono uppercase tracking-[0.2em] mb-2" style={{ color: '#7a7a7a' }}>{label}</label>
-      <div className="relative border" style={{ borderColor: BORDER, background: '#141414' }}>
+      <label className="block text-[10px] mono uppercase tracking-[0.2em] mb-2" style={{ color: _T.textFaint }}>{label}</label>
+      <div className="relative border" style={{ borderColor: _BORDER, background: _T.bgSurface }}>
         <input
           type="text"
           inputMode="decimal"
@@ -1172,23 +1957,35 @@ function NumInput({ label, value, onChange, unit, placeholder, hint }) {
           onBlur={() => setIsFocused(false)}
           placeholder={placeholder}
           className="w-full px-4 py-3 mono text-base bg-transparent"
-          style={{ color: '#e8e4d6' }}
+          style={{ color: _T.textPrimary }}
         />
-        {unit && <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs mono" style={{ color: '#7a7a7a' }}>{unit}</span>}
+        {unit && <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs mono" style={{ color: _T.textFaint }}>{unit}</span>}
       </div>
       {/* 한국어 단위 표시 (입력값 있을 때만) */}
       {koreanUnit && (
-        <div className="text-xs mt-1.5 mono" style={{ color: '#C89650' }}>
+        <div className="text-xs mt-1.5 mono" style={{ color: _T.accent }}>
           ≈ {koreanUnit}
         </div>
       )}
-      {hint && !koreanUnit && <div className="text-[10px] mt-1" style={{ color: '#6a6a6a' }}>{hint}</div>}
-      {hint && koreanUnit && <div className="text-[10px] mt-0.5" style={{ color: '#6a6a6a' }}>{hint}</div>}
+      {hint && !koreanUnit && <div className="text-[10px] mt-1" style={{ color: _T.textFooter }}>{hint}</div>}
+      {hint && koreanUnit && <div className="text-[10px] mt-0.5" style={{ color: _T.textFooter }}>{hint}</div>}
+      {Number(value) < 0 && (
+        <div className="text-[10px] mt-1" style={{ color: '#A63D33' }}>⚠ 음수 입력됨</div>
+      )}
     </div>
   );
 }
 
-function ResultBox({ label, value, unit, highlight, color = '#C89650' }) {
+// 히스토리 저장 헬퍼 — ResultBox에서 highlight된 결과를 전송
+function dispatchCalcHistory(calcId: string, calcName: string, results: { label: string; value: string; unit?: string }[]) {
+  const validResults = results.filter(r => r.value && r.value !== '—' && r.value !== '' && r.value !== '0');
+  if (validResults.length === 0) return;
+  window.dispatchEvent(new CustomEvent(CALC_HISTORY_EVENT, {
+    detail: { id: calcId, label: calcName, results: validResults, ts: Date.now() } as CalcHistoryEntry
+  }));
+}
+
+function ResultBox({ label, value, unit, highlight, color = '#C89650' }: any) {
   const [copied, setCopied] = useState(false);
 
   // value가 쉼표 포함 숫자 문자열인지 확인해서 한국어 단위 계산
@@ -1219,10 +2016,16 @@ function ResultBox({ label, value, unit, highlight, color = '#C89650' }) {
   const hasValue = value && value !== '—' && value !== '0';
 
   return (
-    <div className="p-4 md:p-5 relative group" style={{
-      background: highlight ? color : '#141414',
-      color: highlight ? '#0a0a0a' : '#e8e4d6'
-    }}>
+    <div
+      className="p-4 md:p-5 relative group"
+      data-result-label={label}
+      data-result-value={value}
+      data-result-unit={unit || ''}
+      style={{
+        background: highlight ? color : _T.bgCard,
+        color: highlight ? '#0a0a0a' : _T.textPrimary
+      }}
+    >
       <div className="flex items-center justify-between mb-2">
         <div className="text-[10px] mono uppercase tracking-[0.2em]" style={{ opacity: 0.7 }}>{label}</div>
         {hasValue && (
@@ -1255,44 +2058,68 @@ function ResultBox({ label, value, unit, highlight, color = '#C89650' }) {
   );
 }
 
-function CalcHeader({ num, title, desc, color = '#C89650' }) {
+function CalcHeader({ num, title, desc, color = '#C89650', calcId, results }: any) {
+  const [saved, setSaved] = useState(false);
+
+  const handleSave = () => {
+    if (!calcId || !results) return;
+    dispatchCalcHistory(calcId, title, results);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 1500);
+  };
+
+  const hasResults = results && results.some((r: any) => r.value && r.value !== '—' && r.value !== '' && r.value !== '0');
+
   return (
-    <div className="mb-6 md:mb-8 pb-5 md:pb-6 border-b" style={{ borderColor: BORDER }}>
+    <div className="mb-6 md:mb-8 pb-5 md:pb-6 border-b" style={{ borderColor: _BORDER }}>
       <div className="flex items-baseline gap-4 mb-2">
         <span className="text-xs mono" style={{ color }}>M—{num}</span>
-        <span className="h-px flex-1" style={{ background: BORDER }}></span>
+        <span className="h-px flex-1" style={{ background: _BORDER }}></span>
+        {hasResults && (
+          <button
+            onClick={handleSave}
+            className="flex items-center gap-1 text-[10px] mono px-2 py-0.5 border transition-all"
+            style={{
+              borderColor: saved ? _T.accentGreen : _BORDER,
+              color: saved ? _T.accentGreen : _T.textFaint,
+            }}
+            title="이 결과를 히스토리에 저장"
+          >
+            {saved ? <><Check size={9} /><span>저장됨</span></> : <><Clock size={9} /><span>저장</span></>}
+          </button>
+        )}
       </div>
-      <h2 className="text-2xl md:text-3xl font-light tracking-tight mb-2" style={{ color: '#e8e4d6' }}>{title}</h2>
-      <p className="text-sm" style={{ color: '#a8a49a' }}>{desc}</p>
+      <h2 className="text-2xl md:text-3xl font-light tracking-tight mb-2" style={{ color: _T.textPrimary }}>{title}</h2>
+      <p className="text-sm" style={{ color: _T.textMuted }}>{desc}</p>
     </div>
   );
 }
 
-function CalcNote({ lines, how, example, tip }) {
+function CalcNote({ lines, how, example, tip }: any) {
   // 기존 호환성: lines 배열만 전달된 경우
   if (lines && !how && !example && !tip) {
     return (
-      <div className="mt-6 md:mt-8 pt-5 md:pt-6 border-t" style={{ borderColor: BORDER }}>
-        <div className="text-[10px] mono uppercase tracking-[0.2em] mb-3" style={{ color: '#7a7a7a' }}>Notes</div>
+      <div className="mt-6 md:mt-8 pt-5 md:pt-6 border-t" style={{ borderColor: _BORDER }}>
+        <div className="text-[10px] mono uppercase tracking-[0.2em] mb-3" style={{ color: _T.textFaint }}>Notes</div>
         {lines.map((line, i) => (
-          <div key={i} className="text-xs leading-relaxed" style={{ color: '#a8a49a' }}>— {line}</div>
+          <div key={i} className="text-xs leading-relaxed" style={{ color: _T.textMuted }}>— {line}</div>
         ))}
       </div>
     );
   }
   // 새 구조: how(사용법), example(예시), tip(팁)
   return (
-    <div className="mt-6 md:mt-8 pt-5 md:pt-6 border-t space-y-5" style={{ borderColor: BORDER }}>
+    <div className="mt-6 md:mt-8 pt-5 md:pt-6 border-t space-y-5" style={{ borderColor: _BORDER }}>
       {how && (
         <div>
           <div className="flex items-center gap-2 mb-2">
-            <span className="w-1 h-3" style={{ background: '#C89650' }}></span>
-            <div className="text-[10px] mono uppercase tracking-[0.2em]" style={{ color: '#7a7a7a' }}>How to Use · 사용법</div>
+            <span className="w-1 h-3" style={{ background: _T.accent }}></span>
+            <div className="text-[10px] mono uppercase tracking-[0.2em]" style={{ color: _T.textFaint }}>How to Use · 사용법</div>
           </div>
           <div className="space-y-1.5">
             {how.map((line, i) => (
-              <div key={i} className="text-xs md:text-sm leading-relaxed" style={{ color: '#d4d0c4' }}>
-                <span className="mono mr-2" style={{ color: '#6a6a6a' }}>{String(i + 1).padStart(2, '0')}.</span>{line}
+              <div key={i} className="text-xs md:text-sm leading-relaxed" style={{ color: _T.textSecondary }}>
+                <span className="mono mr-2" style={{ color: _T.textFooter }}>{String(i + 1).padStart(2, '0')}.</span>{line}
               </div>
             ))}
           </div>
@@ -1302,9 +2129,9 @@ function CalcNote({ lines, how, example, tip }) {
         <div>
           <div className="flex items-center gap-2 mb-2">
             <span className="w-1 h-3" style={{ background: '#A63D33' }}></span>
-            <div className="text-[10px] mono uppercase tracking-[0.2em]" style={{ color: '#7a7a7a' }}>Example · 예시</div>
+            <div className="text-[10px] mono uppercase tracking-[0.2em]" style={{ color: _T.textFaint }}>Example · 예시</div>
           </div>
-          <div className="text-xs md:text-sm leading-relaxed p-3 md:p-4 border-l-2" style={{ borderColor: '#A63D33', background: '#0f0f0f', color: '#d4d0c4' }}>
+          <div className="text-xs md:text-sm leading-relaxed p-3 md:p-4 border-l-2" style={{ borderColor: '#A63D33', background: _T.bgCard, color: _T.textSecondary }}>
             {typeof example === 'string' ? example : example.map((line, i) => (
               <div key={i} className={i > 0 ? 'mt-1' : ''}>{line}</div>
             ))}
@@ -1314,12 +2141,12 @@ function CalcNote({ lines, how, example, tip }) {
       {tip && (
         <div>
           <div className="flex items-center gap-2 mb-2">
-            <span className="w-1 h-3" style={{ background: '#4A7045' }}></span>
-            <div className="text-[10px] mono uppercase tracking-[0.2em]" style={{ color: '#7a7a7a' }}>Tips · 해석 가이드</div>
+            <span className="w-1 h-3" style={{ background: _T.accentGreen }}></span>
+            <div className="text-[10px] mono uppercase tracking-[0.2em]" style={{ color: _T.textFaint }}>Tips · 해석 가이드</div>
           </div>
           <div className="space-y-1.5">
             {tip.map((line, i) => (
-              <div key={i} className="text-xs md:text-sm leading-relaxed" style={{ color: '#a8a49a' }}>— {line}</div>
+              <div key={i} className="text-xs md:text-sm leading-relaxed" style={{ color: _T.textMuted }}>— {line}</div>
             ))}
           </div>
         </div>
@@ -1337,9 +2164,9 @@ function fmt(n, d = 2) {
 // 계산기들 (기존 + 신규)
 // ─────────────────────────────────────────────
 function PERCalc() {
-  const [price, setPrice] = useState('');
-  const [netIncome, setNetIncome] = useState('');
-  const [shares, setShares] = useState('');
+  const [price, setPrice] = useSessionState('calc_per_price', '');
+  const [netIncome, setNetIncome] = useSessionState('calc_per_netIncome', '');
+  const [shares, setShares] = useSessionState('calc_per_shares', '');
   const eps = netIncome && shares ? Number(netIncome) / Number(shares) : 0;
   const per = price && eps ? Number(price) / eps : 0;
   return (
@@ -1350,8 +2177,8 @@ function PERCalc() {
         <NumInput label="당기순이익 (연간)" value={netIncome} onChange={setNetIncome} unit="원" placeholder="100,000,000,000" hint="연간 총 순이익" />
         <NumInput label="발행주식수" value={shares} onChange={setShares} unit="주" placeholder="10,000,000" hint="자기주식 제외" />
       </div>
-      <div className="grid md:grid-cols-2 border" style={{ borderColor: BORDER }}>
-        <div className="border-r" style={{ borderColor: BORDER }}><ResultBox label="EPS · 주당순이익" value={fmt(eps)} unit="원" /></div>
+      <div className="grid md:grid-cols-2 border" style={{ borderColor: _BORDER }}>
+        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="EPS · 주당순이익" value={fmt(eps)} unit="원" /></div>
         <ResultBox label="PER · 주가수익비율" value={fmt(per)} unit="배" highlight />
       </div>
       <CalcNote
@@ -1378,9 +2205,9 @@ function PERCalc() {
 }
 
 function PSRCalc() {
-  const [price, setPrice] = useState('');
-  const [sales, setSales] = useState('');
-  const [shares, setShares] = useState('');
+  const [price, setPrice] = useSessionState('calc_psr_price', '');
+  const [sales, setSales] = useSessionState('calc_psr_sales', '');
+  const [shares, setShares] = useSessionState('calc_psr_shares', '');
   const sps = sales && shares ? Number(sales) / Number(shares) : 0;
   const psr = price && sps ? Number(price) / sps : 0;
   const marketCap = price && shares ? Number(price) * Number(shares) : 0;
@@ -1392,9 +2219,9 @@ function PSRCalc() {
         <NumInput label="연간 매출액" value={sales} onChange={setSales} unit="원" placeholder="500,000,000,000" hint="최근 4분기 합산" />
         <NumInput label="발행주식수" value={shares} onChange={setShares} unit="주" placeholder="10,000,000" />
       </div>
-      <div className="grid md:grid-cols-3 border" style={{ borderColor: BORDER }}>
-        <div className="border-r" style={{ borderColor: BORDER }}><ResultBox label="SPS · 주당매출액" value={fmt(sps, 0)} unit="원" /></div>
-        <div className="border-r" style={{ borderColor: BORDER }}><ResultBox label="시가총액" value={fmt(marketCap, 0)} unit="원" /></div>
+      <div className="grid md:grid-cols-3 border" style={{ borderColor: _BORDER }}>
+        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="SPS · 주당매출액" value={fmt(sps, 0)} unit="원" /></div>
+        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="시가총액" value={fmt(marketCap, 0)} unit="원" /></div>
         <ResultBox label="PSR · 주가매출비율" value={fmt(psr, 2)} unit="배" highlight />
       </div>
       <CalcNote
@@ -1422,9 +2249,9 @@ function PSRCalc() {
 }
 
 function PBRCalc() {
-  const [price, setPrice] = useState('');
-  const [equity, setEquity] = useState('');
-  const [shares, setShares] = useState('');
+  const [price, setPrice] = useSessionState('calc_pbr_price', '');
+  const [equity, setEquity] = useSessionState('calc_pbr_equity', '');
+  const [shares, setShares] = useSessionState('calc_pbr_shares', '');
   const bps = equity && shares ? Number(equity) / Number(shares) : 0;
   const pbr = price && bps ? Number(price) / bps : 0;
   return (
@@ -1435,8 +2262,8 @@ function PBRCalc() {
         <NumInput label="자본총계" value={equity} onChange={setEquity} unit="원" placeholder="500,000,000,000" hint="재무상태표의 자본총계" />
         <NumInput label="발행주식수" value={shares} onChange={setShares} unit="주" placeholder="10,000,000" />
       </div>
-      <div className="grid md:grid-cols-2 border" style={{ borderColor: BORDER }}>
-        <div className="border-r" style={{ borderColor: BORDER }}><ResultBox label="BPS · 주당순자산" value={fmt(bps)} unit="원" /></div>
+      <div className="grid md:grid-cols-2 border" style={{ borderColor: _BORDER }}>
+        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="BPS · 주당순자산" value={fmt(bps)} unit="원" /></div>
         <ResultBox label="PBR · 주가순자산비율" value={fmt(pbr)} unit="배" highlight />
       </div>
       <CalcNote
@@ -1477,8 +2304,8 @@ function TargetPriceCalc() {
         <NumInput label="목표 PER" value={targetPer} onChange={setTargetPer} unit="배" placeholder="12" />
         <NumInput label="현재 주가" value={current} onChange={setCurrent} unit="원" placeholder="45,000" />
       </div>
-      <div className="grid md:grid-cols-2 border" style={{ borderColor: BORDER }}>
-        <div className="border-r" style={{ borderColor: BORDER }}><ResultBox label="목표주가" value={fmt(target, 0)} unit="원" highlight /></div>
+      <div className="grid md:grid-cols-2 border" style={{ borderColor: _BORDER }}>
+        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="목표주가" value={fmt(target, 0)} unit="원" highlight /></div>
         <ResultBox label="상승여력" value={fmt(upside)} unit="%" />
       </div>
       <CalcNote
@@ -1533,9 +2360,9 @@ function DCFCalc() {
         <NumInput label="할인율 (WACC)" value={discount} onChange={setDiscount} unit="%" placeholder="10" hint="보통 8~12%" />
         <NumInput label="영구성장률" value={terminal} onChange={setTerminal} unit="%" placeholder="2.5" hint="GDP 성장률 수준" />
       </div>
-      <div className="grid md:grid-cols-3 border" style={{ borderColor: BORDER }}>
-        <div className="border-r" style={{ borderColor: BORDER }}><ResultBox label="5년 PV 합계" value={fmt(pv, 0)} unit="원" /></div>
-        <div className="border-r" style={{ borderColor: BORDER }}><ResultBox label="터미널 PV" value={fmt(pvTerminal, 0)} unit="원" /></div>
+      <div className="grid md:grid-cols-3 border" style={{ borderColor: _BORDER }}>
+        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="5년 PV 합계" value={fmt(pv, 0)} unit="원" /></div>
+        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="터미널 PV" value={fmt(pvTerminal, 0)} unit="원" /></div>
         <ResultBox label="기업가치 (EV)" value={fmt(enterpriseValue, 0)} unit="원" highlight />
       </div>
       <CalcNote
@@ -1584,9 +2411,9 @@ function WACCCalc() {
         <NumInput label="타인자본비용 (Rd)" value={rd} onChange={setRd} unit="%" placeholder="4.5" hint="회사채 금리 수준" />
         <NumInput label="법인세율" value={taxrate} onChange={setTaxrate} unit="%" placeholder="22" />
       </div>
-      <div className="grid md:grid-cols-3 border" style={{ borderColor: BORDER }}>
-        <div className="border-r" style={{ borderColor: BORDER }}><ResultBox label="자기자본 비중" value={fmt(wE * 100)} unit="%" /></div>
-        <div className="border-r" style={{ borderColor: BORDER }}><ResultBox label="부채 비중" value={fmt(wD * 100)} unit="%" /></div>
+      <div className="grid md:grid-cols-3 border" style={{ borderColor: _BORDER }}>
+        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="자기자본 비중" value={fmt(wE * 100)} unit="%" /></div>
+        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="부채 비중" value={fmt(wD * 100)} unit="%" /></div>
         <ResultBox label="WACC" value={fmt(wacc)} unit="%" highlight />
       </div>
       <CalcNote
@@ -1629,8 +2456,8 @@ function ROECalc() {
         <NumInput label="자기자본" value={equity} onChange={setEquity} unit="원" placeholder="500,000,000,000" />
         <NumInput label="총자산" value={assets} onChange={setAssets} unit="원" placeholder="1,000,000,000,000" />
       </div>
-      <div className="grid md:grid-cols-2 border" style={{ borderColor: BORDER }}>
-        <div className="border-r" style={{ borderColor: BORDER }}><ResultBox label="ROE" value={fmt(roe)} unit="%" highlight color="#A63D33" /></div>
+      <div className="grid md:grid-cols-2 border" style={{ borderColor: _BORDER }}>
+        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="ROE" value={fmt(roe)} unit="%" highlight color="#A63D33" /></div>
         <ResultBox label="ROA" value={fmt(roa)} unit="%" />
       </div>
       <CalcNote
@@ -1676,10 +2503,10 @@ function DuPontCalc() {
         <NumInput label="총자산" value={assets} onChange={setAssets} unit="원" placeholder="1,500,000,000,000" />
         <NumInput label="자기자본" value={equity} onChange={setEquity} unit="원" placeholder="600,000,000,000" />
       </div>
-      <div className="grid md:grid-cols-4 border" style={{ borderColor: BORDER }}>
-        <div className="border-r" style={{ borderColor: BORDER }}><ResultBox label="순이익률" value={fmt(margin * 100)} unit="%" /></div>
-        <div className="border-r" style={{ borderColor: BORDER }}><ResultBox label="자산회전율" value={fmt(turnover, 3)} unit="회" /></div>
-        <div className="border-r" style={{ borderColor: BORDER }}><ResultBox label="재무레버리지" value={fmt(leverage, 3)} unit="배" /></div>
+      <div className="grid md:grid-cols-4 border" style={{ borderColor: _BORDER }}>
+        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="순이익률" value={fmt(margin * 100)} unit="%" /></div>
+        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="자산회전율" value={fmt(turnover, 3)} unit="회" /></div>
+        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="재무레버리지" value={fmt(leverage, 3)} unit="배" /></div>
         <ResultBox label="ROE" value={fmt(roe)} unit="%" highlight color="#A63D33" />
       </div>
       <CalcNote
@@ -1724,9 +2551,9 @@ function MarginCalc() {
         <NumInput label="판관비" value={sga} onChange={setSga} unit="원" placeholder="200,000,000,000" />
         <NumInput label="당기순이익" value={ni} onChange={setNi} unit="원" placeholder="120,000,000,000" />
       </div>
-      <div className="grid md:grid-cols-3 border" style={{ borderColor: BORDER }}>
-        <div className="border-r" style={{ borderColor: BORDER }}><ResultBox label="매출총이익률" value={fmt(gross)} unit="%" /></div>
-        <div className="border-r" style={{ borderColor: BORDER }}><ResultBox label="영업이익률" value={fmt(op)} unit="%" highlight color="#A63D33" /></div>
+      <div className="grid md:grid-cols-3 border" style={{ borderColor: _BORDER }}>
+        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="매출총이익률" value={fmt(gross)} unit="%" /></div>
+        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="영업이익률" value={fmt(op)} unit="%" highlight color="#A63D33" /></div>
         <ResultBox label="순이익률" value={fmt(net)} unit="%" />
       </div>
       <CalcNote
@@ -1769,9 +2596,9 @@ function BEPCalc() {
         <NumInput label="단위당 판매가" value={price} onChange={setPrice} unit="원" placeholder="10,000" />
         <NumInput label="단위당 변동비" value={varcost} onChange={setVarcost} unit="원" placeholder="6,000" />
       </div>
-      <div className="grid md:grid-cols-3 border" style={{ borderColor: BORDER }}>
-        <div className="border-r" style={{ borderColor: BORDER }}><ResultBox label="BEP 수량" value={fmt(unit, 0)} unit="개" highlight color="#A63D33" /></div>
-        <div className="border-r" style={{ borderColor: BORDER }}><ResultBox label="BEP 매출액" value={fmt(sales, 0)} unit="원" /></div>
+      <div className="grid md:grid-cols-3 border" style={{ borderColor: _BORDER }}>
+        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="BEP 수량" value={fmt(unit, 0)} unit="개" highlight color="#A63D33" /></div>
+        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="BEP 매출액" value={fmt(sales, 0)} unit="원" /></div>
         <ResultBox label="한계이익률" value={fmt(cm)} unit="%" />
       </div>
       <CalcNote
@@ -1813,9 +2640,9 @@ function DividendCalc() {
         <NumInput label="주당배당금 (DPS)" value={dps} onChange={setDps} unit="원" placeholder="2,000" />
         <NumInput label="보유주식수" value={shares} onChange={setShares} unit="주" placeholder="100" />
       </div>
-      <div className="grid md:grid-cols-3 border" style={{ borderColor: BORDER }}>
-        <div className="border-r" style={{ borderColor: BORDER }}><ResultBox label="배당수익률" value={fmt(yld)} unit="%" highlight color="#C08E6A" /></div>
-        <div className="border-r" style={{ borderColor: BORDER }}><ResultBox label="세전 배당금" value={fmt(annualDiv, 0)} unit="원" /></div>
+      <div className="grid md:grid-cols-3 border" style={{ borderColor: _BORDER }}>
+        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="배당수익률" value={fmt(yld)} unit="%" highlight color="#C08E6A" /></div>
+        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="세전 배당금" value={fmt(annualDiv, 0)} unit="원" /></div>
         <ResultBox label="세후 수령액" value={fmt(afterTax, 0)} unit="원" />
       </div>
       <CalcNote
@@ -1866,9 +2693,9 @@ function CompoundCalc() {
         <NumInput label="연 수익률" value={rate} onChange={setRate} unit="%" placeholder="8" />
         <NumInput label="투자 기간" value={years} onChange={setYears} unit="년" placeholder="20" />
       </div>
-      <div className="grid md:grid-cols-3 border" style={{ borderColor: BORDER }}>
-        <div className="border-r" style={{ borderColor: BORDER }}><ResultBox label="최종 평가액" value={fmt(total, 0)} unit="원" highlight color="#C08E6A" /></div>
-        <div className="border-r" style={{ borderColor: BORDER }}><ResultBox label="총 투자원금" value={fmt(totalInvested, 0)} unit="원" /></div>
+      <div className="grid md:grid-cols-3 border" style={{ borderColor: _BORDER }}>
+        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="최종 평가액" value={fmt(total, 0)} unit="원" highlight color="#C08E6A" /></div>
+        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="총 투자원금" value={fmt(totalInvested, 0)} unit="원" /></div>
         <ResultBox label="순수익" value={fmt(profit, 0)} unit="원" />
       </div>
       <CalcNote
@@ -1910,8 +2737,8 @@ function CAGRCalc() {
         <NumInput label="종료 값" value={end} onChange={setEnd} unit="" placeholder="25,000,000" />
         <NumInput label="기간" value={years} onChange={setYears} unit="년" placeholder="10" />
       </div>
-      <div className="grid md:grid-cols-2 border" style={{ borderColor: BORDER }}>
-        <div className="border-r" style={{ borderColor: BORDER }}><ResultBox label="CAGR" value={fmt(cagr)} unit="%" highlight color="#C08E6A" /></div>
+      <div className="grid md:grid-cols-2 border" style={{ borderColor: _BORDER }}>
+        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="CAGR" value={fmt(cagr)} unit="%" highlight color="#C08E6A" /></div>
         <ResultBox label="총 수익률" value={fmt(totalReturn)} unit="%" />
       </div>
       <CalcNote
@@ -2008,10 +2835,10 @@ function AvgPriceCalc() {
       <div className="mb-8">
         <NumInput label="현재가 (손익 계산용)" value={current} onChange={setCurrent} unit="원" placeholder="45,000" />
       </div>
-      <div className="grid md:grid-cols-2 border" style={{ borderColor: BORDER }}>
-        <div className="border-r border-b" style={{ borderColor: BORDER }}><ResultBox label="평균 매수단가" value={fmt(avg, 0)} unit="원" highlight color="#8A8A8A" /></div>
-        <div className="border-b" style={{ borderColor: BORDER }}><ResultBox label="총 보유수량" value={fmt(totalQty, 0)} unit="주" /></div>
-        <div className="border-r" style={{ borderColor: BORDER }}><ResultBox label="평가손익" value={fmt(pnl, 0)} unit="원" /></div>
+      <div className="grid md:grid-cols-2 border" style={{ borderColor: _BORDER }}>
+        <div className="border-r border-b" style={{ borderColor: _BORDER }}><ResultBox label="평균 매수단가" value={fmt(avg, 0)} unit="원" highlight color="#8A8A8A" /></div>
+        <div className="border-b" style={{ borderColor: _BORDER }}><ResultBox label="총 보유수량" value={fmt(totalQty, 0)} unit="주" /></div>
+        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="평가손익" value={fmt(pnl, 0)} unit="원" /></div>
         <ResultBox label="수익률" value={fmt(pnlRate)} unit="%" />
       </div>
       <CalcNote
@@ -2050,21 +2877,21 @@ function CommissionCalc() {
   return (
     <div>
       <CalcHeader num="16" title="수수료 · 세금 계산" desc="주식 거래 수수료와 증권거래세를 산출합니다." color="#8A8A8A" />
-      <div className="flex mb-5 border" style={{ borderColor: BORDER }}>
+      <div className="flex mb-5 border" style={{ borderColor: _BORDER }}>
         <button onClick={() => setType('buy')} className="flex-1 py-3 text-sm font-medium transition-all border-r"
-          style={{ borderColor: BORDER, background: type === 'buy' ? '#4A7045' : 'transparent', color: type === 'buy' ? '#eae7dc' : '#a8a49a' }}>매수</button>
+          style={{ borderColor: _BORDER, background: type === 'buy' ? '#4A7045' : 'transparent', color: type === 'buy' ? _T.textPrimary : _T.textMuted }}>매수</button>
         <button onClick={() => setType('sell')} className="flex-1 py-3 text-sm font-medium transition-all"
-          style={{ background: type === 'sell' ? '#A63D33' : 'transparent', color: type === 'sell' ? '#eae7dc' : '#a8a49a' }}>매도</button>
+          style={{ background: type === 'sell' ? '#A63D33' : 'transparent', color: type === 'sell' ? _T.textPrimary : _T.textMuted }}>매도</button>
       </div>
       <div className="grid md:grid-cols-3 gap-5 mb-8">
         <NumInput label="주가" value={price} onChange={setPrice} unit="원" placeholder="50,000" />
         <NumInput label="수량" value={qty} onChange={setQty} unit="주" placeholder="100" />
         <NumInput label="수수료율" value={feeRate} onChange={setFeeRate} unit="%" placeholder="0.015" />
       </div>
-      <div className={`grid ${type === 'sell' ? 'md:grid-cols-4' : 'md:grid-cols-3'} border`} style={{ borderColor: BORDER }}>
-        <div className="border-r" style={{ borderColor: BORDER }}><ResultBox label="거래금액" value={fmt(amount, 0)} unit="원" /></div>
-        <div className="border-r" style={{ borderColor: BORDER }}><ResultBox label="수수료" value={fmt(fee, 0)} unit="원" /></div>
-        {type === 'sell' && <div className="border-r" style={{ borderColor: BORDER }}><ResultBox label="증권거래세" value={fmt(tax, 0)} unit="원" /></div>}
+      <div className={`grid ${type === 'sell' ? 'md:grid-cols-4' : 'md:grid-cols-3'} border`} style={{ borderColor: _BORDER }}>
+        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="거래금액" value={fmt(amount, 0)} unit="원" /></div>
+        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="수수료" value={fmt(fee, 0)} unit="원" /></div>
+        {type === 'sell' && <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="증권거래세" value={fmt(tax, 0)} unit="원" /></div>}
         <ResultBox label={type === 'buy' ? '총 매수대금' : '실수령액'} value={fmt(total, 0)} unit="원" highlight color="#8A8A8A" />
       </div>
       <CalcNote
@@ -2108,8 +2935,8 @@ function BreakevenCalc() {
         <NumInput label="매수가" value={buyPrice} onChange={setBuyPrice} unit="원" placeholder="50,000" />
         <NumInput label="수수료율 (편도)" value={feeRate} onChange={setFeeRate} unit="%" placeholder="0.015" />
       </div>
-      <div className="grid md:grid-cols-2 border" style={{ borderColor: BORDER }}>
-        <div className="border-r" style={{ borderColor: BORDER }}><ResultBox label="손익분기 매도가" value={fmt(breakeven, 0)} unit="원" highlight color="#8A8A8A" /></div>
+      <div className="grid md:grid-cols-2 border" style={{ borderColor: _BORDER }}>
+        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="손익분기 매도가" value={fmt(breakeven, 0)} unit="원" highlight color="#8A8A8A" /></div>
         <ResultBox label="필요 상승률" value={fmt(pctUp)} unit="%" />
       </div>
       <CalcNote
@@ -2154,9 +2981,9 @@ function PositionSizeCalc() {
         <NumInput label="진입가" value={entry} onChange={setEntry} unit="원" placeholder="50,000" />
         <NumInput label="손절가" value={stop} onChange={setStop} unit="원" placeholder="47,000" />
       </div>
-      <div className="grid md:grid-cols-3 border" style={{ borderColor: BORDER }}>
-        <div className="border-r" style={{ borderColor: BORDER }}><ResultBox label="허용 손실액" value={fmt(riskAmt, 0)} unit="원" /></div>
-        <div className="border-r" style={{ borderColor: BORDER }}><ResultBox label="매수 수량" value={fmt(shares, 0)} unit="주" highlight color="#8A8A8A" /></div>
+      <div className="grid md:grid-cols-3 border" style={{ borderColor: _BORDER }}>
+        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="허용 손실액" value={fmt(riskAmt, 0)} unit="원" /></div>
+        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="매수 수량" value={fmt(shares, 0)} unit="주" highlight color="#8A8A8A" /></div>
         <ResultBox label="포지션 비중" value={fmt(posPct)} unit="%" />
       </div>
       <CalcNote
@@ -2197,11 +3024,11 @@ function FuturesCalc() {
   return (
     <div>
       <CalcHeader num="19" title="선물 손익 계산" desc="KOSPI200 선물 기준 손익을 산출합니다." color="#6B6B6B" />
-      <div className="flex mb-5 border" style={{ borderColor: BORDER }}>
+      <div className="flex mb-5 border" style={{ borderColor: _BORDER }}>
         <button onClick={() => setSide('long')} className="flex-1 py-3 text-sm font-medium transition-all border-r"
-          style={{ borderColor: BORDER, background: side === 'long' ? '#4A7045' : 'transparent', color: side === 'long' ? '#eae7dc' : '#a8a49a' }}>LONG · 매수</button>
+          style={{ borderColor: _BORDER, background: side === 'long' ? '#4A7045' : 'transparent', color: side === 'long' ? _T.textPrimary : _T.textMuted }}>LONG · 매수</button>
         <button onClick={() => setSide('short')} className="flex-1 py-3 text-sm font-medium transition-all"
-          style={{ background: side === 'short' ? '#A63D33' : 'transparent', color: side === 'short' ? '#eae7dc' : '#a8a49a' }}>SHORT · 매도</button>
+          style={{ background: side === 'short' ? '#A63D33' : 'transparent', color: side === 'short' ? _T.textPrimary : _T.textMuted }}>SHORT · 매도</button>
       </div>
       <div className="grid md:grid-cols-2 gap-5 mb-8">
         <NumInput label="진입가 (포인트)" value={entry} onChange={setEntry} unit="pt" placeholder="350.00" />
@@ -2209,8 +3036,8 @@ function FuturesCalc() {
         <NumInput label="계약수" value={contracts} onChange={setContracts} unit="계약" placeholder="1" />
         <NumInput label="승수" value={multiplier} onChange={setMultiplier} unit="원" placeholder="250,000" />
       </div>
-      <div className="grid md:grid-cols-2 border" style={{ borderColor: BORDER }}>
-        <div className="border-r" style={{ borderColor: BORDER }}><ResultBox label="포인트 손익" value={fmt(directedDiff, 2)} unit="pt" /></div>
+      <div className="grid md:grid-cols-2 border" style={{ borderColor: _BORDER }}>
+        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="포인트 손익" value={fmt(directedDiff, 2)} unit="pt" /></div>
         <ResultBox label="손익금액" value={fmt(pnl, 0)} unit="원" highlight color={pnl >= 0 ? '#C89650' : '#A63D33'} />
       </div>
       <CalcNote
@@ -2255,9 +3082,9 @@ function LeverageCalc() {
         <NumInput label="증거금률" value={marginRate} onChange={setMarginRate} unit="%" placeholder="10" />
         <NumInput label="투자 가용 자본" value={capital} onChange={setCapital} unit="원" placeholder="10,000,000" />
       </div>
-      <div className="grid md:grid-cols-3 border" style={{ borderColor: BORDER }}>
-        <div className="border-r" style={{ borderColor: BORDER }}><ResultBox label="필요 증거금" value={fmt(margin, 0)} unit="원" /></div>
-        <div className="border-r" style={{ borderColor: BORDER }}><ResultBox label="실질 레버리지" value={fmt(leverage)} unit="배" highlight color="#6B6B6B" /></div>
+      <div className="grid md:grid-cols-3 border" style={{ borderColor: _BORDER }}>
+        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="필요 증거금" value={fmt(margin, 0)} unit="원" /></div>
+        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="실질 레버리지" value={fmt(leverage)} unit="배" highlight color="#6B6B6B" /></div>
         <ResultBox label="최대 명목포지션" value={fmt(maxLoss, 0)} unit="원" />
       </div>
       <CalcNote
@@ -2321,11 +3148,11 @@ function BlackScholesCalc() {
   return (
     <div>
       <CalcHeader num="21" title="블랙-숄즈 옵션가" desc="유럽형 옵션의 이론가를 계산합니다." color="#6B6B6B" />
-      <div className="flex mb-5 border" style={{ borderColor: BORDER }}>
+      <div className="flex mb-5 border" style={{ borderColor: _BORDER }}>
         <button onClick={() => setType('call')} className="flex-1 py-3 text-sm font-medium transition-all border-r"
-          style={{ borderColor: BORDER, background: type === 'call' ? '#4A7045' : 'transparent', color: type === 'call' ? '#eae7dc' : '#a8a49a' }}>CALL · 콜옵션</button>
+          style={{ borderColor: _BORDER, background: type === 'call' ? '#4A7045' : 'transparent', color: type === 'call' ? _T.textPrimary : _T.textMuted }}>CALL · 콜옵션</button>
         <button onClick={() => setType('put')} className="flex-1 py-3 text-sm font-medium transition-all"
-          style={{ background: type === 'put' ? '#A63D33' : 'transparent', color: type === 'put' ? '#eae7dc' : '#a8a49a' }}>PUT · 풋옵션</button>
+          style={{ background: type === 'put' ? '#A63D33' : 'transparent', color: type === 'put' ? _T.textPrimary : _T.textMuted }}>PUT · 풋옵션</button>
       </div>
       <div className="grid md:grid-cols-2 gap-5 mb-8">
         <NumInput label="기초자산 가격 (S)" value={S} onChange={setS} unit="원" placeholder="350" />
@@ -2334,9 +3161,9 @@ function BlackScholesCalc() {
         <NumInput label="무위험금리 (r)" value={r} onChange={setR} unit="%" placeholder="3.5" />
         <NumInput label="변동성 (σ)" value={sigma} onChange={setSigma} unit="%" placeholder="20" hint="내재변동성 또는 역사적변동성" />
       </div>
-      <div className="grid md:grid-cols-3 border" style={{ borderColor: BORDER }}>
-        <div className="border-r" style={{ borderColor: BORDER }}><ResultBox label="d₁" value={result ? fmt(result.d1, 4) : '—'} unit="" /></div>
-        <div className="border-r" style={{ borderColor: BORDER }}><ResultBox label="d₂" value={result ? fmt(result.d2, 4) : '—'} unit="" /></div>
+      <div className="grid md:grid-cols-3 border" style={{ borderColor: _BORDER }}>
+        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="d₁" value={result ? fmt(result.d1, 4) : '—'} unit="" /></div>
+        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="d₂" value={result ? fmt(result.d2, 4) : '—'} unit="" /></div>
         <ResultBox label={type === 'call' ? '콜 이론가' : '풋 이론가'} value={result ? fmt(result.price, 2) : '—'} unit="원" highlight color="#6B6B6B" />
       </div>
       <CalcNote
@@ -2396,11 +3223,11 @@ function GreeksCalc() {
   return (
     <div>
       <CalcHeader num="22" title="옵션 Greeks" desc="델타·감마·세타·베가·로를 동시에 산출합니다." color="#6B6B6B" />
-      <div className="flex mb-5 border" style={{ borderColor: BORDER }}>
+      <div className="flex mb-5 border" style={{ borderColor: _BORDER }}>
         <button onClick={() => setType('call')} className="flex-1 py-3 text-sm font-medium border-r"
-          style={{ borderColor: BORDER, background: type === 'call' ? '#4A7045' : 'transparent', color: type === 'call' ? '#eae7dc' : '#a8a49a' }}>CALL</button>
+          style={{ borderColor: _BORDER, background: type === 'call' ? '#4A7045' : 'transparent', color: type === 'call' ? _T.textPrimary : _T.textMuted }}>CALL</button>
         <button onClick={() => setType('put')} className="flex-1 py-3 text-sm font-medium"
-          style={{ background: type === 'put' ? '#A63D33' : 'transparent', color: type === 'put' ? '#eae7dc' : '#a8a49a' }}>PUT</button>
+          style={{ background: type === 'put' ? '#A63D33' : 'transparent', color: type === 'put' ? _T.textPrimary : _T.textMuted }}>PUT</button>
       </div>
       <div className="grid md:grid-cols-2 gap-5 mb-8">
         <NumInput label="기초자산 (S)" value={S} onChange={setS} unit="원" placeholder="350" />
@@ -2409,11 +3236,11 @@ function GreeksCalc() {
         <NumInput label="무위험금리" value={r} onChange={setR} unit="%" placeholder="3.5" />
         <NumInput label="변동성" value={sigma} onChange={setSigma} unit="%" placeholder="20" />
       </div>
-      <div className="grid md:grid-cols-5 border" style={{ borderColor: BORDER }}>
-        <div className="border-r" style={{ borderColor: BORDER }}><ResultBox label="Delta Δ" value={greeks ? fmt(greeks.delta, 4) : '—'} unit="" highlight color="#6B6B6B" /></div>
-        <div className="border-r" style={{ borderColor: BORDER }}><ResultBox label="Gamma Γ" value={greeks ? fmt(greeks.gamma, 5) : '—'} unit="" /></div>
-        <div className="border-r" style={{ borderColor: BORDER }}><ResultBox label="Theta Θ" value={greeks ? fmt(greeks.theta, 4) : '—'} unit="/일" /></div>
-        <div className="border-r" style={{ borderColor: BORDER }}><ResultBox label="Vega ν" value={greeks ? fmt(greeks.vega, 4) : '—'} unit="" /></div>
+      <div className="grid md:grid-cols-5 border" style={{ borderColor: _BORDER }}>
+        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="Delta Δ" value={greeks ? fmt(greeks.delta, 4) : '—'} unit="" highlight color="#6B6B6B" /></div>
+        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="Gamma Γ" value={greeks ? fmt(greeks.gamma, 5) : '—'} unit="" /></div>
+        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="Theta Θ" value={greeks ? fmt(greeks.theta, 4) : '—'} unit="/일" /></div>
+        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="Vega ν" value={greeks ? fmt(greeks.vega, 4) : '—'} unit="" /></div>
         <ResultBox label="Rho ρ" value={greeks ? fmt(greeks.rho, 4) : '—'} unit="" />
       </div>
       <CalcNote
@@ -2458,8 +3285,8 @@ function SharpeCalc() {
         <NumInput label="표준편차 (전체)" value={sigma} onChange={setSigma} unit="%" placeholder="12" />
         <NumInput label="하방편차" value={downside} onChange={setDownside} unit="%" placeholder="8" hint="손실 구간의 표준편차" />
       </div>
-      <div className="grid md:grid-cols-2 border" style={{ borderColor: BORDER }}>
-        <div className="border-r" style={{ borderColor: BORDER }}><ResultBox label="샤프지수" value={fmt(sharpe, 3)} unit="" highlight color="#4F7E7C" /></div>
+      <div className="grid md:grid-cols-2 border" style={{ borderColor: _BORDER }}>
+        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="샤프지수" value={fmt(sharpe, 3)} unit="" highlight color="#4F7E7C" /></div>
         <ResultBox label="소티노지수" value={fmt(sortino, 3)} unit="" />
       </div>
       <CalcNote
@@ -2503,9 +3330,9 @@ function KellyCalc() {
         <NumInput label="평균 수익금" value={winAmt} onChange={setWinAmt} unit="원" placeholder="200,000" />
         <NumInput label="평균 손실금" value={lossAmt} onChange={setLossAmt} unit="원" placeholder="100,000" />
       </div>
-      <div className="grid md:grid-cols-3 border" style={{ borderColor: BORDER }}>
-        <div className="border-r" style={{ borderColor: BORDER }}><ResultBox label="Full Kelly" value={fmt(f * 100)} unit="%" highlight color="#4F7E7C" /></div>
-        <div className="border-r" style={{ borderColor: BORDER }}><ResultBox label="Half Kelly (권장)" value={fmt(halfKelly * 100)} unit="%" /></div>
+      <div className="grid md:grid-cols-3 border" style={{ borderColor: _BORDER }}>
+        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="Full Kelly" value={fmt(f * 100)} unit="%" highlight color="#4F7E7C" /></div>
+        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="Half Kelly (권장)" value={fmt(halfKelly * 100)} unit="%" /></div>
         <ResultBox label="손익비 (b)" value={fmt(b)} unit=":1" />
       </div>
       <CalcNote
@@ -2544,8 +3371,8 @@ function MDDCalc() {
         <NumInput label="고점 (Peak)" value={peak} onChange={setPeak} unit="원" placeholder="100,000,000" />
         <NumInput label="저점 (Trough)" value={trough} onChange={setTrough} unit="원" placeholder="70,000,000" />
       </div>
-      <div className="grid md:grid-cols-2 border" style={{ borderColor: BORDER }}>
-        <div className="border-r" style={{ borderColor: BORDER }}><ResultBox label="MDD" value={fmt(mdd)} unit="%" highlight color="#A63D33" /></div>
+      <div className="grid md:grid-cols-2 border" style={{ borderColor: _BORDER }}>
+        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="MDD" value={fmt(mdd)} unit="%" highlight color="#A63D33" /></div>
         <ResultBox label="회복 필요 수익률" value={fmt(recovery)} unit="%" />
       </div>
       <CalcNote
@@ -2588,18 +3415,18 @@ function VaRCalc() {
         <NumInput label="포트폴리오 가치" value={value} onChange={setValue} unit="원" placeholder="100,000,000" />
         <NumInput label="일일 변동성" value={sigma} onChange={setSigma} unit="%" placeholder="1.5" />
         <div>
-          <label className="block text-[10px] mono uppercase tracking-[0.2em] mb-2" style={{ color: '#7a7a7a' }}>신뢰수준</label>
-          <div className="flex border" style={{ borderColor: BORDER }}>
+          <label className="block text-[10px] mono uppercase tracking-[0.2em] mb-2" style={{ color: _T.textFaint }}>신뢰수준</label>
+          <div className="flex border" style={{ borderColor: _BORDER }}>
             {['90', '95', '99'].map(c => (
               <button key={c} onClick={() => setConfidence(c)} className="flex-1 py-3 text-sm border-r last:border-r-0"
-                style={{ borderColor: BORDER, background: confidence === c ? '#4F7E7C' : 'transparent', color: confidence === c ? '#eae7dc' : '#a8a49a' }}>{c}%</button>
+                style={{ borderColor: _BORDER, background: confidence === c ? '#4F7E7C' : 'transparent', color: confidence === c ? _T.textPrimary : _T.textMuted }}>{c}%</button>
             ))}
           </div>
         </div>
         <NumInput label="기간" value={days} onChange={setDays} unit="일" placeholder="1" />
       </div>
-      <div className="grid md:grid-cols-2 border" style={{ borderColor: BORDER }}>
-        <div className="border-r" style={{ borderColor: BORDER }}><ResultBox label="1일 VaR" value={fmt(dailyVar, 0)} unit="원" /></div>
+      <div className="grid md:grid-cols-2 border" style={{ borderColor: _BORDER }}>
+        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="1일 VaR" value={fmt(dailyVar, 0)} unit="원" /></div>
         <ResultBox label={`${days}일 VaR`} value={fmt(multiDayVar, 0)} unit="원" highlight color="#A63D33" />
       </div>
       <CalcNote
@@ -2644,9 +3471,9 @@ function FXCalc() {
         <NumInput label="매수 환율" value={buyRate} onChange={setBuyRate} unit="KRW" placeholder="1,300" />
         <NumInput label="매도 환율" value={sellRate} onChange={setSellRate} unit="KRW" placeholder="1,380" />
       </div>
-      <div className="grid md:grid-cols-3 border" style={{ borderColor: BORDER }}>
-        <div className="border-r" style={{ borderColor: BORDER }}><ResultBox label="매수 시 원화" value={fmt(krwSpent, 0)} unit="원" /></div>
-        <div className="border-r" style={{ borderColor: BORDER }}><ResultBox label="매도 시 원화" value={fmt(krwReceived, 0)} unit="원" /></div>
+      <div className="grid md:grid-cols-3 border" style={{ borderColor: _BORDER }}>
+        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="매수 시 원화" value={fmt(krwSpent, 0)} unit="원" /></div>
+        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="매도 시 원화" value={fmt(krwReceived, 0)} unit="원" /></div>
         <ResultBox label={`환차${pnl >= 0 ? '익' : '손'}`} value={fmt(pnl, 0)} unit={`원 (${fmt(pnlPct)}%)`} highlight color={pnl >= 0 ? '#C89650' : '#A63D33'} />
       </div>
       <CalcNote
@@ -2689,8 +3516,8 @@ function RealRateCalc() {
         <NumInput label="명목금리" value={nominal} onChange={setNominal} unit="%" placeholder="5" />
         <NumInput label="인플레이션 (CPI)" value={inflation} onChange={setInflation} unit="%" placeholder="3" />
       </div>
-      <div className="grid md:grid-cols-2 border" style={{ borderColor: BORDER }}>
-        <div className="border-r" style={{ borderColor: BORDER }}><ResultBox label="실질금리 (Fisher)" value={fmt(real, 3)} unit="%" highlight color="#7C6A9B" /></div>
+      <div className="grid md:grid-cols-2 border" style={{ borderColor: _BORDER }}>
+        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="실질금리 (Fisher)" value={fmt(real, 3)} unit="%" highlight color="#7C6A9B" /></div>
         <ResultBox label="간이 계산" value={fmt(simpleReal)} unit="%" />
       </div>
       <CalcNote
@@ -2743,8 +3570,8 @@ function BondPriceCalc() {
         <NumInput label="만기수익률 (YTM)" value={ytm} onChange={setYtm} unit="%" placeholder="5" />
         <NumInput label="잔존만기" value={years} onChange={setYears} unit="년" placeholder="5" />
       </div>
-      <div className="grid md:grid-cols-2 border" style={{ borderColor: BORDER }}>
-        <div className="border-r" style={{ borderColor: BORDER }}><ResultBox label="채권 가격 (PV)" value={fmt(pv, 0)} unit="원" highlight color="#7C6A9B" /></div>
+      <div className="grid md:grid-cols-2 border" style={{ borderColor: _BORDER }}>
+        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="채권 가격 (PV)" value={fmt(pv, 0)} unit="원" highlight color="#7C6A9B" /></div>
         <ResultBox label="액면 대비" value={fmt(premium, 2)} unit="%" />
       </div>
       <CalcNote

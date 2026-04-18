@@ -498,7 +498,7 @@ export default function EventsView({ T }: { T?: any }) {
                   }}
                 >
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs mono w-5 h-5 flex items-center justify-center"
+                    <span className="text-sm mono w-6 h-6 flex items-center justify-center"
                       style={{
                         color: isToday ? theme.accent : dow === 0 ? '#A63D33' : dow === 6 ? '#3a5a7a' : theme.textFaint,
                         fontWeight: isToday ? 700 : 400,
@@ -597,7 +597,7 @@ export default function EventsView({ T }: { T?: any }) {
                         >
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
-                              <span className="text-xs font-semibold" style={{ color: ev.color }}>{ev.label}</span>
+                              <span className="text-sm font-semibold" style={{ color: ev.color }}>{ev.label}</span>
                               {e && (
                                 <div className="flex gap-1 flex-wrap">
                                   {e.sector && e.sector !== 'Other' && (
@@ -802,7 +802,7 @@ export default function EventsView({ T }: { T?: any }) {
                 return (
                   <div
                     key={i}
-                    className="px-4 py-2.5 border-b flex items-start gap-3 cursor-pointer"
+                    className="px-4 py-3 border-b flex items-start gap-3 cursor-pointer"
                     style={{ borderColor: theme.borderSoft }}
                     onMouseEnter={el => (el.currentTarget as HTMLElement).style.background = theme.bgHover}
                     onMouseLeave={el => (el.currentTarget as HTMLElement).style.background = 'transparent'}
@@ -814,7 +814,7 @@ export default function EventsView({ T }: { T?: any }) {
                     }}
                   >
                     {/* D-Day 배지 */}
-                    <span className="text-[14px] mono w-10 shrink-0 text-center py-0.5 mt-0.5 border"
+                    <span className="text-[14px] mono w-14 shrink-0 text-center py-0.5 mt-0.5 border"
                       style={{
                         color: diff === 0 ? ev.color : theme.textDimmer,
                         borderColor: diff === 0 ? ev.color : theme.border,
@@ -825,8 +825,8 @@ export default function EventsView({ T }: { T?: any }) {
                     <div className="min-w-0 flex-1">
                       {/* 종목명 + 배지 행 */}
                       <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
-                        <span className="w-2 h-2 rounded-sm shrink-0" style={{ background: ev.color }} />
-                        <span className="text-xs font-semibold" style={{ color: theme.textPrimary }}>{ev.label}</span>
+                        <span className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ background: ev.color }} />
+                        <span className="text-sm font-semibold" style={{ color: theme.textPrimary }}>{ev.label}</span>
                         {/* 섹터 배지 */}
                         {e?.sector && e.sector !== 'Other' && (
                           <span className="text-[14px] mono px-1 border"
@@ -851,23 +851,23 @@ export default function EventsView({ T }: { T?: any }) {
                         )}
                       </div>
                       {/* 날짜 + 한글명 */}
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-[14px] mono" style={{ color: theme.textFaint }}>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        <span className="text-[13px] mono shrink-0" style={{ color: theme.textFaint }}>
                           {ev.dateKST.slice(5).replace('-', '/')}
                         </span>
                         {e && (
-                          <span className="text-[14px] truncate" style={{ color: theme.textDimmer }}>
+                          <span className="text-[13px] truncate" style={{ color: theme.textMuted }}>
                             · {e.nameKo}
                           </span>
                         )}
                         {!e && (
-                          <span className="text-[14px] truncate" style={{ color: theme.textDimmer }}>
+                          <span className="text-[13px] truncate" style={{ color: theme.textMuted }}>
                             · {ev.desc}
                           </span>
                         )}
                         {/* 시총 */}
                         {e?.marketCap != null && e.marketCap > 0 && (
-                          <span className="text-[15px] mono ml-auto shrink-0" style={{ color: theme.textDimmer }}>
+                          <span className="text-[13px] mono ml-auto shrink-0" style={{ color: theme.textFaint }}>
                             ${e.marketCap >= 1000 ? `${(e.marketCap/1000).toFixed(1)}T` : `${e.marketCap}B`}
                           </span>
                         )}

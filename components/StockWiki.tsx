@@ -369,10 +369,10 @@ export default function StockWiki({ features }: { features?: Features }) {
               </span>
               <span className="text-xs mono" style={{ color: T.textFaint }}>.kr</span>
               <span className="hidden lg:inline-block w-px h-4" style={{ background: T.border }}></span>
-              <span className="hidden lg:inline-block text-[10px] tracking-[0.3em] mono uppercase" style={{ color: T.textFaint }}>Terms & Calculators</span>
+              <span className="hidden lg:inline-block text-[12px] tracking-[0.3em] mono uppercase" style={{ color: T.textFaint }}>Terms & Calculators</span>
             </button>
             {/* 모바일: 현재 탭 표시 */}
-            <div className="flex md:hidden items-center gap-1.5 text-[10px] mono uppercase tracking-wider" style={{ color: T.textFaint }}>
+            <div className="flex md:hidden items-center gap-1.5 text-[12px] mono uppercase tracking-wider" style={{ color: T.textFaint }}>
               <span className="w-px h-3" style={{ background: T.border }}></span>
               <span>
                 {activeTab === 'glossary' ? '금융 사전' : activeTab === 'calculator' ? '계산기' : activeTab === 'events' ? '이벤트' : ''}
@@ -388,7 +388,7 @@ export default function StockWiki({ features }: { features?: Features }) {
               >
                 <Search size={12} />
                 <span>빠른 검색</span>
-                <span className="mono text-[10px] px-1.5 py-0.5 border" style={{ borderColor: T.border }}>⌘K</span>
+                <span className="mono text-[12px] px-1.5 py-0.5 border" style={{ borderColor: T.border }}>⌘K</span>
               </button>
             )}
             {/* 다크/라이트 토글 */}
@@ -408,7 +408,7 @@ export default function StockWiki({ features }: { features?: Features }) {
                 </svg>
               )}
             </button>
-            <div className="hidden lg:flex items-center gap-4 text-[11px] mono uppercase tracking-wider" style={{ color: T.textFaint }}>
+            <div className="hidden lg:flex items-center gap-4 text-[13px] mono uppercase tracking-wider" style={{ color: T.textFaint }}>
               <span>{new Date().toLocaleDateString('ko-KR')}</span>
             </div>
             {/* 모바일 메뉴 버튼 */}
@@ -442,10 +442,10 @@ export default function StockWiki({ features }: { features?: Features }) {
                   color: active ? T.textTabActive : T.textMuted,
                 }}
               >
-                <span className="text-[10px] mono opacity-60">{tab.idx}</span>
+                <span className="text-[12px] mono opacity-60">{tab.idx}</span>
                 <Icon size={14} />
                 <span className="font-medium">{tab.label}</span>
-                {tab.count !== null && <span className="text-[10px] mono opacity-50">{tab.count}</span>}
+                {tab.count !== null && <span className="text-[12px] mono opacity-50">{tab.count}</span>}
               </button>
             );
           })}
@@ -456,7 +456,7 @@ export default function StockWiki({ features }: { features?: Features }) {
         {activeTab === 'none' && (
           <div className="flex items-center justify-center" style={{ minHeight: '60vh' }}>
             <div className="text-center max-w-md px-6">
-              <div className="text-[10px] mono uppercase tracking-[0.3em] mb-3" style={{ color: T.textFaint }}>
+              <div className="text-[12px] mono uppercase tracking-[0.3em] mb-3" style={{ color: T.textFaint }}>
                 § Temporarily Disabled
               </div>
               <h2 className="text-2xl md:text-3xl font-light tracking-tight mb-4" style={{ color: T.textPrimary }}>
@@ -466,7 +466,7 @@ export default function StockWiki({ features }: { features?: Features }) {
                 모든 기능이 일시적으로 비활성화되었습니다.<br />
                 관리자가 설정을 업데이트하면 자동으로 사용 가능해집니다.
               </p>
-              <div className="inline-flex items-center gap-2 text-[10px] mono uppercase tracking-[0.25em] px-3 py-1.5 border" style={{ borderColor: T.border, color: T.textFaint }}>
+              <div className="inline-flex items-center gap-2 text-[12px] mono uppercase tracking-[0.25em] px-3 py-1.5 border" style={{ borderColor: T.border, color: T.textFaint }}>
                 <span className="w-1.5 h-1.5 rounded-full" style={{ background: T.accent }} />
                 <span>Service Standby</span>
               </div>
@@ -541,7 +541,7 @@ export default function StockWiki({ features }: { features?: Features }) {
 
             {/* 탭 네비게이션 */}
             <div className="px-4 py-3 border-b" style={{ borderColor: T.border }}>
-              <div className="text-[10px] mono uppercase tracking-[0.2em] mb-2" style={{ color: T.textFaint }}>Navigation</div>
+              <div className="text-[12px] mono uppercase tracking-[0.2em] mb-2" style={{ color: T.textFaint }}>Navigation</div>
               {[
                 { id: 'glossary', label: '금융 사전', icon: BookOpen, count: TERMS.length },
                 { id: 'calculator', label: '계산기', icon: Calculator, count: CALC_CATEGORIES.reduce((s, c) => s + c.calcs.length, 0) },
@@ -561,7 +561,7 @@ export default function StockWiki({ features }: { features?: Features }) {
                   >
                     <Icon size={14} />
                     <span className="font-medium">{tab.label}</span>
-                    {tab.count !== null && <span className="ml-auto text-[10px] mono opacity-50">{tab.count}</span>}
+                    {tab.count !== null && <span className="ml-auto text-[12px] mono opacity-50">{tab.count}</span>}
                   </button>
                 );
               })}
@@ -570,7 +570,7 @@ export default function StockWiki({ features }: { features?: Features }) {
             {/* 즐겨찾기 카테고리 (금융 사전 탭일 때) */}
             {activeTab === 'glossary' && (
               <div className="px-4 py-3 border-b" style={{ borderColor: T.border }}>
-                <div className="text-[10px] mono uppercase tracking-[0.2em] mb-2" style={{ color: T.textFaint }}>카테고리</div>
+                <div className="text-[12px] mono uppercase tracking-[0.2em] mb-2" style={{ color: T.textFaint }}>카테고리</div>
                 <div className="flex flex-col gap-0.5">
                   {categoriesWithFav.map(cat => {
                     const active = selectedCategory === cat;
@@ -602,7 +602,7 @@ export default function StockWiki({ features }: { features?: Features }) {
               <div className="px-4 py-3 border-b" style={{ borderColor: T.border }}>
                 <div className="flex items-center gap-2 mb-2">
                   <Clock size={11} style={{ color: T.textFaint }} />
-                  <div className="text-[10px] mono uppercase tracking-[0.2em]" style={{ color: T.textFaint }}>최근 본 용어</div>
+                  <div className="text-[12px] mono uppercase tracking-[0.2em]" style={{ color: T.textFaint }}>최근 본 용어</div>
                 </div>
                 <div className="flex flex-col gap-0.5">
                   {recent.slice(0, 5).map(t => {
@@ -675,7 +675,7 @@ export default function StockWiki({ features }: { features?: Features }) {
       )}
 
       <footer className="border-t" style={{ borderColor: T.border, background: T.bgSurface }}>
-        <div className="max-w-[1400px] mx-auto px-4 md:px-8 py-6 flex flex-col md:flex-row md:justify-between md:items-center gap-3 text-[11px] mono uppercase tracking-wider" style={{ color: T.textFooter }}>
+        <div className="max-w-[1400px] mx-auto px-4 md:px-8 py-6 flex flex-col md:flex-row md:justify-between md:items-center gap-3 text-[13px] mono uppercase tracking-wider" style={{ color: T.textFooter }}>
           <div className="flex items-center gap-4 flex-wrap">
             <span style={{ color: T.textMuted }}>
               Stock<span style={{ color: T.accent }}>WiKi</span>.kr
@@ -779,7 +779,7 @@ function CommandK({ terms, onClose, onSelect, T }) {
             className="flex-1 bg-transparent text-base"
             style={{ color: T.textPrimary }}
           />
-          <span className="text-[10px] mono px-2 py-1 border" style={{ borderColor: T.border, color: T.textFaint }}>ESC</span>
+          <span className="text-[12px] mono px-2 py-1 border" style={{ borderColor: T.border, color: T.textFaint }}>ESC</span>
         </div>
         <div className="max-h-[50vh] overflow-y-auto">
           {results.map((t, i) => {
@@ -792,7 +792,7 @@ function CommandK({ terms, onClose, onSelect, T }) {
                 className="w-full flex items-center gap-4 px-5 py-3 text-left transition-colors"
                 style={{ background: i === idx ? T.commandKSelected : 'transparent' }}
               >
-                <span className="text-[10px] mono px-2 py-1" style={{ background: color?.bg, color: color?.text }}>{t.category}</span>
+                <span className="text-[12px] mono px-2 py-1" style={{ background: color?.bg, color: color?.text }}>{t.category}</span>
                 <span className="font-medium" style={{ color: T.textPrimary }}>{t.name}</span>
                 <span className="text-sm" style={{ color: T.textFaint }}>{t.fullName}</span>
                 <span className="ml-auto text-xs mono italic" style={{ color: T.textDimmer }}>{t.en}</span>
@@ -803,7 +803,7 @@ function CommandK({ terms, onClose, onSelect, T }) {
             <div className="px-5 py-8 text-center text-sm" style={{ color: T.textDimmer }}>결과 없음</div>
           )}
         </div>
-        <div className="flex items-center gap-4 px-5 py-3 border-t text-[10px] mono uppercase" style={{ borderColor: T.border, color: T.textFaint }}>
+        <div className="flex items-center gap-4 px-5 py-3 border-t text-[12px] mono uppercase" style={{ borderColor: T.border, color: T.textFaint }}>
           <span>↑↓ 이동</span>
           <span>↵ 선택</span>
           <span className="ml-auto">{results.length} results</span>
@@ -821,12 +821,12 @@ function GlossaryView({ terms, searchQuery, setSearchQuery, searchRef, categorie
   return (
     <div>
       <div className="mb-6 border-y" style={{ borderColor: T.border }}>
-        <div className="flex items-center justify-end gap-3 py-2 border-b mono text-[10px] uppercase tracking-[0.2em] whitespace-nowrap" style={{ borderColor: T.border, color: T.textFaint }}>
+        <div className="flex items-center justify-end gap-3 py-2 border-b mono text-[12px] uppercase tracking-[0.2em] whitespace-nowrap" style={{ borderColor: T.border, color: T.textFaint }}>
           <span>§ Glossary</span>
           <span className="w-4 h-px" style={{ background: T.borderMid }}></span>
           <span>Index / 001</span>
         </div>
-        <div className="grid grid-cols-4 gap-2 md:gap-6 py-2 mono text-[10px] uppercase tracking-[0.2em]">
+        <div className="grid grid-cols-4 gap-2 md:gap-6 py-2 mono text-[12px] uppercase tracking-[0.2em]">
           <div className="flex items-baseline gap-1 md:gap-2"><span style={{ color: T.textDimmer }}>Total</span><span style={{ color: T.textPrimary }}>{String(totalCount).padStart(3, '0')}</span></div>
           <div className="flex items-baseline gap-1 md:gap-2 min-w-0"><span style={{ color: T.textDimmer }}>Filter</span><span className="truncate" style={{ color: T.textPrimary }}>{selectedCategory === '전체' ? 'ALL' : selectedCategory.replace('★ ', '')}</span></div>
           <div className="flex items-baseline gap-1 md:gap-2"><span style={{ color: T.textDimmer }}>Shown</span><span style={{ color: T.textPrimary }}>{String(terms.length).padStart(3, '0')}</span></div>
@@ -839,7 +839,7 @@ function GlossaryView({ terms, searchQuery, setSearchQuery, searchRef, categorie
         <div className="mb-6 border" style={{ borderColor: T.border, background: T.bgSurface }}>
           <div className="flex items-center gap-2 px-4 py-2 border-b" style={{ borderColor: T.border }}>
             <Clock size={12} style={{ color: T.textFaint }} />
-            <span className="text-[10px] mono uppercase tracking-[0.2em]" style={{ color: T.textFaint }}>최근 본 용어</span>
+            <span className="text-[12px] mono uppercase tracking-[0.2em]" style={{ color: T.textFaint }}>최근 본 용어</span>
           </div>
           <div className="flex flex-wrap p-2 gap-1">
             {recent.map(t => {
@@ -926,12 +926,12 @@ function GlossaryView({ terms, searchQuery, setSearchQuery, searchRef, categorie
               onMouseLeave={e => e.currentTarget.style.background = T.bgPage}
             >
               <div className="flex items-center justify-between px-5 md:px-6 pt-5 md:pt-6 mb-3">
-                <span className="text-[10px] mono uppercase tracking-wider px-2 py-1" style={{ background: color?.bg, color: color?.text }}>
+                <span className="text-[12px] mono uppercase tracking-wider px-2 py-1" style={{ background: color?.bg, color: color?.text }}>
                   {term.category}
                 </span>
                 <div className="flex items-center gap-2">
                   {term.detailed && (
-                    <span className="text-[9px] mono uppercase tracking-wider px-1.5 py-0.5 border" style={{ borderColor: T.borderMid, color: T.textFaint }}>
+                    <span className="text-[11px] mono uppercase tracking-wider px-1.5 py-0.5 border" style={{ borderColor: T.borderMid, color: T.textFaint }}>
                       심화
                     </span>
                   )}
@@ -953,7 +953,7 @@ function GlossaryView({ terms, searchQuery, setSearchQuery, searchRef, categorie
                 </div>
                 <div className="text-xs mono italic mb-3" style={{ color: T.textFaint }}>{term.en}</div>
                 <div className="text-sm leading-relaxed line-clamp-2" style={{ color: T.textMuted }}>{term.description}</div>
-                <div className="mt-4 flex items-center gap-1 text-[10px] mono uppercase tracking-wider" style={{ color: T.textDimmer }}>
+                <div className="mt-4 flex items-center gap-1 text-[12px] mono uppercase tracking-wider" style={{ color: T.textDimmer }}>
                   <span>자세히</span>
                   <ArrowUpRight size={12} className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
                 </div>
@@ -1079,9 +1079,9 @@ function TermModal({ term, termList, onClose, categoryColors, favorites, toggleF
               <ChevronLeft size={14} />
             </button>
             <span className="ball-joint hidden sm:inline-block" style={{ background: categoryColors[term.category]?.text }}></span>
-            <span className="text-[10px] mono uppercase tracking-[0.3em]">{term.category}</span>
+            <span className="text-[12px] mono uppercase tracking-[0.3em]">{term.category}</span>
             {total > 0 && (
-              <span className="text-[10px] mono opacity-60 hidden sm:inline">
+              <span className="text-[12px] mono opacity-60 hidden sm:inline">
                 {currentIdx + 1} / {total}
               </span>
             )}
@@ -1093,7 +1093,7 @@ function TermModal({ term, termList, onClose, categoryColors, favorites, toggleF
             {/* 비교 버튼 */}
             <button
               onClick={() => { setCompareMode(m => !m); setCompareTerm(null); setCompareSearch(''); }}
-              className="flex items-center gap-1 text-[10px] mono px-1.5 md:px-2 py-1 border transition-all"
+              className="flex items-center gap-1 text-[12px] mono px-1.5 md:px-2 py-1 border transition-all"
               style={{
                 borderColor: compareMode ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.2)',
                 background: compareMode ? 'rgba(255,255,255,0.15)' : 'transparent',
@@ -1145,10 +1145,10 @@ function TermModal({ term, termList, onClose, categoryColors, favorites, toggleF
           {compareMode && (
             <div className="mb-8 pb-8 border-b" style={{ borderColor: T.border }}>
               <div className="flex items-center gap-2 mb-4">
-                <span className="text-[10px] mono uppercase tracking-[0.2em]" style={{ color: T.textFaint }}>용어 비교 · Compare Terms</span>
+                <span className="text-[12px] mono uppercase tracking-[0.2em]" style={{ color: T.textFaint }}>용어 비교 · Compare Terms</span>
                 <button
                   onClick={() => { setCompareMode(false); setCompareTerm(null); }}
-                  className="ml-auto text-[10px] mono px-2 py-0.5 border"
+                  className="ml-auto text-[12px] mono px-2 py-0.5 border"
                   style={{ borderColor: T.border, color: T.textFaint }}
                 >
                   비교 종료
@@ -1171,7 +1171,7 @@ function TermModal({ term, termList, onClose, categoryColors, favorites, toggleF
                       autoFocus
                     />
                   </div>
-                  <div className="text-[10px] mono mb-2" style={{ color: T.textFaint }}>
+                  <div className="text-[12px] mono mb-2" style={{ color: T.textFaint }}>
                     {compareSearch ? '검색 결과' : '관련 용어'}
                   </div>
                   <div className="flex flex-wrap gap-2">
@@ -1202,8 +1202,8 @@ function TermModal({ term, termList, onClose, categoryColors, favorites, toggleF
                     {/* 현재 용어 */}
                     <div className="border p-4" style={{ borderColor: categoryColors[term.category]?.bg || T.border, background: T.bgCard }}>
                       <div className="flex items-center gap-2 mb-3">
-                        <span className="text-[9px] mono px-2 py-0.5" style={{ background: categoryColors[term.category]?.bg, color: categoryColors[term.category]?.text }}>{term.category}</span>
-                        <span className="text-[10px] mono" style={{ color: T.textFaint }}>현재</span>
+                        <span className="text-[11px] mono px-2 py-0.5" style={{ background: categoryColors[term.category]?.bg, color: categoryColors[term.category]?.text }}>{term.category}</span>
+                        <span className="text-[12px] mono" style={{ color: T.textFaint }}>현재</span>
                       </div>
                       <div className="text-2xl font-medium mb-1" style={{ color: T.textPrimary }}>{term.name}</div>
                       <div className="text-xs mb-3" style={{ color: T.textFaint }}>{term.fullName}</div>
@@ -1217,10 +1217,10 @@ function TermModal({ term, termList, onClose, categoryColors, favorites, toggleF
                     {/* 비교 용어 */}
                     <div className="border p-4" style={{ borderColor: categoryColors[compareTerm.category]?.bg || T.border, background: T.bgCard }}>
                       <div className="flex items-center gap-2 mb-3">
-                        <span className="text-[9px] mono px-2 py-0.5" style={{ background: categoryColors[compareTerm.category]?.bg, color: categoryColors[compareTerm.category]?.text }}>{compareTerm.category}</span>
+                        <span className="text-[11px] mono px-2 py-0.5" style={{ background: categoryColors[compareTerm.category]?.bg, color: categoryColors[compareTerm.category]?.text }}>{compareTerm.category}</span>
                         <button
                           onClick={() => setCompareTerm(null)}
-                          className="ml-auto text-[10px] mono px-1.5 py-0.5 border"
+                          className="ml-auto text-[12px] mono px-1.5 py-0.5 border"
                           style={{ borderColor: T.border, color: T.textFaint }}
                         >변경</button>
                       </div>
@@ -1241,13 +1241,13 @@ function TermModal({ term, termList, onClose, categoryColors, favorites, toggleF
                       { key: 'en', label: '영문' },
                     ].map(row => (
                       <div key={row.key} className="grid grid-cols-[120px_1fr_1fr] border-b last:border-b-0" style={{ borderColor: T.border }}>
-                        <div className="px-3 py-2 text-[10px] mono uppercase flex items-center" style={{ background: T.bgCard, color: T.textFaint, borderRight: `1px solid ${T.border}` }}>{row.label}</div>
+                        <div className="px-3 py-2 text-[12px] mono uppercase flex items-center" style={{ background: T.bgCard, color: T.textFaint, borderRight: `1px solid ${T.border}` }}>{row.label}</div>
                         <div className="px-3 py-2 text-xs border-r" style={{ borderColor: T.border, color: T.textSecondary }}>{term[row.key]}</div>
                         <div className="px-3 py-2 text-xs" style={{ color: T.textSecondary }}>{compareTerm[row.key]}</div>
                       </div>
                     ))}
                     <div className="grid grid-cols-[120px_1fr_1fr] border-b" style={{ borderColor: T.border }}>
-                      <div className="px-3 py-2 text-[10px] mono uppercase flex items-center" style={{ background: T.bgCard, color: T.textFaint, borderRight: `1px solid ${T.border}` }}>예시</div>
+                      <div className="px-3 py-2 text-[12px] mono uppercase flex items-center" style={{ background: T.bgCard, color: T.textFaint, borderRight: `1px solid ${T.border}` }}>예시</div>
                       <div className="px-3 py-2 text-xs border-r italic" style={{ borderColor: T.border, color: T.textMuted }}>{term.example?.slice(0, 80)}{term.example?.length > 80 ? '…' : ''}</div>
                       <div className="px-3 py-2 text-xs italic" style={{ color: T.textMuted }}>{compareTerm.example?.slice(0, 80)}{compareTerm.example?.length > 80 ? '…' : ''}</div>
                     </div>
@@ -1276,7 +1276,7 @@ function TermModal({ term, termList, onClose, categoryColors, favorites, toggleF
           {/* 한 줄 요약 (easy) */}
           {hasEasy && (
             <div className="mb-6 px-5 py-4 border-l-4" style={{ background: T.accentGreenBg, borderColor: T.accentGreen }}>
-              <div className="text-[10px] mono uppercase tracking-[0.2em] mb-2" style={{ color: T.accentGreen }}>💡 쉽게 말하면</div>
+              <div className="text-[12px] mono uppercase tracking-[0.2em] mb-2" style={{ color: T.accentGreen }}>💡 쉽게 말하면</div>
               <p className="text-sm md:text-base leading-relaxed" style={{ color: T.accentGreenText }}>{term.easy}</p>
             </div>
           )}
@@ -1351,7 +1351,7 @@ function TermModal({ term, termList, onClose, categoryColors, favorites, toggleF
           {/* 관련 용어 */}
           {relatedTerms.length > 0 && (
             <div className="mt-6 pt-6 border-t" style={{ borderColor: T.border }}>
-              <div className="text-[10px] mono uppercase tracking-[0.2em] mb-3" style={{ color: T.textFaint }}>관련 용어 · Related Terms</div>
+              <div className="text-[12px] mono uppercase tracking-[0.2em] mb-3" style={{ color: T.textFaint }}>관련 용어 · Related Terms</div>
               <div className="flex flex-wrap gap-2">
                 {relatedTerms.map(rt => {
                   const rc = categoryColors[rt.category];
@@ -1377,9 +1377,9 @@ function TermModal({ term, termList, onClose, categoryColors, favorites, toggleF
             <div className="mt-6 pt-6 border-t" style={{ borderColor: T.border }}>
               <div className="flex items-center gap-2 mb-3">
                 <Star size={11} fill={T.accent} stroke={T.accent} />
-                <div className="text-[10px] mono uppercase tracking-[0.2em]" style={{ color: T.textFaint }}>내 메모 · My Note</div>
+                <div className="text-[12px] mono uppercase tracking-[0.2em]" style={{ color: T.textFaint }}>내 메모 · My Note</div>
                 {memoText !== memo && (
-                  <span className="text-[9px] mono ml-1" style={{ color: T.accent }}>● 미저장</span>
+                  <span className="text-[11px] mono ml-1" style={{ color: T.accent }}>● 미저장</span>
                 )}
               </div>
               <div className="relative border" style={{ borderColor: T.border }}>
@@ -1393,7 +1393,7 @@ function TermModal({ term, termList, onClose, categoryColors, favorites, toggleF
                 />
               </div>
               <div className="flex items-center justify-between mt-2">
-                <span className="text-[10px] mono" style={{ color: T.textFaint }}>
+                <span className="text-[12px] mono" style={{ color: T.textFaint }}>
                   {memoText.length > 0 ? `${memoText.length}자` : ''}
                 </span>
                 <button
@@ -1414,7 +1414,7 @@ function TermModal({ term, termList, onClose, categoryColors, favorites, toggleF
           {!isFav && (
             <div className="mt-6 pt-6 border-t flex items-center gap-2" style={{ borderColor: T.border }}>
               <Star size={11} style={{ color: T.textDimmer }} />
-              <span className="text-[10px] mono" style={{ color: T.textDimmer }}>즐겨찾기 추가 시 개인 메모를 작성할 수 있습니다</span>
+              <span className="text-[12px] mono" style={{ color: T.textDimmer }}>즐겨찾기 추가 시 개인 메모를 작성할 수 있습니다</span>
             </div>
           )}
         </div>
@@ -1428,7 +1428,7 @@ function Section({ label, color, children, T }: { label: any; color: any; childr
     <div className="mb-6 md:mb-8">
       <div className="flex items-center gap-2 mb-3">
         <span className="w-1 h-3" style={{ background: color || T.accent }}></span>
-        <div className="text-[10px] mono uppercase tracking-[0.25em]" style={{ color: T.textFaint }}>{label}</div>
+        <div className="text-[12px] mono uppercase tracking-[0.25em]" style={{ color: T.textFaint }}>{label}</div>
       </div>
       <div>{children}</div>
     </div>
@@ -1583,7 +1583,7 @@ function CalculatorView({ selectedCalc, setSelectedCalc, T, isDark }) {
     <div>
       {/* 상단 메타 바 */}
       <div className="mb-6 border-y" style={{ borderColor: T.border }}>
-        <div className="flex items-center justify-between gap-3 py-2 border-b mono text-[10px] uppercase tracking-[0.2em] whitespace-nowrap" style={{ borderColor: T.border, color: T.textFaint }}>
+        <div className="flex items-center justify-between gap-3 py-2 border-b mono text-[12px] uppercase tracking-[0.2em] whitespace-nowrap" style={{ borderColor: T.border, color: T.textFaint }}>
           <div className="flex items-center gap-3">
             <span>§ Calculator</span>
             <span className="w-4 h-px hidden md:inline-block" style={{ background: T.borderMid }}></span>
@@ -1618,7 +1618,7 @@ function CalculatorView({ selectedCalc, setSelectedCalc, T, isDark }) {
             )}
           </div>
         </div>
-        <div className="grid grid-cols-3 gap-2 md:gap-6 py-2 mono text-[10px] uppercase tracking-[0.2em]">
+        <div className="grid grid-cols-3 gap-2 md:gap-6 py-2 mono text-[12px] uppercase tracking-[0.2em]">
           <div className="flex items-baseline gap-1 md:gap-2"><span style={{ color: T.textDimmer }}>Groups</span><span style={{ color: T.textPrimary }}>{String(CALC_CATEGORIES.length).padStart(3, '0')}</span></div>
           <div className="flex items-baseline gap-1 md:gap-2"><span style={{ color: T.textDimmer }}>Modules</span><span style={{ color: T.textPrimary }}>{String(allCalcs.length).padStart(3, '0')}</span></div>
           <div className="flex items-baseline gap-1 md:gap-2"><span style={{ color: T.textDimmer }}>Active</span><span style={{ color: currentCalc?.color || T.textPrimary }}>M—{currentCalc?.num || '—'}</span></div>
@@ -1636,8 +1636,8 @@ function CalculatorView({ selectedCalc, setSelectedCalc, T, isDark }) {
             <div className="mb-4 border" style={{ borderColor: T.border }}>
               <div className="px-4 py-2.5 flex items-center gap-3 border-b" style={{ background: T.bgCard, borderColor: T.border }}>
                 <Star size={11} fill={T.accent} stroke={T.accent} />
-                <span className="text-[11px] mono uppercase tracking-[0.2em]" style={{ color: T.accent }}>즐겨찾기</span>
-                <span className="ml-auto text-[10px] mono" style={{ color: T.textDimmer }}>{String(favCalcList.length).padStart(2, '0')} PINNED</span>
+                <span className="text-[13px] mono uppercase tracking-[0.2em]" style={{ color: T.accent }}>즐겨찾기</span>
+                <span className="ml-auto text-[12px] mono" style={{ color: T.textDimmer }}>{String(favCalcList.length).padStart(2, '0')} PINNED</span>
               </div>
               <div className="grid grid-cols-2">
                 {favCalcList.map((calc, i) => {
@@ -1669,8 +1669,8 @@ function CalculatorView({ selectedCalc, setSelectedCalc, T, isDark }) {
                 {/* 카테고리 헤더 */}
                 <div className="px-4 py-2.5 flex items-center gap-2.5" style={{ background: T.bgCard }}>
                   <span className="w-1.5 h-1.5 rounded-full" style={{ background: cat.color }}></span>
-                  <span className="text-[11px] mono uppercase tracking-[0.2em]" style={{ color: T.textMuted }}>{cat.name}</span>
-                  <span className="ml-auto text-[10px] mono" style={{ color: T.textDimmer }}>{String(cat.calcs.length).padStart(2, '0')}</span>
+                  <span className="text-[13px] mono uppercase tracking-[0.2em]" style={{ color: T.textMuted }}>{cat.name}</span>
+                  <span className="ml-auto text-[12px] mono" style={{ color: T.textDimmer }}>{String(cat.calcs.length).padStart(2, '0')}</span>
                 </div>
                 {/* 계산기 버튼 — 2열 */}
                 <div className="grid grid-cols-2 border-t" style={{ borderColor: T.border }}>
@@ -1687,7 +1687,7 @@ function CalculatorView({ selectedCalc, setSelectedCalc, T, isDark }) {
                             color: active ? '#0a0a0a' : T.textSecondary,
                           }}
                         >
-                          <span className="text-[10px] mono opacity-50 w-4 shrink-0">{calc.num}</span>
+                          <span className="text-[12px] mono opacity-50 w-4 shrink-0">{calc.num}</span>
                           <span className="font-medium truncate">{calc.name}</span>
                         </button>
                         {/* 즐겨찾기 별 — hover + 이미 즐겨찾기된 경우 항상 표시 */}
@@ -1729,14 +1729,14 @@ function CalculatorView({ selectedCalc, setSelectedCalc, T, isDark }) {
             >
               {/* 패널 헤더 */}
               <div className="px-6 py-3 border-b flex items-center gap-3" style={{ borderColor: T.border, background: T.bgCard }}>
-                <span className="text-[10px] mono uppercase tracking-[0.2em]" style={{ color: currentCalc?.color || T.textMuted }}>
+                <span className="text-[12px] mono uppercase tracking-[0.2em]" style={{ color: currentCalc?.color || T.textMuted }}>
                   M—{currentCalc?.num}
                 </span>
                 <span className="text-sm font-medium" style={{ color: T.textPrimary }}>{currentCalc?.name}</span>
                 {/* 시나리오 비교 버튼 */}
                 <button
                   onClick={() => { setCompareCalcMode(m => !m); setCompareCalcId(selectedCalc); }}
-                  className="flex items-center gap-1 text-[10px] mono px-2 py-1 border transition-all hover:bg-white/5"
+                  className="flex items-center gap-1 text-[12px] mono px-2 py-1 border transition-all hover:bg-white/5"
                   style={{
                     borderColor: compareCalcMode ? T.accent : T.border,
                     color: compareCalcMode ? T.accent : T.textFaint,
@@ -1763,7 +1763,7 @@ function CalculatorView({ selectedCalc, setSelectedCalc, T, isDark }) {
                       setShowHistory(true);
                     }
                   }}
-                  className="flex items-center gap-1 text-[10px] mono px-2 py-1 border transition-all hover:bg-white/5"
+                  className="flex items-center gap-1 text-[12px] mono px-2 py-1 border transition-all hover:bg-white/5"
                   style={{ borderColor: T.border, color: T.textFaint }}
                   title="현재 결과를 히스토리에 저장"
                 >
@@ -1784,8 +1784,8 @@ function CalculatorView({ selectedCalc, setSelectedCalc, T, isDark }) {
               {compareCalcMode ? (
                 <div className="grid grid-cols-2 overflow-y-auto" style={{ borderColor: T.border, maxHeight: 'calc(100vh - 160px)' }}>
                   <div className="p-5" style={{ borderRight: `1px solid ${T.border}` }}>
-                    <div className="text-[10px] mono uppercase tracking-[0.2em] mb-4 flex items-center gap-2" style={{ color: T.textFaint }}>
-                      <span className="px-1.5 py-0.5 text-[9px]" style={{ background: T.accent, color: '#0a0a0a' }}>A</span>
+                    <div className="text-[12px] mono uppercase tracking-[0.2em] mb-4 flex items-center gap-2" style={{ color: T.textFaint }}>
+                      <span className="px-1.5 py-0.5 text-[11px]" style={{ background: T.accent, color: '#0a0a0a' }}>A</span>
                       <span>시나리오 A</span>
                     </div>
                     <CalcPrefixContext.Provider value="scenarioA">
@@ -1793,10 +1793,10 @@ function CalculatorView({ selectedCalc, setSelectedCalc, T, isDark }) {
                     </CalcPrefixContext.Provider>
                   </div>
                   <div className="p-5">
-                    <div className="text-[10px] mono uppercase tracking-[0.2em] mb-4 flex items-center gap-2" style={{ color: T.textFaint }}>
-                      <span className="px-1.5 py-0.5 text-[9px]" style={{ background: T.accentGreen, color: '#fff' }}>B</span>
+                    <div className="text-[12px] mono uppercase tracking-[0.2em] mb-4 flex items-center gap-2" style={{ color: T.textFaint }}>
+                      <span className="px-1.5 py-0.5 text-[11px]" style={{ background: T.accentGreen, color: '#fff' }}>B</span>
                       <span>시나리오 B</span>
-                      <span className="ml-auto text-[9px]" style={{ color: T.textDimmer }}>독립 입력</span>
+                      <span className="ml-auto text-[11px]" style={{ color: T.textDimmer }}>독립 입력</span>
                     </div>
                     <CalcPrefixContext.Provider value="scenarioB">
                       {renderCalcComponent(selectedCalc)}
@@ -1811,7 +1811,7 @@ function CalculatorView({ selectedCalc, setSelectedCalc, T, isDark }) {
             </div>
           ) : (
             <div className="border flex flex-col items-center justify-center py-24" style={{ borderColor: T.border, background: T.bgCard }}>
-              <span className="text-[10px] mono uppercase tracking-[0.3em]" style={{ color: T.borderMid }}>No Module Selected</span>
+              <span className="text-[12px] mono uppercase tracking-[0.3em]" style={{ color: T.borderMid }}>No Module Selected</span>
               <span className="mt-3 text-xs" style={{ color: T.textDimmer }}>← 좌측에서 계산기를 선택하세요</span>
             </div>
           )}
@@ -1824,14 +1824,14 @@ function CalculatorView({ selectedCalc, setSelectedCalc, T, isDark }) {
         <div className="mt-6 border" style={{ borderColor: T.border, background: T.bgSurface }}>
           <div className="px-5 py-3 border-b flex items-center gap-3" style={{ borderColor: T.border, background: T.bgCard }}>
             <Clock size={12} style={{ color: T.accent }} />
-            <span className="text-[11px] mono uppercase tracking-[0.2em]" style={{ color: T.textMuted }}>계산 히스토리 · Calculation History</span>
+            <span className="text-[13px] mono uppercase tracking-[0.2em]" style={{ color: T.textMuted }}>계산 히스토리 · Calculation History</span>
             <button
               onClick={() => {
                 setCalcHistory([]);
                 try { localStorage.removeItem('stockwiki_calc_history'); } catch {}
                 setShowHistory(false);
               }}
-              className="ml-auto text-[10px] mono px-2 py-1 border transition-all hover:bg-white/5"
+              className="ml-auto text-[12px] mono px-2 py-1 border transition-all hover:bg-white/5"
               style={{ borderColor: T.border, color: T.textFaint }}
             >
               전체 삭제
@@ -1851,12 +1851,12 @@ function CalculatorView({ selectedCalc, setSelectedCalc, T, isDark }) {
                   <div className="flex items-center gap-3 mb-2">
                     <span className="w-1.5 h-1.5 rounded-full" style={{ background: calcInfo?.color || T.accent }}></span>
                     <span className="text-xs font-medium" style={{ color: T.textPrimary }}>{entry.label}</span>
-                    <span className="ml-auto text-[10px] mono" style={{ color: T.textFaint }}>
+                    <span className="ml-auto text-[12px] mono" style={{ color: T.textFaint }}>
                       {new Date(entry.ts).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                     </span>
                     <button
                       onClick={() => setSelectedCalc(entry.id)}
-                      className="text-[10px] mono px-2 py-0.5 border"
+                      className="text-[12px] mono px-2 py-0.5 border"
                       style={{ borderColor: T.border, color: T.textMuted }}
                     >
                       다시 열기
@@ -1865,9 +1865,9 @@ function CalculatorView({ selectedCalc, setSelectedCalc, T, isDark }) {
                   <div className="flex flex-wrap gap-3">
                     {entry.results.map((r, j) => (
                       <div key={j} className="flex items-baseline gap-1.5">
-                        <span className="text-[10px] mono" style={{ color: T.textFaint }}>{r.label}:</span>
+                        <span className="text-[12px] mono" style={{ color: T.textFaint }}>{r.label}:</span>
                         <span className="text-sm mono font-medium" style={{ color: T.accent }}>{r.value}</span>
-                        {r.unit && <span className="text-[10px] mono" style={{ color: T.textDimmer }}>{r.unit}</span>}
+                        {r.unit && <span className="text-[12px] mono" style={{ color: T.textDimmer }}>{r.unit}</span>}
                       </div>
                     ))}
                   </div>
@@ -1946,7 +1946,7 @@ function NumInput({ label, value, onChange, unit, placeholder, hint }: any) {
 
   return (
     <div>
-      <label className="block text-[10px] mono uppercase tracking-[0.2em] mb-2" style={{ color: _T.textFaint }}>{label}</label>
+      <label className="block text-[12px] mono uppercase tracking-[0.2em] mb-2" style={{ color: _T.textFaint }}>{label}</label>
       <div className="relative border" style={{ borderColor: _BORDER, background: _T.bgSurface }}>
         <input
           type="text"
@@ -1967,10 +1967,10 @@ function NumInput({ label, value, onChange, unit, placeholder, hint }: any) {
           ≈ {koreanUnit}
         </div>
       )}
-      {hint && !koreanUnit && <div className="text-[10px] mt-1" style={{ color: _T.textFooter }}>{hint}</div>}
-      {hint && koreanUnit && <div className="text-[10px] mt-0.5" style={{ color: _T.textFooter }}>{hint}</div>}
+      {hint && !koreanUnit && <div className="text-[12px] mt-1" style={{ color: _T.textFooter }}>{hint}</div>}
+      {hint && koreanUnit && <div className="text-[12px] mt-0.5" style={{ color: _T.textFooter }}>{hint}</div>}
       {Number(value) < 0 && (
-        <div className="text-[10px] mt-1" style={{ color: '#A63D33' }}>⚠ 음수 입력됨</div>
+        <div className="text-[12px] mt-1" style={{ color: '#A63D33' }}>⚠ 음수 입력됨</div>
       )}
     </div>
   );
@@ -2027,11 +2027,11 @@ function ResultBox({ label, value, unit, highlight, color = '#C89650' }: any) {
       }}
     >
       <div className="flex items-center justify-between mb-2">
-        <div className="text-[10px] mono uppercase tracking-[0.2em]" style={{ opacity: 0.7 }}>{label}</div>
+        <div className="text-[12px] mono uppercase tracking-[0.2em]" style={{ opacity: 0.7 }}>{label}</div>
         {hasValue && (
           <button
             onClick={handleCopy}
-            className="text-[9px] mono uppercase tracking-[0.15em] px-1.5 py-0.5 transition-all flex items-center gap-1"
+            className="text-[11px] mono uppercase tracking-[0.15em] px-1.5 py-0.5 transition-all flex items-center gap-1"
             style={{
               opacity: copied ? 1 : 0.4,
               color: 'inherit',
@@ -2078,7 +2078,7 @@ function CalcHeader({ num, title, desc, color = '#C89650', calcId, results }: an
         {hasResults && (
           <button
             onClick={handleSave}
-            className="flex items-center gap-1 text-[10px] mono px-2 py-0.5 border transition-all"
+            className="flex items-center gap-1 text-[12px] mono px-2 py-0.5 border transition-all"
             style={{
               borderColor: saved ? _T.accentGreen : _BORDER,
               color: saved ? _T.accentGreen : _T.textFaint,
@@ -2100,7 +2100,7 @@ function CalcNote({ lines, how, example, tip }: any) {
   if (lines && !how && !example && !tip) {
     return (
       <div className="mt-6 md:mt-8 pt-5 md:pt-6 border-t" style={{ borderColor: _BORDER }}>
-        <div className="text-[10px] mono uppercase tracking-[0.2em] mb-3" style={{ color: _T.textFaint }}>Notes</div>
+        <div className="text-[12px] mono uppercase tracking-[0.2em] mb-3" style={{ color: _T.textFaint }}>Notes</div>
         {lines.map((line, i) => (
           <div key={i} className="text-xs leading-relaxed" style={{ color: _T.textMuted }}>— {line}</div>
         ))}
@@ -2114,7 +2114,7 @@ function CalcNote({ lines, how, example, tip }: any) {
         <div>
           <div className="flex items-center gap-2 mb-2">
             <span className="w-1 h-3" style={{ background: _T.accent }}></span>
-            <div className="text-[10px] mono uppercase tracking-[0.2em]" style={{ color: _T.textFaint }}>How to Use · 사용법</div>
+            <div className="text-[12px] mono uppercase tracking-[0.2em]" style={{ color: _T.textFaint }}>How to Use · 사용법</div>
           </div>
           <div className="space-y-1.5">
             {how.map((line, i) => (
@@ -2129,7 +2129,7 @@ function CalcNote({ lines, how, example, tip }: any) {
         <div>
           <div className="flex items-center gap-2 mb-2">
             <span className="w-1 h-3" style={{ background: '#A63D33' }}></span>
-            <div className="text-[10px] mono uppercase tracking-[0.2em]" style={{ color: _T.textFaint }}>Example · 예시</div>
+            <div className="text-[12px] mono uppercase tracking-[0.2em]" style={{ color: _T.textFaint }}>Example · 예시</div>
           </div>
           <div className="text-xs md:text-sm leading-relaxed p-3 md:p-4 border-l-2" style={{ borderColor: '#A63D33', background: _T.bgCard, color: _T.textSecondary }}>
             {typeof example === 'string' ? example : example.map((line, i) => (
@@ -2142,7 +2142,7 @@ function CalcNote({ lines, how, example, tip }: any) {
         <div>
           <div className="flex items-center gap-2 mb-2">
             <span className="w-1 h-3" style={{ background: _T.accentGreen }}></span>
-            <div className="text-[10px] mono uppercase tracking-[0.2em]" style={{ color: _T.textFaint }}>Tips · 해석 가이드</div>
+            <div className="text-[12px] mono uppercase tracking-[0.2em]" style={{ color: _T.textFaint }}>Tips · 해석 가이드</div>
           </div>
           <div className="space-y-1.5">
             {tip.map((line, i) => (
@@ -3415,7 +3415,7 @@ function VaRCalc() {
         <NumInput label="포트폴리오 가치" value={value} onChange={setValue} unit="원" placeholder="100,000,000" />
         <NumInput label="일일 변동성" value={sigma} onChange={setSigma} unit="%" placeholder="1.5" />
         <div>
-          <label className="block text-[10px] mono uppercase tracking-[0.2em] mb-2" style={{ color: _T.textFaint }}>신뢰수준</label>
+          <label className="block text-[12px] mono uppercase tracking-[0.2em] mb-2" style={{ color: _T.textFaint }}>신뢰수준</label>
           <div className="flex border" style={{ borderColor: _BORDER }}>
             {['90', '95', '99'].map(c => (
               <button key={c} onClick={() => setConfidence(c)} className="flex-1 py-3 text-sm border-r last:border-r-0"
