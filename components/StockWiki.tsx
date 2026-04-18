@@ -993,7 +993,7 @@ function GlossaryView({ terms, searchQuery, setSearchQuery, searchRef, categorie
 
       {/* ── 2단 카테고리 필터 ── */}
       <div className="mb-6 md:mb-10 border-y" style={{ borderColor: T.border }}>
-        {/* 1단: family 5개 */}
+        {/* 1단: family 6개 */}
         <div className="flex overflow-x-auto scroll-hide border-b" style={{ borderColor: T.border }}>
           <button
             onClick={() => handleFamilyClick(null)}
@@ -1011,7 +1011,7 @@ function GlossaryView({ terms, searchQuery, setSearchQuery, searchRef, categorie
               <button
                 key={fam.id}
                 onClick={() => handleFamilyClick(active ? null : fam.id)}
-                className="shrink-0 flex items-center gap-2 px-4 py-2.5 text-xs mono uppercase tracking-[0.18em] border-r transition-all"
+                className="shrink-0 flex items-center gap-2 px-4 py-2.5 text-xs mono uppercase tracking-[0.18em] border-r transition-all whitespace-nowrap"
                 style={{
                   borderColor: T.border,
                   background: active ? ft.bg : 'transparent',
@@ -5896,12 +5896,12 @@ function HomeView({ T, isDark, totalTerms, recent, favorites, categoryColors, se
   const isOpen = kstD >= 1 && kstD <= 5 && (kstH > 9 || (kstH === 9 && kstM >= 0)) && (kstH < 15 || (kstH === 15 && kstM <= 30));
 
   const FAMILY_LIST = [
-    { id: 'fundamental', name: '펀더멘털',    color: HUE_FAMILIES.fundamental.base, cats: ['밸류에이션','수익성','기업재무','회계심화','배당','재무안정성'] },
-    { id: 'market',      name: '시장',        color: HUE_FAMILIES.market.base,      cats: ['한국시장','해외시장·지수','ETF·상장상품','시장거래'] },
-    { id: 'macro',       name: '경제',        color: HUE_FAMILIES.macro.base,       cats: ['통화정책·금리','물가·인플레이션','성장·경기순환','고용·소비·생산','환율·대외수지','금융위기·신용','재정·국가경제','미시경제'] },
-    { id: 'risk',        name: '리스크·퀀트', color: HUE_FAMILIES.risk.base,        cats: ['포트폴리오','퀀트통계'] },
-    { id: 'derivatives', name: '파생',        color: HUE_FAMILIES.derivatives.base, cats: ['선물옵션','파생헤지'] },
-    { id: 'trading',     name: '매매실전',    color: HUE_FAMILIES.trading.base,     cats: ['기술적지표','차트패턴·가격행동','투자심리·행동편향'] },
+    { id: 'fundamental', name: '펀더멘털',    en: 'FUNDAMENTAL', color: HUE_FAMILIES.fundamental.base, cats: ['밸류에이션','수익성','기업재무','회계심화','배당','재무안정성'] },
+    { id: 'market',      name: '시장',        en: 'MARKET',      color: HUE_FAMILIES.market.base,      cats: ['한국시장','해외시장·지수','ETF·상장상품','시장거래'] },
+    { id: 'macro',       name: '경제',        en: 'ECON',        color: HUE_FAMILIES.macro.base,       cats: ['통화정책·금리','물가·인플레이션','성장·경기순환','고용·소비·생산','환율·대외수지','금융위기·신용','재정·국가경제','미시경제'] },
+    { id: 'risk',        name: '리스크·퀀트', en: 'RISK',        color: HUE_FAMILIES.risk.base,        cats: ['포트폴리오','퀀트통계'] },
+    { id: 'derivatives', name: '파생',        en: 'DERIV',       color: HUE_FAMILIES.derivatives.base, cats: ['선물옵션','파생헤지'] },
+    { id: 'trading',     name: '매매실전',    en: 'TRADING',     color: HUE_FAMILIES.trading.base,     cats: ['기술적지표','차트패턴·가격행동','투자심리·행동편향'] },
   ];
 
   const QUICK_CALCS = [
@@ -6008,10 +6008,10 @@ function HomeView({ T, isDark, totalTerms, recent, favorites, categoryColors, se
         {/* 왼쪽: 카테고리 패밀리 맵 + 최근 본 용어 */}
         <div className="flex flex-col gap-6">
 
-          {/* 5 hue family 맵 */}
+          {/* 6 hue family 맵 */}
           <div className="border" style={{ borderColor: T.border }}>
             <div className="px-5 py-3 border-b flex items-center justify-between" style={{ borderColor: T.border }}>
-              <span className="mono text-[11px] uppercase tracking-[0.25em]" style={{ color: T.textFaint }}>§ 카테고리 · 5 Groups</span>
+              <span className="mono text-[11px] uppercase tracking-[0.25em]" style={{ color: T.textFaint }}>§ 카테고리 · 6 Groups</span>
               <button onClick={() => setActiveTab('glossary')} className="mono text-[11px] uppercase tracking-[0.15em] flex items-center gap-1" style={{ color: T.textDimmer }}>
                 전체 사전 <ArrowUpRight size={11} />
               </button>
@@ -6022,11 +6022,11 @@ function HomeView({ T, isDark, totalTerms, recent, favorites, categoryColors, se
                   style={{ borderColor: T.border }}>
                   <div className="w-1 self-stretch shrink-0" style={{ background: fam.color }} />
                   <div className="px-4 py-3 flex-1 flex items-center gap-4 min-w-0">
-                    <div className="flex flex-col gap-0.5 w-14 shrink-0">
+                    <div className="flex flex-col gap-0.5 w-20 shrink-0">
                       <span className="mono text-[10px] uppercase tracking-[0.2em]" style={{ color: fam.color }}>
-                        {fam.id.toUpperCase()}
+                        {fam.en}
                       </span>
-                      <span className="text-sm font-medium" style={{ color: T.textPrimary }}>{fam.name}</span>
+                      <span className="text-sm font-medium whitespace-nowrap" style={{ color: T.textPrimary }}>{fam.name}</span>
                     </div>
                     <div className="flex flex-wrap gap-1.5 min-w-0">
                       {fam.cats.map(cat => (
