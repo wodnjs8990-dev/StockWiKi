@@ -245,7 +245,7 @@ export default function EventsView({ T }: { T?: any }) {
       <div className="flex flex-col gap-5">
 
         {/* ── 달력 ── */}
-        <div className="w-full min-w-0 border" style={{ borderColor: theme.border, maxWidth: '1200px', margin: '0 auto' }}>
+        <div className="w-full min-w-0 border" style={{ borderColor: theme.border }}>
 
           {/* 월 네비게이션 */}
           <div className="flex items-center justify-between px-4 md:px-6 py-3 border-b"
@@ -332,7 +332,7 @@ export default function EventsView({ T }: { T?: any }) {
                   onClick={() => { setSelectedDate(isSelected ? null : day); setSelectedEarning(null); }}
                   className="border-r border-b p-1.5 cursor-pointer overflow-hidden"
                   style={{
-                    aspectRatio: '1 / 1',
+                    minHeight: '80px',
                     borderColor: theme.borderSoft,
                     background: isToday ? `${theme.accent}14` : isSelected ? theme.bgHover : 'transparent',
                     outline: isToday ? `1px solid ${theme.accent}50` : isSelected ? `1px solid ${theme.borderMid}` : 'none',
@@ -388,7 +388,7 @@ export default function EventsView({ T }: { T?: any }) {
         </div>
 
         {/* ── 하단: 선택 날짜 상세 + 다가오는 이벤트 ── */}
-        <div className="grid md:grid-cols-2 gap-5" style={{ maxWidth: '1200px', margin: '0 auto', width: '100%' }}>
+        <div className="grid md:grid-cols-2 gap-5 w-full">
 
           {/* 선택 날짜 이벤트 */}
           {selectedDate && (
