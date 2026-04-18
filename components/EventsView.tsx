@@ -134,13 +134,13 @@ export default function EventsView({ T }: { T?: any }) {
 
   useEffect(() => { fetchEarnings(); }, []);
 
-  // 어닝 → CalEvent 변환
+  // 어닝 → CalEvent 변환 (국내는 기업명, 미국은 티커)
   const earningEvents: CalEvent[] = earnings
     .filter(e => marketFilter === 'ALL' || e.market === marketFilter)
     .map(e => ({
       dateKST: e.date,
-      label: e.symbol,
-      desc: e.nameKo + (e.timing && e.timing !== 'unknown' ? ` · ${e.timing}` : ''),
+      label: e.market === 'KR' ? e.nameKo : e.symbol,
+      desc: e.market === 'KR' ? e.symbol : (e.nameKo + (e.timing && e.timing !== 'unknown' ? ` · ${e.timing}` : '')),
       color: e.market === 'KR' ? '#6B8FD4' : '#C89650',
       earning: e,
     }));

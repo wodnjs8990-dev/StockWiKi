@@ -12,102 +12,105 @@ export type EarningItem = {
   timing?: 'BMO' | 'AMC' | 'unknown';
   epsEstimate?: number | null;
   epsActual?: number | null;
-  revenueEstimate?: number | null;  // 백만달러(US)
+  revenueEstimate?: number | null;
   revenueActual?: number | null;
-  surprise?: number | null;         // %
+  surprise?: number | null;
 };
 
-// ─── 미국 주요 종목 한글 이름 매핑 ─────────────────────────
+// ─── 미국 종목 한글명 (S&P500 + 나스닥100 주요 종목) ────
+// Alpha Vantage CSV에 없는 종목도 있으므로 맵으로 보조
 const US_NAME_MAP: Record<string, string> = {
-  'AAPL': '애플', 'MSFT': '마이크로소프트', 'NVDA': '엔비디아',
-  'AMZN': '아마존', 'GOOGL': '구글', 'META': '메타',
-  'TSLA': '테슬라', 'JPM': 'JP모건', 'V': '비자', 'WMT': '월마트',
-  'BRK-B': '버크셔해서웨이', 'XOM': '엑슨모빌', 'UNH': '유나이티드헬스',
-  'LLY': '일라이릴리', 'JNJ': '존슨앤존슨', 'PG': 'P&G',
-  'MA': '마스터카드', 'HD': '홈디포', 'MRK': '머크', 'ABBV': '애브비',
-  'AVGO': '브로드컴', 'COST': '코스트코', 'CVX': '쉐브론',
-  'PEP': '펩시코', 'NFLX': '넷플릭스', 'AMD': 'AMD',
-  'INTC': '인텔', 'QCOM': '퀄컴', 'TXN': '텍사스인스트루먼트', 'MU': '마이크론',
-  'GS': '골드만삭스', 'MS': '모건스탠리', 'BAC': '뱅크오브아메리카',
-  'ORCL': '오라클', 'CRM': '세일즈포스', 'ADBE': '어도비',
+  'AAPL':'애플','MSFT':'마이크로소프트','NVDA':'엔비디아','AMZN':'아마존',
+  'GOOGL':'구글','GOOG':'구글C','META':'메타','TSLA':'테슬라',
+  'AVGO':'브로드컴','ORCL':'오라클','CRM':'세일즈포스','ADBE':'어도비',
+  'AMD':'AMD','INTC':'인텔','QCOM':'퀄컴','TXN':'텍사스인스트루먼트',
+  'MU':'마이크론','AMAT':'어플라이드머티리얼즈','LRCX':'램리서치',
+  'KLAC':'KLA','MRVL':'마벨테크','SNPS':'시놉시스','CDNS':'케이던스',
+  'MCHP':'마이크로칩','ON':'온세미','STX':'씨게이트','WDC':'웨스턴디지털',
+  'HPQ':'HP','HPE':'HPE','DELL':'델','IBM':'IBM','CSCO':'시스코',
+  'PANW':'팔로알토','CRWD':'크라우드스트라이크','FTNT':'포티넷',
+  'NOW':'서비스나우','SNOW':'스노우플레이크','PLTR':'팔란티어',
+  'NET':'클라우드플레어','DDOG':'데이터독','ZS':'지스케일러',
+  'OKTA':'옥타','MDB':'몽고DB','TEAM':'아틀라시안','ZM':'줌',
+  'WDAY':'워크데이','VEEV':'비바시스템즈','INTU':'인튜이트',
+  'HUBS':'허브스팟','ANSS':'안시스','UBER':'우버','ABNB':'에어비앤비',
+  'LYFT':'리프트','NFLX':'넷플릭스','DIS':'디즈니','CMCSA':'컴캐스트',
+  'T':'AT&T','VZ':'버라이즌','TMUS':'T모바일','CHTR':'차터커뮤니케이션',
+  'EBAY':'이베이','ETSY':'엣시','SHOP':'쇼피파이','PINS':'핀터레스트',
+  'SNAP':'스냅','RBLX':'로블록스','SPOT':'스포티파이','MTCH':'매치그룹',
+  'JPM':'JP모건','BAC':'뱅크오브아메리카','WFC':'웰스파고',
+  'GS':'골드만삭스','MS':'모건스탠리','C':'씨티그룹','BLK':'블랙록',
+  'SCHW':'찰스슈왑','AXP':'아메리칸익스프레스','V':'비자','MA':'마스터카드',
+  'PYPL':'페이팔','BRK-B':'버크셔해서웨이','CB':'CB보험','PGR':'프로그레시브',
+  'MET':'메트라이프','PRU':'푸르덴셜','AFL':'애플랙','TRV':'트래블러스',
+  'ALL':'올스테이트','AIG':'AIG','COF':'캐피탈원','DFS':'디스커버',
+  'USB':'US뱅코프','PNC':'PNC파이낸셜','TFC':'트루이스트',
+  'FITB':'피프스서드','RF':'리전스','KEY':'키코프',
+  'BK':'뉴욕멜론','STT':'스테이트스트리트',
+  'ICE':'인터콘티넨탈익스체인지','CME':'CME그룹',
+  'SPGI':'S&P글로벌','MCO':'무디스','MSCI':'MSCI',
+  'FIS':'피델리티인포','FISV':'피서브','GPN':'글로벌페이먼츠',
+  'UNH':'유나이티드헬스','JNJ':'존슨앤존슨','LLY':'일라이릴리',
+  'ABBV':'애브비','MRK':'머크','PFE':'화이자','TMO':'써모피셔',
+  'ABT':'애보트','DHR':'다나허','BMY':'브리스톨마이어스',
+  'AMGN':'암젠','GILD':'길리어드','ISRG':'인튜이티브서지컬',
+  'VRTX':'버텍스파마','REGN':'리제네론','CVS':'CVS헬스',
+  'CI':'시그나','HUM':'휴마나','ELV':'엘레반스','CNC':'센텐',
+  'ZBH':'짐머바이오멧','SYK':'스트라이커','BSX':'보스턴사이언티픽',
+  'MDT':'메드트로닉','BDX':'BD','ZTS':'조에티스','IDXX':'아이덱스',
+  'IQV':'IQVIA','HCA':'HCA헬스케어','A':'에질런트','BAX':'박스터',
+  'WMT':'월마트','COST':'코스트코','HD':'홈디포','LOW':'로우스',
+  'TGT':'타겟','MCD':'맥도날드','SBUX':'스타벅스','NKE':'나이키',
+  'TJX':'TJX컴퍼니','PG':'P&G','KO':'코카콜라','PEP':'펩시코',
+  'PM':'필립모리스','MO':'알트리아','CL':'콜게이트','EL':'에스티로더',
+  'KMB':'킴벌리클라크','GIS':'제너럴밀스','MDLZ':'몬델리즈',
+  'HSY':'허쉬','MKC':'맥코믹','YUM':'얌브랜즈','CMG':'치폴레',
+  'DPZ':'도미노피자','DRI':'다든레스토랑','ROST':'로스스토어즈',
+  'BURL':'벌링턴','AZO':'오토존','ORLY':'오라일리','TSCO':'트랙터서플라이',
+  'DG':'달러제너럴','DLTR':'달러트리','LULU':'룰루레몬','NKE':'나이키',
+  'XOM':'엑슨모빌','CVX':'쉐브론','COP':'코노코필립스','EOG':'EOG리소시스',
+  'SLB':'슐럼버거','OXY':'옥시덴탈','MPC':'마라톤페트롤리엄',
+  'VLO':'발레로에너지','PSX':'필립스66','HES':'헤스','DVN':'데본에너지',
+  'FANG':'다이아몬드백','HAL':'할리버튼','BKR':'베이커휴즈',
+  'KMI':'킨더모건','WMB':'윌리엄스','OKE':'ONEOK',
+  'CAT':'캐터필러','DE':'존디어','HON':'허니웰','RTX':'레이시온',
+  'LMT':'록히드마틴','GE':'GE에어로스페이스','BA':'보잉',
+  'UPS':'UPS','FDX':'페덱스','MMM':'3M','EMR':'에머슨',
+  'ETN':'이튼','PH':'파커해니핀','ROK':'로크웰오토메이션',
+  'ITW':'일리노이툴웍스','GWW':'W.W.그레인저','FAST':'파스널',
+  'NOC':'노스럽그루먼','GD':'제너럴다이나믹스','LHX':'L3해리스',
+  'CARR':'캐리어','OTIS':'오티스','DAL':'델타항공','UAL':'유나이티드항공',
+  'AAL':'아메리칸항공','LUV':'사우스웨스트','CSX':'CSX',
+  'NSC':'노포크서던','UNP':'유니온퍼시픽',
+  'LIN':'린데','APD':'에어프로덕츠','ECL':'에코랩',
+  'SHW':'셔윈윌리엄스','PPG':'PPG','NUE':'뉴코','FCX':'프리포트맥모란',
+  'NEM':'뉴몬트','AA':'알코아',
+  'AMT':'아메리칸타워','PLD':'프로로지스','EQIX':'에퀴닉스',
+  'CCI':'크라운캐슬','SPG':'사이먼프로퍼티','O':'리얼티인컴',
+  'NEE':'넥스트에라에너지','DUK':'듀크에너지','SO':'서던컴퍼니',
+  'D':'도미니언에너지','AEP':'아메리칸일렉트릭파워','EXC':'엑셀론',
+  // 추가 성장주
+  'COIN':'코인베이스','HOOD':'로빈후드','SQ':'블록','AFRM':'어펌',
+  'UPST':'업스타트','SOFI':'소파이','NU':'누뱅크','MELI':'메르카도리브레',
+  'SE':'씨리미티드','GRAB':'그랩','BIDU':'바이두','JD':'징동',
+  'PDD':'핀둬둬','BABA':'알리바바','NIO':'니오','XPEV':'샤오펑',
+  'LI':'리오토','RIVN':'리비안','LCID':'루시드','F':'포드','GM':'GM',
+  'STLA':'스텔란티스','TM':'토요타','HMC':'혼다','RACE':'페라리',
+  'ARM':'ARM홀딩스','SMCI':'슈퍼마이크로','ASML':'ASML',
+  'TSM':'TSMC','NXPI':'NXP세미컨덕터','STM':'ST마이크로',
+  'MPWR':'모노리식파워','WOLF':'울프스피드',
+  'APP':'앱러빈','TTD':'트레이드데스크','MGNI':'매그나이트',
+  'RDFN':'레드핀','OPEN':'오픈도어','Z':'질로우',
+  'ABNB':'에어비앤비','EXPE':'익스피디아','BKNG':'부킹홀딩스',
+  'MAR':'메리어트','HLT':'힐튼','H':'하얏트','IHG':'IHG',
+  'CCL':'카니발','RCL':'로열캐리비안','NCLH':'노르웨지안크루즈',
+  'MGM':'MGM리조트','WYNN':'윈리조트','LVS':'라스베이거스샌즈',
+  'CZR':'시저스엔터테인먼트',
 };
 
-const AV_KEY = process.env.ALPHA_VANTAGE_API_KEY ?? '';
-
-// ─── Alpha Vantage: 미국 어닝 캘린더 ────────────────────
-// EARNINGS_CALENDAR: CSV로 수백 개 종목 한번에, 3개월치 제공
-// 무료 25회/일 — 1시간 캐시로 충분
-async function fetchUSEarnings(): Promise<EarningItem[]> {
-  if (!AV_KEY) return [];
-
-  const watchSymbols = new Set(Object.keys(US_NAME_MAP));
-
-  // horizon=3month: 향후 3개월치
-  // horizon=12month: 향후 12개월치 (과거는 별도 호출)
-  const fetchHorizon = async (horizon: '3month' | '12month'): Promise<EarningItem[]> => {
-    try {
-      const url = `https://www.alphavantage.co/query?function=EARNINGS_CALENDAR&horizon=${horizon}&apikey=${AV_KEY}`;
-      // 과거(12month)는 7일 캐시, 미래(3month)는 1시간 캐시
-      const res = await fetch(url, {
-        next: { revalidate: horizon === '12month' ? 7 * 24 * 3600 : 3600 },
-      });
-      if (!res.ok) return [];
-      const csv = await res.text();
-
-      // CSV 파싱: symbol,name,reportDate,fiscalDateEnding,estimate,currency
-      const lines = csv.trim().split('\n');
-      const results: EarningItem[] = [];
-
-      for (let i = 1; i < lines.length; i++) {
-        const cols = lines[i].split(',');
-        if (cols.length < 4) continue;
-        const symbol = cols[0]?.trim();
-        const reportDate = cols[2]?.trim(); // YYYY-MM-DD (ET 기준)
-        const estimate = parseFloat(cols[4]?.trim() ?? '');
-
-        if (!symbol || !reportDate || !watchSymbols.has(symbol)) continue;
-
-        // ET → KST 변환 (+14시간, 보수적으로 +1일 처리)
-        // Alpha Vantage는 발표 시간 정보 없으므로 date만 사용
-        const epsEstimate = isNaN(estimate) ? null : estimate;
-
-        results.push({
-          symbol,
-          nameKo: US_NAME_MAP[symbol] ?? symbol,
-          date: reportDate,
-          market: 'US' as const,
-          timing: 'unknown',
-          epsEstimate,
-          epsActual: null,
-          revenueEstimate: null,
-          revenueActual: null,
-          surprise: null,
-        });
-      }
-      return results;
-    } catch {
-      return [];
-    }
-  };
-
-  // 3month(미래) + 12month(올해 전체) 병렬 fetch
-  const [future, full] = await Promise.all([
-    fetchHorizon('3month'),
-    fetchHorizon('12month'),
-  ]);
-
-  // 중복 제거: symbol 기준, 날짜가 더 정확한 쪽(3month) 우선
-  const bySymbol = new Map<string, EarningItem>();
-  for (const e of [...full, ...future]) {
-    bySymbol.set(e.symbol, e); // future가 나중에 덮어써서 우선됨
-  }
-  return Array.from(bySymbol.values());
-}
-
-// ─── DART: 한국 주요 종목 실적 공시 ────────────────────────
-const DART_KEY = process.env.DART_API_KEY ?? '';
-
+// ─── 국내 종목 (코스피200 + 코스닥150 주요 종목) ──────────
 const KR_CORPS: { corpCode: string; name: string; symbol: string }[] = [
+  // ── 코스피 ──
   { corpCode: '00126380', name: '삼성전자', symbol: '005930' },
   { corpCode: '00164779', name: 'SK하이닉스', symbol: '000660' },
   { corpCode: '00401731', name: 'LG에너지솔루션', symbol: '373220' },
@@ -138,9 +141,196 @@ const KR_CORPS: { corpCode: string; name: string; symbol: string }[] = [
   { corpCode: '00101521', name: '한국조선해양', symbol: '009540' },
   { corpCode: '00115821', name: 'HD현대중공업', symbol: '329180' },
   { corpCode: '00251685', name: '카카오뱅크', symbol: '323410' },
+  { corpCode: '00164711', name: 'SK이노베이션', symbol: '096770' },
+  { corpCode: '00126186', name: 'SK', symbol: '034730' },
+  { corpCode: '00126623', name: '삼성증권', symbol: '016360' },
+  { corpCode: '00108921', name: '우리금융지주', symbol: '316140' },
+  { corpCode: '00159290', name: 'HD현대', symbol: '267250' },
+  { corpCode: '00164530', name: 'LG디스플레이', symbol: '034220' },
+  { corpCode: '00164401', name: 'LG이노텍', symbol: '011070' },
+  { corpCode: '00160694', name: '현대글로비스', symbol: '086280' },
+  { corpCode: '00120182', name: '현대제철', symbol: '004020' },
+  { corpCode: '00104216', name: '한화에어로스페이스', symbol: '012450' },
+  { corpCode: '00131791', name: '한화솔루션', symbol: '009830' },
+  { corpCode: '00113584', name: '삼성엔지니어링', symbol: '028050' },
+  { corpCode: '00126953', name: '현대건설', symbol: '000720' },
+  { corpCode: '00108532', name: 'GS건설', symbol: '006360' },
+  { corpCode: '00140516', name: '메리츠금융지주', symbol: '138040' },
+  { corpCode: '00113067', name: '두산밥캣', symbol: '241560' },
+  { corpCode: '00126676', name: '삼성중공업', symbol: '010140' },
+  { corpCode: '00126215', name: '대한항공', symbol: '003490' },
+  { corpCode: '00108398', name: 'GS홀딩스', symbol: '078930' },
+  { corpCode: '00114099', name: '롯데케미칼', symbol: '011170' },
+  { corpCode: '00126124', name: '롯데쇼핑', symbol: '023530' },
+  { corpCode: '00113988', name: '한국가스공사', symbol: '036460' },
+  { corpCode: '00155227', name: '미래에셋증권', symbol: '006800' },
+  { corpCode: '00128570', name: '한국투자금융지주', symbol: '071050' },
+  { corpCode: '00131313', name: 'NH투자증권', symbol: '005940' },
+  { corpCode: '00126230', name: '기업은행', symbol: '024110' },
+  { corpCode: '00264904', name: 'BNK금융지주', symbol: '138930' },
+  { corpCode: '00258801', name: 'DGB금융지주', symbol: '139130' },
+  { corpCode: '00257439', name: 'JB금융지주', symbol: '175330' },
+  { corpCode: '00113120', name: '현대해상', symbol: '001450' },
+  { corpCode: '00126620', name: 'DB손해보험', symbol: '005830' },
+  { corpCode: '00104531', name: '한화생명', symbol: '088350' },
+  { corpCode: '00101929', name: '롯데지주', symbol: '004990' },
+  { corpCode: '00112009', name: 'CJ제일제당', symbol: '097950' },
+  { corpCode: '00108377', name: 'CJ', symbol: '001040' },
+  { corpCode: '00109080', name: '이마트', symbol: '139480' },
+  { corpCode: '00115418', name: 'BGF리테일', symbol: '282330' },
+  { corpCode: '00156024', name: 'GS리테일', symbol: '007070' },
+  { corpCode: '00115564', name: 'KT&G', symbol: '033780' },
+  { corpCode: '00117628', name: '오리온', symbol: '271560' },
+  { corpCode: '00113531', name: '아모레퍼시픽', symbol: '090430' },
+  { corpCode: '00226413', name: 'LG생활건강', symbol: '051900' },
+  { corpCode: '00109708', name: 'HMM', symbol: '011200' },
+  { corpCode: '00104062', name: 'SK가스', symbol: '018670' },
+  { corpCode: '00122498', name: '두산', symbol: '000150' },
+  { corpCode: '00101559', name: 'OCI홀딩스', symbol: '010060' },
+  { corpCode: '00166997', name: '효성첨단소재', symbol: '298050' },
+  { corpCode: '00155276', name: '코오롱인더', symbol: '120110' },
+  { corpCode: '00113097', name: '한진칼', symbol: '180640' },
+  { corpCode: '00115145', name: '아시아나항공', symbol: '020560' },
+  { corpCode: '00108866', name: '유한양행', symbol: '000100' },
+  { corpCode: '00126115', name: '한미약품', symbol: '128940' },
+  { corpCode: '00113891', name: '녹십자', symbol: '006280' },
+  { corpCode: '00109002', name: 'NCSoft', symbol: '036570' },
+  { corpCode: '00102447', name: '넷마블', symbol: '251270' },
+  { corpCode: '00163557', name: '크래프톤', symbol: '259960' },
+  { corpCode: '00126558', name: '셀트리온제약', symbol: '068760' },
+  { corpCode: '00104216', name: '한화에어로스페이스', symbol: '012450' },
+  { corpCode: '00113386', name: '동아에스티', symbol: '170900' },
+  { corpCode: '00113171', name: '종근당', symbol: '185750' },
+  { corpCode: '00104648', name: '대웅제약', symbol: '069620' },
+  { corpCode: '00113649', name: '리노공업', symbol: '058470' },
+  { corpCode: '00101624', name: 'HD한국조선해양', symbol: '009540' },
+  { corpCode: '00164835', name: 'SK바이오팜', symbol: '326030' },
+  { corpCode: '00164775', name: 'SK바이오사이언스', symbol: '302440' },
+  { corpCode: '00179433', name: '카카오페이', symbol: '377300' },
+  { corpCode: '00184599', name: '카카오게임즈', symbol: '293490' },
+  { corpCode: '00140516', name: '메리츠금융지주', symbol: '138040' },
+  { corpCode: '00130413', name: '현대위아', symbol: '011210' },
+  { corpCode: '00101594', name: '한국타이어앤테크놀로지', symbol: '161390' },
+  { corpCode: '00108760', name: '금호석유화학', symbol: '011780' },
+  { corpCode: '00126928', name: '영풍', symbol: '000670' },
+  { corpCode: '00126512', name: '한진중공업홀딩스', symbol: '003480' },
+  { corpCode: '00115384', name: '태광산업', symbol: '003160' },
+  { corpCode: '00108374', name: 'CJ대한통운', symbol: '000120' },
+  { corpCode: '00155228', name: '미래에셋생명', symbol: '085620' },
+  { corpCode: '00101535', name: '대한유화', symbol: '006650' },
+  { corpCode: '00101055', name: '한화', symbol: '000880' },
+  { corpCode: '00126847', name: '삼성전기', symbol: '009150' },
+  { corpCode: '00164534', name: 'LG유플러스', symbol: '032640' },
+  { corpCode: '00101246', name: 'SKC', symbol: '011790' },
+  { corpCode: '00114814', name: '롯데에너지머티리얼즈', symbol: '020150' },
+  { corpCode: '00104635', name: '한국항공우주', symbol: '047810' },
+  { corpCode: '00113525', name: '현대오토에버', symbol: '307950' },
+  { corpCode: '00126875', name: '삼성SDS', symbol: '018260' },
+  { corpCode: '00108396', name: 'GS에너지', symbol: '093050' },
+  // ── 코스닥 ──
+  { corpCode: '00155872', name: '에코프로비엠', symbol: '247540' },
+  { corpCode: '00160984', name: '에코프로', symbol: '086520' },
+  { corpCode: '00260374', name: '포스코퓨처엠', symbol: '003670' },
+  { corpCode: '00131129', name: '알테오젠', symbol: '196170' },
+  { corpCode: '00235225', name: '엘앤에프', symbol: '066970' },
+  { corpCode: '00401121', name: 'HLB', symbol: '028300' },
+  { corpCode: '00184038', name: 'HPSP', symbol: '403870' },
+  { corpCode: '00127639', name: '솔브레인', symbol: '357780' },
+  { corpCode: '00145210', name: '펄어비스', symbol: '263750' },
+  { corpCode: '00143885', name: '컴투스', symbol: '078340' },
+  { corpCode: '00130507', name: '위메이드', symbol: '112040' },
+  { corpCode: '00102337', name: '제넥신', symbol: '095700' },
+  { corpCode: '00139456', name: '셀트리온헬스케어', symbol: '091990' },
+  { corpCode: '00102031', name: '파라다이스', symbol: '034230' },
+  { corpCode: '00113649', name: '리노공업', symbol: '058470' },
+  { corpCode: '00164649', name: '카카오뱅크', symbol: '323410' },
+  { corpCode: '00160479', name: '성일하이텍', symbol: '365340' },
+  { corpCode: '00163226', name: '원익IPS', symbol: '240810' },
+  { corpCode: '00149655', name: '파크시스템스', symbol: '140860' },
+  { corpCode: '00136655', name: '레인보우로보틱스', symbol: '277810' },
+  { corpCode: '00155489', name: '씨에스윈드', symbol: '112610' },
+  { corpCode: '00128185', name: '동진쎄미켐', symbol: '005290' },
+  { corpCode: '00113270', name: '리가켐바이오', symbol: '141080' },
+  { corpCode: '00124629', name: '클래시스', symbol: '214150' },
+  { corpCode: '00165019', name: '케어젠', symbol: '214370' },
+  { corpCode: '00124488', name: '메가스터디교육', symbol: '215200' },
+  { corpCode: '00157932', name: '에스티팜', symbol: '237690' },
+  { corpCode: '00140571', name: '피에스케이홀딩스', symbol: '319400' },
+  { corpCode: '00168345', name: '유니드', symbol: '014830' },
+  { corpCode: '00143059', name: '더블유씨피', symbol: '393890' },
+  { corpCode: '00165535', name: '이녹스첨단소재', symbol: '272290' },
+  { corpCode: '00118797', name: '오스템임플란트', symbol: '048260' },
+  { corpCode: '00156535', name: '덴티움', symbol: '145720' },
+  { corpCode: '00128696', name: '셀바스AI', symbol: '108860' },
+  { corpCode: '00104215', name: '한글과컴퓨터', symbol: '030520' },
+  { corpCode: '00141028', name: '비에이치', symbol: '090460' },
+  { corpCode: '00149030', name: '엠씨넥스', symbol: '097520' },
+  { corpCode: '00129128', name: '테크트로닉스', symbol: '053610' },
+  { corpCode: '00165813', name: '에코앤드림', symbol: '101360' },
+  { corpCode: '00132100', name: '제일기획', symbol: '030000' },
 ];
 
-// DART: corp_code 지정 → 기간 제한 없음, 30개 종목 전체 병렬 fetch
+const AV_KEY = process.env.ALPHA_VANTAGE_API_KEY ?? '';
+const DART_KEY = process.env.DART_API_KEY ?? '';
+
+// ─── Alpha Vantage: 미국 어닝 캘린더 ─────────────────────
+async function fetchUSEarnings(): Promise<EarningItem[]> {
+  if (!AV_KEY) return [];
+
+  const fetchHorizon = async (horizon: '3month' | '12month'): Promise<EarningItem[]> => {
+    try {
+      const url = `https://www.alphavantage.co/query?function=EARNINGS_CALENDAR&horizon=${horizon}&apikey=${AV_KEY}`;
+      const res = await fetch(url, {
+        next: { revalidate: horizon === '12month' ? 7 * 24 * 3600 : 3600 },
+      });
+      if (!res.ok) return [];
+      const csv = await res.text();
+      const lines = csv.trim().split('\n');
+      const results: EarningItem[] = [];
+
+      for (let i = 1; i < lines.length; i++) {
+        const cols = lines[i].split(',');
+        if (cols.length < 3) continue;
+        const symbol = cols[0]?.trim();
+        const name = cols[1]?.trim();
+        const reportDate = cols[2]?.trim();
+        const estimate = parseFloat(cols[4]?.trim() ?? '');
+        if (!symbol || !reportDate) continue;
+
+        // 한글명: 맵에 있으면 사용, 없으면 영문명 그대로
+        const nameKo = US_NAME_MAP[symbol] ?? name ?? symbol;
+
+        results.push({
+          symbol,
+          nameKo,
+          date: reportDate,
+          market: 'US',
+          timing: 'unknown',
+          epsEstimate: isNaN(estimate) ? null : estimate,
+          epsActual: null,
+          revenueEstimate: null,
+          revenueActual: null,
+          surprise: null,
+        });
+      }
+      return results;
+    } catch {
+      return [];
+    }
+  };
+
+  const [future, full] = await Promise.all([
+    fetchHorizon('3month'),
+    fetchHorizon('12month'),
+  ]);
+
+  // symbol 중복 제거 (future 우선)
+  const bySymbol = new Map<string, EarningItem>();
+  for (const e of [...full, ...future]) bySymbol.set(e.symbol, e);
+  return Array.from(bySymbol.values());
+}
+
+// ─── DART: 국내 종목 실적 공시 ───────────────────────────
 async function fetchDartEarnings(): Promise<EarningItem[]> {
   if (!DART_KEY) return [];
 
@@ -149,7 +339,6 @@ async function fetchDartEarnings(): Promise<EarningItem[]> {
   const bgn = `${currentYear}0101`;
   const end = today.toISOString().slice(0, 10).replace(/-/g, '');
 
-  // 종목 1개에 대해 보고서유형 A003→A002→A001 순으로 조회, 첫 히트 반환
   const fetchOneCorp = async (corp: typeof KR_CORPS[0]): Promise<EarningItem | null> => {
     for (const pType of ['A003', 'A002', 'A001']) {
       try {
@@ -160,7 +349,6 @@ async function fetchDartEarnings(): Promise<EarningItem[]> {
         if (data.status !== '000') continue;
         const list: any[] = data.list ?? [];
         if (list.length === 0) continue;
-        // 가장 최신 공시
         const latest = list.reduce((a: any, b: any) => a.rcept_dt > b.rcept_dt ? a : b);
         const rdt = latest.rcept_dt as string;
         return {
@@ -177,7 +365,6 @@ async function fetchDartEarnings(): Promise<EarningItem[]> {
     return null;
   };
 
-  // 30개 종목 전체 동시 병렬 (각각 독립적으로 캐싱됨)
   const settled = await Promise.allSettled(KR_CORPS.map(fetchOneCorp));
   return settled
     .filter((r): r is PromiseFulfilledResult<EarningItem> =>
