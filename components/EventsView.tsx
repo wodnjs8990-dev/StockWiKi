@@ -274,7 +274,7 @@ export default function EventsView({ T }: { T?: any }) {
     <div>
       {/* 상단 메타 바 */}
       <div className="mb-6 border-y" style={{ borderColor: theme.border }}>
-        <div className="flex items-center justify-between gap-3 py-2 border-b mono text-[10px] uppercase tracking-[0.2em]"
+        <div className="flex items-center justify-between gap-3 py-2 border-b mono text-[12px] uppercase tracking-[0.2em]"
           style={{ borderColor: theme.border, color: theme.textFaint }}>
           <div className="flex items-center gap-3">
             <span>§ Events Calendar</span>
@@ -294,7 +294,7 @@ export default function EventsView({ T }: { T?: any }) {
             </button>
           </div>
         </div>
-        <div className="grid grid-cols-4 gap-2 md:gap-6 py-2 mono text-[10px] uppercase tracking-[0.2em]">
+        <div className="grid grid-cols-4 gap-2 md:gap-6 py-2 mono text-[12px] uppercase tracking-[0.2em]">
           <div className="flex items-baseline gap-1 md:gap-2">
             <span style={{ color: theme.textDimmer }}>전체</span>
             <span style={{ color: loading ? theme.textDimmer : '#C89650' }}>
@@ -337,7 +337,7 @@ export default function EventsView({ T }: { T?: any }) {
                 {year}년 {month}월
               </span>
               <button onClick={goToday}
-                className="text-[10px] mono uppercase tracking-[0.2em] px-2 py-0.5 border hover:opacity-70 transition-opacity"
+                className="text-[12px] mono uppercase tracking-[0.2em] px-2 py-0.5 border hover:opacity-70 transition-opacity"
                 style={{ borderColor: theme.border, color: theme.textFaint }}>
                 오늘
               </button>
@@ -349,7 +349,7 @@ export default function EventsView({ T }: { T?: any }) {
                   { key: 'NDX100', label: 'NDX' },
                 ] as const).map(({ key, label }) => (
                   <button key={key} onClick={() => setIndexFilter(key)}
-                    className="text-[9px] mono px-2 py-0.5 transition-colors"
+                    className="text-[13px] mono px-2 py-0.5 transition-colors"
                     style={{
                       background: indexFilter === key ? theme.bgTabActive : 'transparent',
                       color: indexFilter === key ? theme.bgPage : theme.textFaint,
@@ -372,7 +372,7 @@ export default function EventsView({ T }: { T?: any }) {
               const color = s === 'ALL' ? theme.accent : SECTOR_COLOR[s];
               return (
                 <button key={s} onClick={() => setSectorFilter(s)}
-                  className="text-[9px] mono px-2 py-0.5 border transition-all"
+                  className="text-[13px] mono px-2 py-0.5 border transition-all"
                   style={{
                     borderColor: isActive ? color : theme.borderSoft,
                     background: isActive ? `${color}25` : 'transparent',
@@ -387,7 +387,7 @@ export default function EventsView({ T }: { T?: any }) {
           {/* 요일 헤더 */}
           <div className="grid grid-cols-7 border-b" style={{ borderColor: theme.border }}>
             {DAY_LABELS.map((d, i) => (
-              <div key={d} className="text-center py-2 text-[10px] mono uppercase tracking-[0.15em]"
+              <div key={d} className="text-center py-2 text-[12px] mono uppercase tracking-[0.15em]"
                 style={{ color: i === 0 ? '#A63D33' : i === 6 ? '#3a5a7a' : theme.textDimmer }}>
                 {d}
               </div>
@@ -431,17 +431,17 @@ export default function EventsView({ T }: { T?: any }) {
                   <div className="flex flex-col gap-0.5">
                     {evs.slice(0, 4).map((ev, i) => (
                       <div key={i}
-                        className={`flex items-center gap-1 px-1 py-0.5 text-[8px] md:text-[10px] truncate rounded-sm${i >= 2 ? ' hidden md:flex' : ''}`}
+                        className={`flex items-center gap-1 px-1 py-0.5 text-[12px] md:text-[12px] truncate rounded-sm${i >= 2 ? ' hidden md:flex' : ''}`}
                         style={{ background: `${ev.color}${evBgAlpha}`, borderLeft: `2px solid ${ev.color}${evBorderAlpha}`, color: ev.color }}>
                         <span className="truncate font-semibold">{ev.label}</span>
                       </div>
                     ))}
                     {/* 모바일: 2개 초과 / 데스크탑: 4개 초과 */}
                     {evs.length > 2 && (
-                      <div className="text-[8px] mono px-1 md:hidden" style={{ color: theme.textDimmer }}>+{evs.length - 2}개</div>
+                      <div className="text-[12px] mono px-1 md:hidden" style={{ color: theme.textDimmer }}>+{evs.length - 2}개</div>
                     )}
                     {evs.length > 4 && (
-                      <div className="text-[9px] mono px-1 hidden md:block" style={{ color: theme.textDimmer }}>+{evs.length - 4}개</div>
+                      <div className="text-[13px] mono px-1 hidden md:block" style={{ color: theme.textDimmer }}>+{evs.length - 4}개</div>
                     )}
                   </div>
                 </div>
@@ -465,7 +465,7 @@ export default function EventsView({ T }: { T?: any }) {
               <div key={label} className="flex items-center gap-1.5">
                 <span className="w-2.5 h-2.5 rounded-sm"
                   style={{ background: `${color}${isLight ? '55' : '33'}`, borderLeft: `2px solid ${color}` }} />
-                <span className="text-[10px] mono" style={{ color: theme.textDimmer }}>{label}</span>
+                <span className="text-[12px] mono" style={{ color: theme.textDimmer }}>{label}</span>
               </div>
             ))}
           </div>
@@ -479,18 +479,18 @@ export default function EventsView({ T }: { T?: any }) {
             <div className="border" style={{ borderColor: theme.border }}>
               <div className="px-4 py-3 border-b flex items-center justify-between"
                 style={{ borderColor: theme.border, background: theme.bgCard }}>
-                <span className="text-[11px] mono uppercase tracking-[0.2em]" style={{ color: theme.textMuted }}>
+                <span className="text-[13px] mono uppercase tracking-[0.2em]" style={{ color: theme.textMuted }}>
                   {parseInt(selectedDate.slice(5, 7))}월 {parseInt(selectedDate.slice(8, 10))}일
                 </span>
                 {selectedDate === today && (
-                  <span className="text-[9px] mono px-1.5 py-0.5 border"
+                  <span className="text-[13px] mono px-1.5 py-0.5 border"
                     style={{ background: `${theme.accent}20`, color: theme.accent, borderColor: `${theme.accent}40` }}>
                     TODAY
                   </span>
                 )}
               </div>
               {selectedEvents.length === 0 ? (
-                <div className="px-4 py-6 text-center text-[11px]" style={{ color: theme.textDimmer }}>이벤트 없음</div>
+                <div className="px-4 py-6 text-center text-[13px]" style={{ color: theme.textDimmer }}>이벤트 없음</div>
               ) : (
                 <div>
                   {selectedEvents.map((ev, i) => {
@@ -523,31 +523,31 @@ export default function EventsView({ T }: { T?: any }) {
                               {e && (
                                 <div className="flex gap-1 flex-wrap">
                                   {e.sector && e.sector !== 'Other' && (
-                                    <span className="text-[9px] mono px-1 border"
+                                    <span className="text-[13px] mono px-1 border"
                                       style={{ color: SECTOR_COLOR[e.sector], borderColor: `${SECTOR_COLOR[e.sector]}50` }}>
                                       {SECTOR_LABEL[e.sector]}
                                     </span>
                                   )}
                                   {e.isSP500 && (
-                                    <span className="text-[9px] mono px-1 border"
+                                    <span className="text-[13px] mono px-1 border"
                                       style={{ color: '#7BAF7A', borderColor: '#7BAF7A50' }}>S&P</span>
                                   )}
                                   {e.isNDX100 && (
-                                    <span className="text-[9px] mono px-1 border"
+                                    <span className="text-[13px] mono px-1 border"
                                       style={{ color: '#7B9FDF', borderColor: '#7B9FDF50' }}>NDX</span>
                                   )}
                                 </div>
                               )}
                             </div>
                             {e && (
-                              <span className="text-[9px] mono" style={{ color: theme.textDimmer }}>
+                              <span className="text-[13px] mono" style={{ color: theme.textDimmer }}>
                                 {e.surprise != null
                                   ? (e.surprise > 0 ? '+' : '') + e.surprise.toFixed(1) + '%'
                                   : '상세 보기'}
                               </span>
                             )}
                           </div>
-                          <div className="text-[11px] mt-0.5" style={{ color: theme.textMuted }}>{ev.desc}</div>
+                          <div className="text-[13px] mt-0.5" style={{ color: theme.textMuted }}>{ev.desc}</div>
                         </div>
 
                         {/* 확장 디테일 */}
@@ -562,7 +562,7 @@ export default function EventsView({ T }: { T?: any }) {
                                 { label: '이전치', val: m.prev },
                               ].map(({ label, val }) => (
                                 <div key={label}>
-                                  <div className="text-[9px] mono uppercase tracking-[0.15em] mb-1" style={{ color: theme.textDimmer }}>{label}</div>
+                                  <div className="text-[13px] mono uppercase tracking-[0.15em] mb-1" style={{ color: theme.textDimmer }}>{label}</div>
                                   <span className="text-sm font-semibold" style={{ color: val != null ? ev.color : theme.textDimmer }}>
                                     {val != null ? `${val}${m.unit ?? ''}` : '-'}
                                   </span>
@@ -578,18 +578,18 @@ export default function EventsView({ T }: { T?: any }) {
                             <div className="grid grid-cols-2 gap-3">
                               {/* EPS */}
                               <div>
-                                <div className="text-[9px] mono uppercase tracking-[0.15em] mb-1.5"
+                                <div className="text-[13px] mono uppercase tracking-[0.15em] mb-1.5"
                                   style={{ color: theme.textDimmer }}>EPS</div>
                                 <div className="flex items-baseline gap-2 flex-wrap">
                                   <span className="text-sm font-semibold"
                                     style={{ color: e.epsActual != null ? surpriseColor(e.surprise, theme.accent, theme.accentGreen) : theme.textPrimary }}>
                                     {fmtNum(e.epsActual ?? e.epsEstimate)}
                                     {e.epsActual == null && e.epsEstimate != null && (
-                                      <span className="text-[9px] ml-1" style={{ color: theme.textDimmer }}>(예상)</span>
+                                      <span className="text-[13px] ml-1" style={{ color: theme.textDimmer }}>(예상)</span>
                                     )}
                                   </span>
                                   {e.epsEstimate != null && e.epsActual != null && (
-                                    <span className="text-[10px]" style={{ color: theme.textFaint }}>
+                                    <span className="text-[12px]" style={{ color: theme.textFaint }}>
                                       예상 {fmtNum(e.epsEstimate)}
                                     </span>
                                   )}
@@ -598,7 +598,7 @@ export default function EventsView({ T }: { T?: any }) {
 
                               {/* 서프라이즈 */}
                               <div>
-                                <div className="text-[9px] mono uppercase tracking-[0.15em] mb-1.5"
+                                <div className="text-[13px] mono uppercase tracking-[0.15em] mb-1.5"
                                   style={{ color: theme.textDimmer }}>서프라이즈</div>
                                 {e.surprise != null ? (
                                   <div className="flex items-center gap-1">
@@ -613,24 +613,24 @@ export default function EventsView({ T }: { T?: any }) {
                                     </span>
                                   </div>
                                 ) : (
-                                  <span className="text-[11px]" style={{ color: theme.textDimmer }}>-</span>
+                                  <span className="text-[13px]" style={{ color: theme.textDimmer }}>-</span>
                                 )}
                               </div>
 
                               {/* 매출 */}
                               {(e.revenueEstimate != null || e.revenueActual != null) && (
                                 <div className="col-span-2">
-                                  <div className="text-[9px] mono uppercase tracking-[0.15em] mb-1.5"
+                                  <div className="text-[13px] mono uppercase tracking-[0.15em] mb-1.5"
                                     style={{ color: theme.textDimmer }}>매출</div>
                                   <div className="flex items-baseline gap-2 flex-wrap">
                                     <span className="text-sm font-semibold" style={{ color: theme.textPrimary }}>
                                       {fmtRevenue(e.revenueActual ?? e.revenueEstimate, e.market)}
                                       {e.revenueActual == null && e.revenueEstimate != null && (
-                                        <span className="text-[9px] ml-1" style={{ color: theme.textDimmer }}>(예상)</span>
+                                        <span className="text-[13px] ml-1" style={{ color: theme.textDimmer }}>(예상)</span>
                                       )}
                                     </span>
                                     {e.revenueEstimate != null && e.revenueActual != null && (
-                                      <span className="text-[10px]" style={{ color: theme.textFaint }}>
+                                      <span className="text-[12px]" style={{ color: theme.textFaint }}>
                                         예상 {fmtRevenue(e.revenueEstimate, e.market)}
                                       </span>
                                     )}
@@ -641,7 +641,7 @@ export default function EventsView({ T }: { T?: any }) {
                               {/* BMO / AMC */}
                               {e.timing && e.timing !== 'unknown' && (
                                 <div className="col-span-2">
-                                  <span className="text-[9px] mono px-1.5 py-0.5 border"
+                                  <span className="text-[13px] mono px-1.5 py-0.5 border"
                                     style={{ color: ev.color, borderColor: `${ev.color}50` }}>
                                     {e.timing === 'BMO' ? '장 전 발표 (BMO)' : '장 후 발표 (AMC)'}
                                   </span>
@@ -663,20 +663,20 @@ export default function EventsView({ T }: { T?: any }) {
             <div className="px-4 py-3 border-b flex items-center justify-between"
               style={{ borderColor: theme.border, background: theme.bgCard }}>
               <div className="flex items-center gap-2">
-                <span className="text-[11px] mono uppercase tracking-[0.2em]" style={{ color: theme.textMuted }}>
+                <span className="text-[13px] mono uppercase tracking-[0.2em]" style={{ color: theme.textMuted }}>
                   다가오는 이벤트
                 </span>
                 {/* 활성 필터 표시 */}
                 {(indexFilter !== 'ALL' || sectorFilter !== 'ALL') && (
                   <div className="flex gap-1">
                     {indexFilter !== 'ALL' && (
-                      <span className="text-[9px] mono px-1 border"
+                      <span className="text-[13px] mono px-1 border"
                         style={{ color: theme.accent, borderColor: `${theme.accent}50` }}>
                         {indexFilter === 'SP500' ? 'S&P' : 'NDX'}
                       </span>
                     )}
                     {sectorFilter !== 'ALL' && (
-                      <span className="text-[9px] mono px-1 border"
+                      <span className="text-[13px] mono px-1 border"
                         style={{ color: SECTOR_COLOR[sectorFilter], borderColor: `${SECTOR_COLOR[sectorFilter]}50` }}>
                         {SECTOR_LABEL[sectorFilter]}
                       </span>
@@ -685,12 +685,12 @@ export default function EventsView({ T }: { T?: any }) {
                 )}
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-[9px] mono" style={{ color: theme.textDimmer }}>
+                <span className="text-[13px] mono" style={{ color: theme.textDimmer }}>
                   {loading ? '로딩 중...' : `${[...FOMC_2026, ...FUTURES_EVENTS, ...macroToUse, ...earningEvents].filter(e => e.dateKST >= today).length}건`}
                 </span>
                 {(indexFilter !== 'ALL' || sectorFilter !== 'ALL') && (
                   <button onClick={() => { setIndexFilter('ALL'); setSectorFilter('ALL'); }}
-                    className="text-[9px] mono px-1.5 border hover:opacity-70 transition-opacity"
+                    className="text-[13px] mono px-1.5 border hover:opacity-70 transition-opacity"
                     style={{ color: theme.textDimmer, borderColor: theme.borderSoft }}>
                     초기화
                   </button>
@@ -730,7 +730,7 @@ export default function EventsView({ T }: { T?: any }) {
                     }}
                   >
                     {/* D-Day 배지 */}
-                    <span className="text-[10px] mono w-10 shrink-0 text-center py-0.5 mt-0.5 border"
+                    <span className="text-[12px] mono w-10 shrink-0 text-center py-0.5 mt-0.5 border"
                       style={{
                         color: diff === 0 ? ev.color : theme.textDimmer,
                         borderColor: diff === 0 ? ev.color : theme.border,
@@ -745,22 +745,22 @@ export default function EventsView({ T }: { T?: any }) {
                         <span className="text-xs font-semibold" style={{ color: theme.textPrimary }}>{ev.label}</span>
                         {/* 섹터 배지 */}
                         {e?.sector && e.sector !== 'Other' && (
-                          <span className="text-[8px] mono px-1 border"
+                          <span className="text-[12px] mono px-1 border"
                             style={{ color: SECTOR_COLOR[e.sector], borderColor: `${SECTOR_COLOR[e.sector]}40` }}>
                             {SECTOR_LABEL[e.sector]}
                           </span>
                         )}
                         {e?.isSP500 && (
-                          <span className="text-[8px] mono px-1 border"
+                          <span className="text-[12px] mono px-1 border"
                             style={{ color: '#7BAF7A', borderColor: '#7BAF7A40' }}>S&P</span>
                         )}
                         {e?.isNDX100 && (
-                          <span className="text-[8px] mono px-1 border"
+                          <span className="text-[12px] mono px-1 border"
                             style={{ color: '#7B9FDF', borderColor: '#7B9FDF40' }}>NDX</span>
                         )}
                         {/* EPS 예상 */}
                         {e?.epsEstimate != null && (
-                          <span className="text-[9px] mono ml-auto shrink-0"
+                          <span className="text-[13px] mono ml-auto shrink-0"
                             style={{ color: theme.textDimmer }}>
                             EPS {e.epsEstimate > 0 ? '+' : ''}{e.epsEstimate.toFixed(2)}
                           </span>
@@ -768,22 +768,22 @@ export default function EventsView({ T }: { T?: any }) {
                       </div>
                       {/* 날짜 + 한글명 */}
                       <div className="flex items-center gap-1.5">
-                        <span className="text-[10px] mono" style={{ color: theme.textFaint }}>
+                        <span className="text-[12px] mono" style={{ color: theme.textFaint }}>
                           {ev.dateKST.slice(5).replace('-', '/')}
                         </span>
                         {e && (
-                          <span className="text-[10px] truncate" style={{ color: theme.textDimmer }}>
+                          <span className="text-[12px] truncate" style={{ color: theme.textDimmer }}>
                             · {e.nameKo}
                           </span>
                         )}
                         {!e && (
-                          <span className="text-[10px] truncate" style={{ color: theme.textDimmer }}>
+                          <span className="text-[12px] truncate" style={{ color: theme.textDimmer }}>
                             · {ev.desc}
                           </span>
                         )}
                         {/* 시총 */}
                         {e?.marketCap != null && e.marketCap > 0 && (
-                          <span className="text-[9px] mono ml-auto shrink-0" style={{ color: theme.textDimmer }}>
+                          <span className="text-[13px] mono ml-auto shrink-0" style={{ color: theme.textDimmer }}>
                             ${e.marketCap >= 1000 ? `${(e.marketCap/1000).toFixed(1)}T` : `${e.marketCap}B`}
                           </span>
                         )}
@@ -794,7 +794,7 @@ export default function EventsView({ T }: { T?: any }) {
               })}
           </div>
 
-          <p className="text-[9px] mono text-center mt-1 md:col-span-2" style={{ color: theme.textDimmer }}>
+          <p className="text-[13px] mono text-center mt-1 md:col-span-2" style={{ color: theme.textDimmer }}>
             모든 날짜·시간 KST 기준 · 어닝 데이터: Alpha Vantage · S&P500 / Nasdaq100 필터 지원
           </p>
         </div>
