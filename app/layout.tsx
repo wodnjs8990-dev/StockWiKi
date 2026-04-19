@@ -9,10 +9,10 @@ import { headers } from 'next/headers';
 // Noto Sans KR — OFL 1.1, 상업용 무료
 const notoSansKR = Noto_Sans_KR({
   subsets: ['latin'],
-  weight: ['300', '400', '500', '700'],
+  weight: ['400', '500', '700'],
   variable: '--font-sans',
   display: 'swap',
-  preload: false,
+  preload: true,
 });
 
 // JetBrains Mono — OFL 1.1, 상업용 무료 (수치/모노용)

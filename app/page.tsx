@@ -5,7 +5,8 @@ import { getSiteConfig, getBanner, getCustomEvents } from '@/lib/config';
 import SiteBanner from '@/components/SiteBanner';
 import { TERMS } from '@/data/terms';
 
-export const dynamic = 'force-dynamic';
+// Edge Config 변경이 드물므로 60초 ISR 캐싱 — TTFB / LCP 대폭 개선
+export const revalidate = 60;
 
 // 동적 OG 메타태그 — ?term=per 딥링크 공유 시 카카오/트위터에 용어 정보 표시
 export async function generateMetadata(
