@@ -68,6 +68,16 @@ html, body {
   transition: background 0.2s, color 0.2s;
 }
 
+/* 홈 씬 — stage 배경과 통일해서 FOUC 방지 */
+body.hw-active,
+html.hw-active {
+  background: #080808 !important;
+}
+html.light body.hw-active,
+html.light.hw-active {
+  background: #f5f4f0 !important;
+}
+
 * {
   box-sizing: border-box;
 }
