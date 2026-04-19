@@ -7105,7 +7105,7 @@ function HomeView({ T, isDark, feat, totalTerms, recent, favorites, categoryColo
                 )}
               </div>
             </div>
-            {/* 시계 + 시장 상태 3개 */}
+            {/* 시계 + 시장 상태 — 데스크탑 */}
             <div className="shrink-0 hidden md:flex flex-col items-end gap-3">
               <div className="text-right">
                 <div className="mono text-[10px] uppercase tracking-[0.3em] mb-1" style={{ color: T.textFaint }}>KST</div>
@@ -7199,6 +7199,66 @@ function HomeView({ T, isDark, feat, totalTerms, recent, favorites, categoryColo
               <SlotNumber target={s.v} pad={s.pad} color={s.color} delay={i * 120} />
             </div>
           ))}
+        </div>
+
+        {/* ── 모바일 전용: 시장 상태 가로 스크롤 바 ── */}
+        <div className="flex md:hidden border-t overflow-x-auto scroll-hide" style={{ borderColor: T.border }}>
+          {(() => {
+            const now2 = new Date();
+            const kstParts2 = new Intl.DateTimeFormat('en-US', {
+              timeZone: 'Asia/Seoul',
+              hour: 'numeric', minute: 'numeric', weekday: 'short', hour12: false,
+            }).formatToParts(now2);
+            const kstH2 = parseInt(kstParts2.find(p => p.type === 'hour')?.value ?? '0');
+            const kstM2 = parseInt(kstParts2.find(p => p.type === 'minute')?.value ?? '0');
+            const kstWd2 = kstParts2.find(p => p.type === 'weekday')?.value ?? '';
+            const kstD2 = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].indexOf(kstWd2);
+
+            const krOpen2 = kstD2 >= 1 && kstD2 <= 5
+              && (kstH2 > 9 || (kstH2 === 9 && kstM2 >= 0))
+              && (kstH2 < 15 || (kstH2 === 15 && kstM2 <= 30));
+            const nxtOpen2 = kstD2 >= 1 && kstD2 <= 5 && kstH2 >= 18 && kstH2 < 22;
+            const nightFutOpen2 = (() => {
+              if (kstD2 === 0) return false;
+              if (kstD2 >= 1 && kstD2 <= 5 && kstH2 >= 18) return true;
+              if (kstD2 >= 2 && kstD2 <= 6 && kstH2 < 6) return true;
+              return false;
+            })();
+            const etParts2 = new Intl.DateTimeFormat('en-US', {
+              timeZone: 'America/New_York',
+              hour: 'numeric', minute: 'numeric', weekday: 'short', hour12: false,
+            }).formatToParts(now2);
+            const etH2 = parseInt(etParts2.find(p => p.type === 'hour')?.value ?? '0');
+            const etM2 = parseInt(etParts2.find(p => p.type === 'minute')?.value ?? '0');
+            const etWd2 = etParts2.find(p => p.type === 'weekday')?.value ?? '';
+            const etWeekday2 = ['Mon','Tue','Wed','Thu','Fri'].includes(etWd2);
+            const usOpen2 = etWeekday2 && (etH2 > 9 || (etH2 === 9 && etM2 >= 30)) && etH2 < 16;
+
+            const markets2 = [
+              { label: 'KOSPI',    sub: '한국 정규',     open: krOpen2,        color: HUE_FAMILIES.fundamental.base },
+              { label: 'NXT',      sub: '한국 야간주식', open: nxtOpen2,       color: HUE_FAMILIES.fundamental.tones[2] },
+              { label: '야간선물', sub: 'KRX 야간',      open: nightFutOpen2,  color: HUE_FAMILIES.derivatives.base },
+              { label: 'NYSE',     sub: '미국',          open: usOpen2,        color: HUE_FAMILIES.market.base },
+              { label: 'Crypto',   sub: '24/7',          open: true,           color: HUE_FAMILIES.trading.base },
+            ];
+            return markets2.map((m, i, arr) => (
+              <div key={m.label}
+                className="flex items-center gap-2 px-4 py-2.5 border-r shrink-0"
+                style={{ borderColor: i < arr.length - 1 ? T.border : 'transparent' }}>
+                <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{
+                  background: m.open ? '#22c55e' : T.textDimmer,
+                  boxShadow: m.open ? '0 0 6px #22c55e, 0 0 14px #22c55e80' : 'none',
+                }} />
+                <div className="flex flex-col leading-tight">
+                  <span className="mono text-[11px] font-medium" style={{ color: m.open ? (isDark ? '#e8e4dc' : '#22c55e') : T.textMuted }}>{m.label}</span>
+                  <span className="mono text-[9px]" style={{ color: T.textFaint }}>{m.sub}</span>
+                </div>
+                <span className="mono text-[10px] uppercase tracking-[0.12em] ml-1" style={{ color: m.open ? (isDark ? '#e8e4dc' : '#22c55e') : T.textDimmer }}>
+                  {m.open ? '장중' : '장외'}
+                </span>
+              </div>
+            ));
+          })()}
         </div>
       </div>
 
