@@ -8,21 +8,20 @@ import { SpeedInsights } from '@vercel/speed-insights/next';
 import { headers } from 'next/headers';
 import Script from 'next/script';
 
-// Noto Sans KR — 자체 호스팅 (Google Fonts CDN 요청 완전 제거 → 폰트 로딩 ~1,400ms 절감)
+// Noto Sans KR — 자체 호스팅
+// latin(14KB)만 preload, korean(530KB)은 swap으로 비차단 로딩
 const notoSansKR = localFont({
   src: [
-    // latin subset 먼저 (더 작음, 우선 로딩)
     { path: '../public/fonts/noto-sans-kr-latin-400-normal.woff2', weight: '400', style: 'normal' },
     { path: '../public/fonts/noto-sans-kr-latin-500-normal.woff2', weight: '500', style: 'normal' },
     { path: '../public/fonts/noto-sans-kr-latin-700-normal.woff2', weight: '700', style: 'normal' },
-    // korean subset
     { path: '../public/fonts/noto-sans-kr-korean-400-normal.woff2', weight: '400', style: 'normal' },
     { path: '../public/fonts/noto-sans-kr-korean-500-normal.woff2', weight: '500', style: 'normal' },
     { path: '../public/fonts/noto-sans-kr-korean-700-normal.woff2', weight: '700', style: 'normal' },
   ],
   variable: '--font-sans',
-  display: 'swap',
-  preload: true,
+  display: 'optional',   // 폰트 없어도 렌더링 차단 안 함 — LCP 보호
+  preload: false,        // 1.6MB korean 파일 preload 금지
   adjustFontFallback: 'Arial',
 });
 
