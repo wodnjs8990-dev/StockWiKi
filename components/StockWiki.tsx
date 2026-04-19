@@ -891,6 +891,7 @@ function CommandK({ terms, onClose, onSelect, T }) {
 function GlossaryView({ terms, searchQuery, setSearchQuery, searchRef, categories, selectedCategory, setSelectedCategory, selectedTerm, setSelectedTerm, closeTerm, totalCount, categoryColors, favorites, toggleFav, favMemos, updateFavMemo, recent, T, isDark, showToast, setActiveTab }) {
   // ── 2단 카테고리 필터: family(1단) + sub(2단)
   const [selectedFamily, setSelectedFamily] = React.useState<string | null>(null);
+  const [familyOpen, setFamilyOpen] = React.useState(false); // 모바일 접기/펼치기
 
   const FAMILY_LIST = [
     { id: 'fundamental', name: '펀더멘털',    en: 'FUNDAMENTAL' },
@@ -908,6 +909,7 @@ function GlossaryView({ terms, searchQuery, setSearchQuery, searchRef, categorie
   const handleFamilyClick = (fid: string | null) => {
     setSelectedFamily(fid);
     setSelectedCategory('전체');
+    setFamilyOpen(false); // 선택 후 모바일 패널 닫기
   };
 
   // family 필터링된 terms
@@ -998,81 +1000,181 @@ function GlossaryView({ terms, searchQuery, setSearchQuery, searchRef, categorie
 
       {/* ── 2단 카테고리 필터 ── */}
       <div className="mb-6 md:mb-10 border-y" style={{ borderColor: T.border }}>
-        {/* 1단: family 6개 */}
-        <div className="flex overflow-x-auto scroll-hide border-b" style={{ borderColor: T.border }}>
+
+        {/* ── 모바일: 토글 헤더 ── */}
+        <div className="flex md:hidden items-center justify-between px-4 py-2.5 border-b" style={{ borderColor: T.border }}>
+          <span className="mono text-[11px] uppercase tracking-[0.2em]" style={{ color: T.textMuted }}>
+            {selectedFamily
+              ? `${FAMILY_LIST.find(f => f.id === selectedFamily)?.name ?? selectedFamily}${selectedCategory !== '전체' ? ' · ' + selectedCategory : ''}`
+              : selectedCategory === '★ 즐겨찾기' ? '★ 즐겨찾기' : '전체 그룹'}
+          </span>
           <button
-            onClick={() => handleFamilyClick(null)}
-            className="shrink-0 px-4 py-2.5 text-xs mono uppercase tracking-[0.18em] border-r transition-all"
-            style={{
-              borderColor: T.border,
-              background: !selectedFamily && selectedCategory === '전체' ? T.bgTabActive : 'transparent',
-              color: !selectedFamily && selectedCategory === '전체' ? T.textTabActive : T.textMuted,
-            }}
-          >전체</button>
-          {FAMILY_LIST.map(fam => {
-            const ft = HUE_FAMILIES[fam.id as keyof typeof HUE_FAMILIES];
-            const active = selectedFamily === fam.id;
-            return (
-              <button
-                key={fam.id}
-                onClick={() => handleFamilyClick(active ? null : fam.id)}
-                className="shrink-0 flex items-center gap-2 px-4 py-2.5 text-xs mono uppercase tracking-[0.18em] border-r transition-all whitespace-nowrap"
-                style={{
-                  borderColor: T.border,
-                  background: active ? ft.bg : 'transparent',
-                  color: active ? ft.text : T.textMuted,
-                }}
-              >
-                <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: active ? ft.text : ft.base }} />
-                {fam.name}
-                <span className="opacity-50 text-[10px]">{fam.en}</span>
-              </button>
-            );
-          })}
-          {/* 즐겨찾기 */}
-          {categories.includes('★ 즐겨찾기') && (
-            <button
-              onClick={() => { handleFamilyClick(null); setSelectedCategory('★ 즐겨찾기'); }}
-              className="shrink-0 px-4 py-2.5 text-xs mono uppercase tracking-[0.18em] border-r transition-all"
-              style={{
-                borderColor: T.border,
-                background: selectedCategory === '★ 즐겨찾기' ? T.accent : 'transparent',
-                color: selectedCategory === '★ 즐겨찾기' ? '#0a0a0a' : T.textMuted,
-              }}
-            >★ 즐겨찾기</button>
-          )}
+            onClick={() => setFamilyOpen(o => !o)}
+            className="mono text-[10px] uppercase tracking-[0.2em] flex items-center gap-1.5 px-3 py-1 border"
+            style={{ borderColor: T.border, color: T.textMuted }}
+          >
+            {familyOpen ? '닫기 ↑' : '필터 ↓'}
+          </button>
         </div>
 
-        {/* 2단: sub-categories (family 선택 시만 노출) */}
-        {selectedFamily && subCategories.length > 0 && (
-          <div className="flex overflow-x-auto scroll-hide" style={{ background: T.bgSurface }}>
-            <button
-              onClick={() => setSelectedCategory('전체')}
-              className="shrink-0 px-4 py-2 text-[11px] mono uppercase tracking-[0.2em] border-r transition-all"
-              style={{
-                borderColor: T.border,
-                color: selectedCategory === '전체' ? HUE_FAMILIES[selectedFamily as keyof typeof HUE_FAMILIES].base : T.textDimmer,
-                borderBottom: selectedCategory === '전체' ? `2px solid ${HUE_FAMILIES[selectedFamily as keyof typeof HUE_FAMILIES].base}` : '2px solid transparent',
-              }}
-            >전체</button>
-            {subCategories.map(cat => {
-              const active = selectedCategory === cat;
-              const ft = HUE_FAMILIES[selectedFamily as keyof typeof HUE_FAMILIES];
-              return (
+        {/* ── 모바일 펼침 패널 ── */}
+        {familyOpen && (
+          <div className="flex md:hidden flex-col border-b" style={{ borderColor: T.border, background: T.bgSurface }}>
+            {/* 전체 + 즐겨찾기 */}
+            <div className="flex border-b" style={{ borderColor: T.border }}>
+              <button
+                onClick={() => { handleFamilyClick(null); setSelectedCategory('전체'); }}
+                className="flex-1 px-4 py-2.5 text-xs mono uppercase tracking-[0.18em] border-r transition-all"
+                style={{
+                  borderColor: T.border,
+                  background: !selectedFamily && selectedCategory === '전체' ? T.bgTabActive : 'transparent',
+                  color: !selectedFamily && selectedCategory === '전체' ? T.textTabActive : T.textMuted,
+                }}
+              >전체</button>
+              {categories.includes('★ 즐겨찾기') && (
                 <button
-                  key={cat}
-                  onClick={() => setSelectedCategory(active ? '전체' : cat)}
-                  className="shrink-0 px-4 py-2 text-[11px] mono uppercase tracking-[0.15em] border-r transition-all"
+                  onClick={() => { handleFamilyClick(null); setSelectedCategory('★ 즐겨찾기'); }}
+                  className="flex-1 px-4 py-2.5 text-xs mono uppercase tracking-[0.18em] transition-all"
+                  style={{
+                    background: selectedCategory === '★ 즐겨찾기' ? T.accent : 'transparent',
+                    color: selectedCategory === '★ 즐겨찾기' ? '#0a0a0a' : T.textMuted,
+                  }}
+                >★ 즐겨찾기</button>
+              )}
+            </div>
+            {/* 그룹 버튼들 — 2열 그리드 */}
+            <div className="grid grid-cols-2 divide-x divide-y" style={{ borderColor: T.border }}>
+              {FAMILY_LIST.map(fam => {
+                const ft = HUE_FAMILIES[fam.id as keyof typeof HUE_FAMILIES];
+                const active = selectedFamily === fam.id;
+                return (
+                  <button
+                    key={fam.id}
+                    onClick={() => handleFamilyClick(active ? null : fam.id)}
+                    className="flex items-center gap-2 px-4 py-3 text-xs mono uppercase tracking-[0.15em] transition-all"
+                    style={{
+                      borderColor: T.border,
+                      background: active ? ft.bg : 'transparent',
+                      color: active ? ft.text : T.textMuted,
+                    }}
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: active ? ft.text : ft.base }} />
+                    <span>{fam.name}</span>
+                    <span className="opacity-40 text-[9px]">{fam.en}</span>
+                  </button>
+                );
+              })}
+            </div>
+            {/* 모바일 sub-category (family 선택 시) */}
+            {selectedFamily && subCategories.length > 0 && (
+              <div className="flex flex-wrap gap-0 border-t" style={{ borderColor: T.border, background: T.bgPage }}>
+                <button
+                  onClick={() => setSelectedCategory('전체')}
+                  className="px-4 py-2 text-[11px] mono tracking-[0.15em] border-r border-b transition-all"
                   style={{
                     borderColor: T.border,
-                    color: active ? ft.base : T.textDimmer,
-                    borderBottom: active ? `2px solid ${ft.base}` : '2px solid transparent',
+                    color: selectedCategory === '전체' ? HUE_FAMILIES[selectedFamily as keyof typeof HUE_FAMILIES].base : T.textDimmer,
                   }}
-                >{cat}</button>
-              );
-            })}
+                >전체</button>
+                {subCategories.map(cat => {
+                  const active = selectedCategory === cat;
+                  const ft = HUE_FAMILIES[selectedFamily as keyof typeof HUE_FAMILIES];
+                  return (
+                    <button
+                      key={cat}
+                      onClick={() => setSelectedCategory(active ? '전체' : cat)}
+                      className="px-4 py-2 text-[11px] mono tracking-[0.12em] border-r border-b transition-all"
+                      style={{
+                        borderColor: T.border,
+                        color: active ? ft.base : T.textDimmer,
+                        background: active ? `${ft.base}15` : 'transparent',
+                      }}
+                    >{cat}</button>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
+
+        {/* ── 데스크탑: 2줄 wrap ── */}
+        <div className="hidden md:block">
+          {/* 1단: family — flex-wrap 2줄 */}
+          <div className="flex flex-wrap border-b" style={{ borderColor: T.border }}>
+            <button
+              onClick={() => handleFamilyClick(null)}
+              className="shrink-0 px-4 py-2.5 text-xs mono uppercase tracking-[0.18em] border-r border-b transition-all"
+              style={{
+                borderColor: T.border,
+                background: !selectedFamily && selectedCategory === '전체' ? T.bgTabActive : 'transparent',
+                color: !selectedFamily && selectedCategory === '전체' ? T.textTabActive : T.textMuted,
+              }}
+            >전체</button>
+            {FAMILY_LIST.map(fam => {
+              const ft = HUE_FAMILIES[fam.id as keyof typeof HUE_FAMILIES];
+              const active = selectedFamily === fam.id;
+              return (
+                <button
+                  key={fam.id}
+                  onClick={() => handleFamilyClick(active ? null : fam.id)}
+                  className="shrink-0 flex items-center gap-2 px-4 py-2.5 text-xs mono uppercase tracking-[0.18em] border-r border-b transition-all whitespace-nowrap"
+                  style={{
+                    borderColor: T.border,
+                    background: active ? ft.bg : 'transparent',
+                    color: active ? ft.text : T.textMuted,
+                  }}
+                >
+                  <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: active ? ft.text : ft.base }} />
+                  {fam.name}
+                  <span className="opacity-50 text-[10px]">{fam.en}</span>
+                </button>
+              );
+            })}
+            {/* 즐겨찾기 */}
+            {categories.includes('★ 즐겨찾기') && (
+              <button
+                onClick={() => { handleFamilyClick(null); setSelectedCategory('★ 즐겨찾기'); }}
+                className="shrink-0 px-4 py-2.5 text-xs mono uppercase tracking-[0.18em] border-r border-b transition-all"
+                style={{
+                  borderColor: T.border,
+                  background: selectedCategory === '★ 즐겨찾기' ? T.accent : 'transparent',
+                  color: selectedCategory === '★ 즐겨찾기' ? '#0a0a0a' : T.textMuted,
+                }}
+              >★ 즐겨찾기</button>
+            )}
+          </div>
+
+          {/* 2단: sub-categories (family 선택 시만 노출) */}
+          {selectedFamily && subCategories.length > 0 && (
+            <div className="flex flex-wrap" style={{ background: T.bgSurface }}>
+              <button
+                onClick={() => setSelectedCategory('전체')}
+                className="shrink-0 px-4 py-2 text-[11px] mono uppercase tracking-[0.2em] border-r border-b transition-all"
+                style={{
+                  borderColor: T.border,
+                  color: selectedCategory === '전체' ? HUE_FAMILIES[selectedFamily as keyof typeof HUE_FAMILIES].base : T.textDimmer,
+                  borderBottom: selectedCategory === '전체' ? `2px solid ${HUE_FAMILIES[selectedFamily as keyof typeof HUE_FAMILIES].base}` : undefined,
+                }}
+              >전체</button>
+              {subCategories.map(cat => {
+                const active = selectedCategory === cat;
+                const ft = HUE_FAMILIES[selectedFamily as keyof typeof HUE_FAMILIES];
+                return (
+                  <button
+                    key={cat}
+                    onClick={() => setSelectedCategory(active ? '전체' : cat)}
+                    className="shrink-0 px-4 py-2 text-[11px] mono uppercase tracking-[0.15em] border-r border-b transition-all"
+                    style={{
+                      borderColor: T.border,
+                      color: active ? ft.base : T.textDimmer,
+                      borderBottom: active ? `2px solid ${ft.base}` : undefined,
+                    }}
+                  >{cat}</button>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* 용어 그리드 */}
