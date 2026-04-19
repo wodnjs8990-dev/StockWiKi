@@ -1,0 +1,776 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>StockWiKi.kr — 전업투자자를 위한 금융 책상</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,200;0,300;0,400;0,500;1,200&family=IBM+Plex+Mono:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --ink:#ede9df;--muted:#76726e;--faint:#2e2e2e;--dim:#1a1a1a;
+  --accent:#C89650;
+  /* 9 hue families */
+  --fundamental:#C89650;
+  --market:#A63D33;
+  --econ:#7C6A9B;
+  --risk:#4F7E7C;
+  --deriv:#6FA09E;
+  --trading:#6B6B6B;
+  --industry:#7BAF7A;
+  --digital:#9B7FD4;
+  --tax:#B07A5A;
+  --ok:#6f9c6a;
+  --bg:#080808;--bg1:#0d0d0d;--border:#1c1c1c;--border2:#252525;
+}
+html{font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased;color:var(--muted)}
+body{background:var(--bg);overflow-x:hidden}
+
+/* ── STAGE ── */
+#stage{position:fixed;inset:0;overflow:hidden;background:var(--bg)}
+
+/* ── SCENE BASE ── */
+.scene{
+  position:absolute;inset:0;
+  display:flex;align-items:center;justify-content:center;
+  pointer-events:none;
+  will-change:opacity,transform;
+}
+.scene.on{pointer-events:auto}
+
+/* ── TOP PROGRESS LINE ── */
+#tprog{
+  position:fixed;top:0;left:0;height:1px;z-index:300;
+  background:linear-gradient(90deg,var(--accent),transparent);
+  transition:width .05s linear;
+}
+
+/* ── NAV ── */
+nav{
+  position:fixed;top:0;left:0;right:0;z-index:200;
+  height:52px;display:flex;align-items:center;
+  padding:0 5vw;justify-content:space-between;
+  border-bottom:1px solid transparent;
+  transition:background .5s,border-color .5s;
+}
+nav.ink{background:rgba(8,8,8,.92);backdrop-filter:blur(24px) saturate(160%);border-color:var(--border)}
+.brand{font-size:16px;font-weight:300;letter-spacing:-.02em;color:var(--ink);text-decoration:none;display:flex;align-items:baseline;gap:4px}
+.brand em{font-style:normal;color:var(--accent);font-weight:500}
+.brand .kr{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);margin-left:1px}
+.nav-r{display:flex;gap:2px}
+.nb{font-size:12.5px;color:var(--muted);padding:6px 10px;background:transparent;border:1px solid transparent;cursor:pointer;font-family:inherit;text-decoration:none;transition:color .18s,border-color .18s;white-space:nowrap}
+.nb:hover{color:var(--ink);border-color:var(--border2)}
+.nb.cta{border-color:rgba(200,150,80,.4)!important;color:var(--accent)!important;
+  font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;padding:6px 14px}
+.nb.cta:hover{background:var(--accent)!important;color:#000!important;border-color:var(--accent)!important}
+
+/* ── SIDE PROGRESS ── */
+#dots{position:fixed;right:20px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:8px;z-index:100}
+.dot{width:4px;height:4px;border-radius:50%;background:var(--faint);cursor:pointer;transition:all .3s ease}
+.dot.on{background:var(--accent);height:18px;border-radius:2px}
+#lbl{position:fixed;left:5vw;bottom:24px;z-index:100;
+  font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.3em;text-transform:uppercase;
+  color:var(--faint);display:flex;align-items:center;gap:8px}
+#lbl b{color:var(--accent);font-weight:400}
+
+/* ════════════════════════
+   S0 — HERO
+════════════════════════ */
+#s0{flex-direction:column;text-align:center;padding:0 5vw}
+
+/* animated grid */
+.hero-grid{
+  position:absolute;inset:0;pointer-events:none;
+  background-image:
+    linear-gradient(var(--border) 1px,transparent 1px),
+    linear-gradient(90deg,var(--border) 1px,transparent 1px);
+  background-size:80px 80px;
+  mask-image:radial-gradient(ellipse 80% 80% at 50% 50%,black 0%,transparent 100%);
+  animation:gridShift 20s linear infinite;
+  opacity:.6;
+}
+@keyframes gridShift{from{background-position:0 0}to{background-position:80px 80px}}
+
+/* radial glow */
+.glow{
+  position:absolute;top:50%;left:50%;
+  transform:translate(-50%,-50%);
+  width:100vw;height:100vh;
+  background:radial-gradient(ellipse 60% 50% at 50% 50%,rgba(200,150,80,.07) 0%,transparent 70%);
+  pointer-events:none;animation:gp 6s ease-in-out infinite;
+}
+@keyframes gp{0%,100%{transform:translate(-50%,-50%) scale(1)}50%{transform:translate(-50%,-50%) scale(1.12)}}
+
+.h-eyebrow{
+  display:inline-flex;align-items:center;gap:10px;
+  font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.38em;text-transform:uppercase;
+  color:var(--muted);margin-bottom:32px;
+}
+.h-dot{width:5px;height:5px;border-radius:50%;background:var(--accent);animation:pd 2.4s ease-in-out infinite}
+@keyframes pd{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.2;transform:scale(.5)}}
+
+.h-title{
+  font-size:clamp(56px,12vw,152px);
+  font-weight:200;letter-spacing:-.045em;line-height:.86;
+  color:var(--ink);margin-bottom:28px;
+  position:relative;z-index:1;
+}
+.h-title em{font-style:normal;color:var(--accent)}
+.h-title .line2{color:rgba(232,228,214,.45)}
+
+.h-sub{
+  font-size:clamp(14px,1.5vw,18px);font-weight:300;color:var(--muted);
+  max-width:520px;margin:0 auto 44px;line-height:1.65;
+  position:relative;z-index:1;
+}
+.h-sub strong{color:var(--ink);font-weight:400}
+
+.h-btns{display:flex;gap:10px;justify-content:center;position:relative;z-index:1;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:13px 24px;font-size:13px;
+  cursor:pointer;border:1px solid;font-family:inherit;text-decoration:none;transition:all .2s;letter-spacing:-.01em}
+.btn-p{background:var(--accent);color:#000;border-color:var(--accent);font-weight:500}
+.btn-p:hover{filter:brightness(1.08);transform:translateY(-1px)}
+.btn-g{background:transparent;color:var(--muted);border-color:var(--border2)}
+.btn-g:hover{color:var(--ink);border-color:var(--muted);transform:translateY(-1px)}
+.kbd{font-family:'IBM Plex Mono',monospace;font-size:10px;border:1px solid rgba(0,0,0,.3);padding:1px 5px;opacity:.55;border-radius:2px}
+
+.scrl-cue{
+  position:absolute;bottom:28px;left:50%;transform:translateX(-50%);
+  display:flex;flex-direction:column;align-items:center;gap:6px;
+}
+.scrl-line{width:1px;height:52px;background:linear-gradient(to bottom,transparent,var(--muted),transparent);animation:sl 2s ease-in-out infinite}
+@keyframes sl{0%{transform:scaleY(0) translateY(-50%);opacity:0}40%{transform:scaleY(1) translateY(0);opacity:1}80%,100%{transform:scaleY(0) translateY(50%);opacity:0}}
+.scrl-txt{font-family:'IBM Plex Mono',monospace;font-size:8.5px;letter-spacing:.4em;text-transform:uppercase;color:var(--faint)}
+
+/* ════════════════════════
+   S1 — PHILOSOPHY
+════════════════════════ */
+#s1{flex-direction:column;padding:0 8vw;text-align:center;background:var(--bg)}
+.phil-label{
+  font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.35em;text-transform:uppercase;
+  color:var(--faint);margin-bottom:36px;display:flex;align-items:center;gap:12px;justify-content:center;
+}
+.phil-label::before,.phil-label::after{content:'';width:40px;height:1px;background:var(--border2)}
+.phil-q{
+  font-size:clamp(30px,5.5vw,72px);font-weight:200;letter-spacing:-.035em;line-height:1.05;
+  color:var(--ink);max-width:900px;margin:0 auto 28px;
+}
+.phil-q em{font-style:italic;color:var(--accent);font-weight:200}
+.phil-body{
+  font-size:clamp(14px,1.4vw,17px);font-weight:300;color:var(--muted);
+  max-width:620px;margin:0 auto;line-height:1.8;
+}
+.phil-body strong{color:rgba(232,228,214,.7);font-weight:400}
+
+/* ════════════════════════
+   S2 — NUMBERS
+════════════════════════ */
+#s2{flex-direction:column;padding:48px 5vw 0;align-items:stretch}
+.n-header{
+  font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.35em;
+  text-transform:uppercase;color:var(--faint);
+  margin-bottom:40px;display:flex;align-items:center;gap:14px;
+}
+.n-header::before{content:'§';color:var(--accent)}
+.n-header::after{content:'';flex:1;height:1px;background:var(--border)}
+.ngrid{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--border)}
+.nstat{padding:36px 28px;border-right:1px solid var(--border);border-bottom:1px solid var(--border);position:relative;overflow:hidden}
+.nstat:last-child{border-right:none}
+.nstat::after{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(135deg,transparent 40%,rgba(255,255,255,.025) 50%,transparent 60%);
+  transform:translateX(-100%);transition:transform 1s ease;
+}
+.nstat.lit::after{transform:translateX(100%)}
+.nbar{position:absolute;bottom:0;left:0;right:0;height:2px;transform:scaleX(0);transform-origin:left;transition:transform 1.4s cubic-bezier(.16,1,.3,1)}
+.nstat.lit .nbar{transform:scaleX(1)}
+.nk{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.3em;text-transform:uppercase;color:var(--muted);margin-bottom:16px}
+.nv{font-family:'IBM Plex Mono',monospace;font-size:clamp(44px,5.5vw,72px);font-weight:400;letter-spacing:-.025em;color:var(--ink);line-height:1;margin-bottom:10px}
+.nv .u{font-size:.38em;color:var(--muted);margin-left:6px;vertical-align:top;margin-top:14px;display:inline-block}
+.nd{font-size:12.5px;color:var(--faint);line-height:1.55}
+
+/* ════════════════════════
+   S3 — FAMILIES UNIFIED
+════════════════════════ */
+.fsc{flex-direction:row;align-items:stretch;padding:0}
+
+/* 좌: 상세 패널 */
+.fl{
+  width:55%;padding:clamp(40px,4.5vw,80px);
+  display:flex;flex-direction:column;justify-content:center;
+  border-right:1px solid var(--border);position:relative;overflow:hidden;
+}
+.fl-bg{
+  position:absolute;right:-5vw;bottom:-8vh;
+  font-family:'IBM Plex Mono',monospace;
+  font-size:clamp(100px,18vw,280px);font-weight:400;
+  letter-spacing:-.05em;opacity:.035;line-height:1;
+  user-select:none;pointer-events:none;
+  transition:opacity .5s;
+}
+.f-num{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.35em;text-transform:uppercase;margin-bottom:14px;transition:color .4s}
+.f-name{font-size:clamp(40px,6vw,86px);font-weight:200;letter-spacing:-.04em;line-height:.88;margin-bottom:16px;transition:color .4s}
+.f-desc{font-size:clamp(12px,1.2vw,15px);line-height:1.75;color:var(--muted);max-width:420px;margin-bottom:22px;min-height:72px;transition:opacity .3s}
+.f-tags{display:flex;flex-wrap:wrap;gap:7px;min-height:36px}
+.f-tag{
+  font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.05em;
+  padding:4px 12px;border:1px solid;background:rgba(255,255,255,.02);
+  transition:background .3s,border-color .4s,color .4s;
+}
+.f-tag:hover{background:rgba(255,255,255,.06)}
+
+/* 우: 인덱스 리스트 */
+.fr{width:45%;display:flex;flex-direction:column;overflow-y:auto}
+.frow{
+  display:flex;align-items:stretch;
+  border-bottom:1px solid var(--border);position:relative;
+  cursor:pointer;transition:background .25s;
+}
+.frow:last-child{border-bottom:none}
+.frow:hover,.frow.on{background:rgba(255,255,255,.025)}
+.frbar{width:3px;flex-shrink:0;transition:opacity .35s}
+.frow:not(.on) .frbar{opacity:.12}
+.frbody{padding:13px 20px;flex:1}
+.fren{font-family:'IBM Plex Mono',monospace;font-size:8.5px;letter-spacing:.3em;text-transform:uppercase;margin-bottom:3px;transition:color .3s}
+.frko{font-size:13px;color:var(--ink);opacity:.25;transition:opacity .3s;font-weight:300}
+.frow.on .frko{opacity:1}
+
+/* ════════════════════════
+   S12–S14 — FEATURES
+════════════════════════ */
+.fsc2{flex-direction:row;align-items:stretch;padding:0}
+.fsc2.rv .ft{order:2}
+.fsc2.rv .fv{order:1}
+.ft{
+  width:42%;padding:clamp(48px,5vw,88px);
+  display:flex;flex-direction:column;justify-content:center;
+  border-right:1px solid var(--border);
+}
+.fsc2.rv .ft{border-right:none;border-left:1px solid var(--border)}
+.fv{flex:1;display:flex;align-items:center;justify-content:center;padding:clamp(32px,4vw,60px);background:var(--bg1);position:relative;overflow:hidden}
+.fv::before{
+  content:'';position:absolute;inset:0;pointer-events:none;
+  background-image:radial-gradient(circle,var(--border2) 1px,transparent 1px);
+  background-size:28px 28px;opacity:.8;
+}
+.ft-tag{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.35em;text-transform:uppercase;color:var(--faint);margin-bottom:22px}
+.ft-h{font-size:clamp(26px,3.5vw,48px);font-weight:200;letter-spacing:-.025em;line-height:1.05;color:var(--ink);margin-bottom:14px}
+.ft-h em{font-style:normal}
+.ft-body{font-size:13.5px;line-height:1.78;color:var(--muted);margin-bottom:28px;max-width:400px}
+.ft-link{
+  font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;
+  color:var(--accent);text-decoration:none;display:inline-flex;align-items:center;gap:8px;
+  position:relative;
+}
+.ft-link::after{content:'';position:absolute;bottom:-2px;left:0;width:0;height:1px;background:var(--accent);transition:width .3s}
+.ft-link:hover::after{width:100%}
+.arr{display:inline-block;transition:transform .25s}
+.ft-link:hover .arr{transform:translateX(4px)}
+
+/* ── MOCK: Term Card ── */
+.mock{
+  border:1px solid rgba(255,255,255,.06);
+  background:rgba(14,14,14,.97);
+  width:100%;max-width:340px;
+  box-shadow:0 32px 80px rgba(0,0,0,.7),0 0 0 1px rgba(255,255,255,.03);
+  position:relative;z-index:1;
+}
+.mh{padding:10px 14px;border-bottom:1px solid rgba(255,255,255,.05);display:flex;align-items:center;gap:8px}
+.chip{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;padding:2px 9px}
+.mt{font-size:22px;font-weight:500;color:var(--ink);padding:14px 14px 2px;letter-spacing:-.02em}
+.me{font-family:'IBM Plex Mono',monospace;font-style:italic;font-size:10.5px;color:var(--muted);padding:0 14px 10px}
+.mf{font-family:'IBM Plex Mono',monospace;font-size:12px;padding:9px 12px;border-left:3px solid var(--accent);background:#050505;color:var(--ink);margin:0 14px 10px}
+.mf small{font-size:8px;letter-spacing:.22em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:3px}
+.mk{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid rgba(255,255,255,.05)}
+.kc{padding:9px 11px;border-right:1px solid rgba(255,255,255,.05)}.kc:last-child{border-right:none}
+.kk{font-family:'IBM Plex Mono',monospace;font-size:8.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-bottom:3px}
+.kv{font-family:'IBM Plex Mono',monospace;font-size:14px;color:var(--ink)}
+.mr{display:flex;flex-wrap:wrap;gap:3px;padding:9px 14px 12px}
+.mr span{font-family:'IBM Plex Mono',monospace;font-size:9px;padding:2px 6px;border:1px solid rgba(255,255,255,.07);color:var(--muted);cursor:pointer;transition:border-color .2s,color .2s}
+.mr span:hover{border-color:var(--accent);color:var(--accent)}
+
+/* ── MOCK: A/B Calc ── */
+.mab{border:1px solid rgba(255,255,255,.06);background:rgba(14,14,14,.97);width:100%;max-width:390px;box-shadow:0 32px 80px rgba(0,0,0,.7),0 0 0 1px rgba(255,255,255,.03);position:relative;z-index:1}
+.abh{padding:10px 14px;border-bottom:1px solid rgba(255,255,255,.05);display:flex;align-items:center;gap:8px}
+.abid{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--risk)}
+.abn{font-size:13px;color:var(--ink);flex:1;font-weight:300}
+.abt{display:flex;border:1px solid rgba(255,255,255,.08);margin-left:auto}
+.abt span{padding:3px 8px;font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted)}
+.abt span.on{background:var(--accent);color:#000}
+.ab3{display:grid;grid-template-columns:1fr 88px 1fr}
+.cola,.colb{padding:13px}
+.cl{font-family:'IBM Plex Mono',monospace;font-size:8.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;display:flex;align-items:center;gap:5px}
+.cl .tg{padding:2px 5px;font-size:9px}
+.ir{margin-bottom:6px}
+.ik{font-family:'IBM Plex Mono',monospace;font-size:8.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--faint);margin-bottom:2px}
+.iv{font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--ink)}
+.rs{margin-top:9px;border:1px solid rgba(255,255,255,.07);padding:9px;background:#050505}
+.rk{font-family:'IBM Plex Mono',monospace;font-size:8.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-bottom:3px}
+.rv2{font-family:'IBM Plex Mono',monospace;font-size:22px;font-weight:500}
+.cold{background:#050505;border-left:1px solid rgba(255,255,255,.05);border-right:1px solid rgba(255,255,255,.05);padding:13px 8px;display:flex;flex-direction:column;align-items:center;gap:6px}
+.dh{font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:.32em;text-transform:uppercase;color:var(--muted);padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,.06);width:100%;text-align:center}
+.dv{font-family:'IBM Plex Mono',monospace;font-size:20px;font-weight:500}
+.dp{font-family:'IBM Plex Mono',monospace;font-size:9.5px;opacity:.7}
+.db{width:100%;height:2px;background:rgba(255,255,255,.06);overflow:hidden;margin-top:4px;border-radius:1px}
+.dbf{height:100%;width:0;transition:width 1.6s cubic-bezier(.16,1,.3,1);border-radius:1px}
+
+/* ── MOCK: Calendar ── */
+.mcal{border:1px solid rgba(255,255,255,.06);background:rgba(14,14,14,.97);width:100%;max-width:344px;box-shadow:0 32px 80px rgba(0,0,0,.7),0 0 0 1px rgba(255,255,255,.03);position:relative;z-index:1}
+.chd{padding:11px 14px;border-bottom:1px solid rgba(255,255,255,.05);display:flex;align-items:center;gap:8px}
+.cmo{font-size:15px;color:var(--ink);font-weight:300}
+.cinf{font-family:'IBM Plex Mono',monospace;font-size:8.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
+.cnav{margin-left:auto;display:flex;gap:3px}
+.cnav span{width:22px;height:22px;display:flex;align-items:center;justify-content:center;border:1px solid rgba(255,255,255,.07);font-size:10px;color:var(--muted);cursor:pointer}
+.cdow{display:grid;grid-template-columns:repeat(7,1fr);border-bottom:1px solid rgba(255,255,255,.05)}
+.cdow div{padding:5px 2px;font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:.1em;text-transform:uppercase;text-align:center;color:var(--muted)}
+.cg{display:grid;grid-template-columns:repeat(7,1fr)}
+.cc{min-height:44px;padding:4px;border-right:1px solid rgba(255,255,255,.04);border-bottom:1px solid rgba(255,255,255,.04);position:relative}
+.cc:nth-child(7n){border-right:none}
+.cdn{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted)}
+.cc.td .cdn{color:var(--accent)}
+.cc.td::after{content:'';position:absolute;top:3px;right:3px;width:4px;height:4px;background:#E07A30;border-radius:50%}
+.cc.out{background:rgba(0,0,0,.4)}
+.cc.out .cdn{color:var(--faint)}
+.ev{font-size:7.5px;padding:1px 3px;border-left:2px solid;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--ink);background:rgba(255,255,255,.02)}
+
+/* ════════════════════════
+   S7 — CTA
+════════════════════════ */
+#s7{flex-direction:column;text-align:center;padding:0 6vw}
+#s7 .glow{opacity:.5}
+.cta-label{font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.38em;text-transform:uppercase;color:var(--muted);margin-bottom:32px;display:flex;align-items:center;gap:14px;justify-content:center}
+.cta-label::before{content:'§';color:var(--accent)}
+.cta-label::after{content:'';width:32px;height:1px;background:var(--border2)}
+.cta-h{font-size:clamp(48px,9vw,120px);font-weight:200;letter-spacing:-.045em;line-height:.88;color:var(--ink);margin-bottom:20px}
+.cta-h em{font-style:normal;color:var(--accent)}
+.cta-sub{font-size:clamp(14px,1.5vw,17px);color:var(--muted);margin-bottom:40px;font-weight:300}
+.cta-btns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:56px}
+.shortcuts{display:flex;gap:28px;justify-content:center;flex-wrap:wrap;border-top:1px solid var(--border);padding-top:40px}
+.sc{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--faint)}
+.sc .k{font-family:'IBM Plex Mono',monospace;font-size:10.5px;border:1px solid var(--border2);padding:3px 8px;color:var(--muted);letter-spacing:0}
+
+/* ── MOBILE ── */
+@media(max-width:768px){
+  .fsc,.fsc2{flex-direction:column!important}
+  .fsc2.rv .ft,.fsc2.rv .fv{order:unset!important}
+  .fl,.fr,.ft,.fv{width:100%!important;border-right:none!important;border-left:none!important}
+  .fl{border-bottom:1px solid var(--border);padding:clamp(32px,6vw,56px) 6vw}
+  .ft{border-bottom:1px solid var(--border);padding:clamp(32px,6vw,56px) 6vw}
+  .fv{min-height:280px;padding:24px}
+  .fr{max-height:280px;overflow-y:auto}
+  .ngrid{grid-template-columns:repeat(2,1fr)}
+  .nstat{padding:24px 18px}
+  #dots{display:none}
+  #lbl{display:none}
+  .h-title{font-size:clamp(44px,14vw,100px)}
+}
+</style>
+</head>
+<body>
+
+<!-- top progress line -->
+<div id="tprog" style="width:0"></div>
+
+<nav id="nav">
+  <a class="brand" href="#">Stock<em>WiKi</em><span class="kr">.kr</span></a>
+  <div class="nav-r">
+    <a class="nb" href="#">금융 사전</a>
+    <a class="nb" href="#">계산기</a>
+    <a class="nb" href="#">이벤트</a>
+    <a class="nb cta" href="#">시작하기 →</a>
+  </div>
+</nav>
+<div id="dots"></div>
+<div id="lbl"><b id="lnum">01</b><span id="ltxt">홈</span></div>
+
+<div id="stage">
+
+  <!-- S0: HERO -->
+  <div class="scene" id="s0">
+    <div class="hero-grid"></div>
+    <div class="glow"></div>
+    <div style="position:relative;z-index:1;text-align:center">
+      <div class="h-eyebrow"><span class="h-dot"></span>전업투자자를 위한 금융 책상</div>
+      <h1 class="h-title">
+        주식의<br>
+        <span class="line2">모든 언어를</span><br>
+        <em>한 곳에.</em>
+      </h1>
+      <p class="h-sub"><strong>2,112개</strong> 금융 용어부터 <strong>69개</strong> 실전 계산기,<br>어닝·거시 이벤트 캘린더까지 — 흐름을 끊지 않고.</p>
+      <div class="h-btns">
+        <a href="#" class="btn btn-p">사전 열기<span class="kbd">G</span></a>
+        <a href="#" class="btn btn-g">계산기 보기 →</a>
+      </div>
+    </div>
+    <div class="scrl-cue"><div class="scrl-line"></div><span class="scrl-txt">scroll</span></div>
+  </div>
+
+  <!-- S1: PHILOSOPHY -->
+  <div class="scene" id="s1">
+    <div class="glow" style="background:radial-gradient(ellipse 50% 60% at 50% 50%,rgba(200,150,80,.04),transparent)"></div>
+    <div style="text-align:center;padding:0 8vw;position:relative;z-index:1">
+      <div class="phil-label">Philosophy</div>
+      <div class="phil-q">
+        검색창을 열고 또 열며<br>
+        흐름이 끊기는 순간,<br>
+        <em>StockWiKi가 시작됐습니다.</em>
+      </div>
+      <p class="phil-body">투자·경제 관련 용어, 계산기, 일정을 한 곳에 모아<br><strong>흐름을 끊지 않고 바로 찾고, 바로 이해</strong>할 수 있도록.</p>
+    </div>
+  </div>
+
+  <!-- S2: STATS -->
+  <div class="scene" id="s2">
+    <div style="width:100%;padding:0 5vw">
+      <div class="n-header">Numbers · 숫자로 보는 StockWiKi</div>
+      <div class="ngrid">
+        <div class="nstat" id="st0">
+          <div class="nbar" style="background:var(--fundamental)"></div>
+          <div class="nk">Terms · 용어</div>
+          <div class="nv"><span class="num" data-to="2112">0</span><span class="u">개</span></div>
+          <div class="nd">주식·선물·옵션·거시·회계·퀀트·산업·디지털·세금 90개 카테고리</div>
+        </div>
+        <div class="nstat" id="st1">
+          <div class="nbar" style="background:var(--market)"></div>
+          <div class="nk">Calculators · 계산기</div>
+          <div class="nv"><span class="num" data-to="69">0</span><span class="u">개</span></div>
+          <div class="nd">PER·DCF·Black-Scholes·Kelly·VaR·양도세·ISA·연금</div>
+        </div>
+        <div class="nstat" id="st2">
+          <div class="nbar" style="background:var(--econ)"></div>
+          <div class="nk">Hue Families · 색 그룹</div>
+          <div class="nv"><span class="num" data-to="9">0</span><span class="u">family</span></div>
+          <div class="nd">펀더멘털·시장·거시·리스크·파생·매매·산업·디지털·세금</div>
+        </div>
+        <div class="nstat" id="st3">
+          <div class="nbar" style="background:var(--risk)"></div>
+          <div class="nk">Events · 이벤트</div>
+          <div class="nv"><span class="num" data-to="200">0</span><span class="u">+개</span></div>
+          <div class="nd">FOMC·CPI·NFP·PCE·어닝시즌·K200 만기</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- S3: FAMILIES UNIFIED -->
+  <div class="scene fsc" id="s3">
+    <div class="fl" id="fam-detail">
+      <span class="fl-bg" id="fam-bg">01</span>
+      <div class="f-num" id="fam-num">01 / FUNDAMENTAL</div>
+      <div class="f-name" id="fam-name">펀더멘털</div>
+      <div class="f-desc" id="fam-desc">기업의 내재가치를 수치로 표현하는 도구들. PER부터 DCF·WACC까지, 얼마나 싼가 또는 비싼가를 묻는 언어. 재무제표와 회계의 기초도 포함합니다.</div>
+      <div class="f-tags" id="fam-tags">
+        <span class="f-tag" id="ft0">밸류에이션</span>
+        <span class="f-tag" id="ft1">기업재무</span>
+        <span class="f-tag" id="ft2">회계·재무제표</span>
+        <span class="f-tag" id="ft3">수익성</span>
+        <span class="f-tag" id="ft4">배당</span>
+      </div>
+    </div>
+    <div class="fr" id="fam-list"></div>
+  </div>
+
+  <!-- S4: GLOSSARY FEATURE -->
+  <div class="scene fsc2" id="s4">
+    <div class="ft">
+      <div class="ft-tag">01 / 금융 사전 · Glossary</div>
+      <h3 class="ft-h">카드 한 장으로<br><em style="color:var(--fundamental)">개념을 완성</em>합니다.</h3>
+      <p class="ft-body">용어 이름, 공식, 계산 예시, 관련 용어가 한 카드에. 2,112개 용어, 90개 카테고리를 스캔만으로 이해하도록 설계했습니다.</p>
+      <a href="#" class="ft-link">사전 열기 <span class="arr">→</span></a>
+    </div>
+    <div class="fv">
+      <div class="mock">
+        <div class="mh">
+          <span class="chip" style="background:var(--fundamental);color:#000">밸류에이션</span>
+          <span class="chip" style="border:1px solid rgba(255,255,255,.07);color:var(--muted);font-size:9.5px;padding:2px 7px">심화</span>
+        </div>
+        <div class="mt">PER</div>
+        <div class="me">Price Earnings Ratio</div>
+        <div class="mf"><small>ƒ Formula</small>PER = 주가 ÷ EPS</div>
+        <div class="mk">
+          <div class="kc"><div class="kk">주가</div><div class="kv">50,000</div></div>
+          <div class="kc"><div class="kk">EPS</div><div class="kv">5,000</div></div>
+          <div class="kc"><div class="kk">PER</div><div class="kv" style="color:var(--fundamental)">10.0<span style="font-size:8.5px;color:var(--muted)">배</span></div></div>
+        </div>
+        <div class="mr"><span>EPS ↗</span><span>PEG</span><span>PBR</span><span>DCF</span><span>WACC</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- S5: CALC FEATURE -->
+  <div class="scene fsc2 rv" id="s5">
+    <div class="ft">
+      <div class="ft-tag">02 / 계산기 · Calculator</div>
+      <h3 class="ft-h">두 시나리오를<br><em style="color:var(--risk)">나란히 비교</em>합니다.</h3>
+      <p class="ft-body">69개 계산기, A/B 비교 모드에서 두 입력을 동시에 계산하고 중앙 Δ 컬럼이 차이를 즉시 보여줍니다. 히스토리도 자동 저장됩니다.</p>
+      <a href="#" class="ft-link">계산기 열기 <span class="arr">→</span></a>
+    </div>
+    <div class="fv">
+      <div class="mab">
+        <div class="abh">
+          <span class="abid">M—01</span>
+          <span class="abn">PER · EPS</span>
+          <div class="abt"><span>단일</span><span class="on">A/B</span></div>
+        </div>
+        <div class="ab3">
+          <div class="cola">
+            <div class="cl"><span class="tg" style="background:var(--accent);color:#000">A</span>현재 기준</div>
+            <div class="ir"><div class="ik">Price</div><div class="iv">50,000</div></div>
+            <div class="ir"><div class="ik">EPS</div><div class="iv">5,000</div></div>
+            <div class="rs"><div class="rk">PER</div><div class="rv2" style="color:var(--accent)">10.0<span style="font-size:10px;color:var(--muted);margin-left:2px">배</span></div></div>
+          </div>
+          <div class="cold">
+            <div class="dh">§ Δ</div>
+            <div class="dv" style="color:var(--ok)">−2.5</div>
+            <div class="dp" style="color:var(--ok)">▼ 25%</div>
+            <div class="db"><div class="dbf" id="dbf" style="background:var(--ok)"></div></div>
+          </div>
+          <div class="colb">
+            <div class="cl"><span class="tg" style="background:var(--ok);color:#000">B</span>EPS+25%</div>
+            <div class="ir"><div class="ik">Price</div><div class="iv">52,000</div></div>
+            <div class="ir"><div class="ik">EPS</div><div class="iv">6,875</div></div>
+            <div class="rs" style="border-color:rgba(111,156,106,.25)"><div class="rk">PER</div><div class="rv2" style="color:var(--ok)">7.6<span style="font-size:10px;color:var(--muted);margin-left:2px">배</span></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- S6: EVENTS FEATURE -->
+  <div class="scene fsc2" id="s6">
+    <div class="ft">
+      <div class="ft-tag">03 / 이벤트 · Events</div>
+      <h3 class="ft-h">시장을 움직이는<br><em style="color:var(--econ)">날짜를 미리</em> 봅니다.</h3>
+      <p class="ft-body">FOMC, CPI, NFP, 어닝시즌, K200 만기까지 — MACRO · EARNINGS · OPTIONS EXPIRY 탭으로 이벤트 종류를 한눈에 구분합니다.</p>
+      <a href="#" class="ft-link">캘린더 열기 <span class="arr">→</span></a>
+    </div>
+    <div class="fv">
+      <div class="mcal">
+        <div class="chd">
+          <span class="cmo">2026.04</span>
+          <span class="cinf">April · KST</span>
+          <div class="cnav"><span>‹</span><span>›</span></div>
+        </div>
+        <div class="cdow">
+          <div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div>
+          <div style="color:#3a5a7a">Sat</div><div style="color:#7a3a3a">Sun</div>
+        </div>
+        <div class="cg">
+          <div class="cc out"><span class="cdn">30</span></div>
+          <div class="cc out"><span class="cdn">31</span></div>
+          <div class="cc"><span class="cdn">01</span><div class="ev" style="border-color:var(--econ)">韓 CPI</div></div>
+          <div class="cc"><span class="cdn">02</span></div>
+          <div class="cc"><span class="cdn">03</span><div class="ev" style="border-color:var(--market)">NFP</div></div>
+          <div class="cc"><span class="cdn">04</span></div><div class="cc"><span class="cdn">05</span></div>
+          <div class="cc"><span class="cdn">06</span></div>
+          <div class="cc"><span class="cdn">07</span><div class="ev" style="border-color:var(--econ)">美 PPI</div></div>
+          <div class="cc"><span class="cdn">08</span><div class="ev" style="border-color:var(--trading)">K200만기</div></div>
+          <div class="cc"><span class="cdn">09</span><div class="ev" style="border-color:var(--econ)">美 CPI ●●●</div></div>
+          <div class="cc"><span class="cdn">10</span><div class="ev" style="border-color:var(--market)">JPMorgan</div></div>
+          <div class="cc"><span class="cdn">11</span></div><div class="cc"><span class="cdn">12</span></div>
+          <div class="cc"><span class="cdn">13</span></div><div class="cc"><span class="cdn">14</span></div><div class="cc"><span class="cdn">15</span></div>
+          <div class="cc"><span class="cdn">16</span><div class="ev" style="border-color:var(--risk)">FOMC</div></div>
+          <div class="cc td"><span class="cdn">19</span><div class="ev" style="border-color:var(--market)">TSMC 실적</div></div>
+          <div class="cc"><span class="cdn">20</span></div><div class="cc"><span class="cdn">21</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- S7: CTA -->
+  <div class="scene" id="s7">
+    <div class="glow"></div>
+    <div class="hero-grid" style="opacity:.3"></div>
+    <div style="text-align:center;padding:0 6vw;position:relative;z-index:1">
+      <div class="cta-label">지금 시작하세요</div>
+      <h2 class="cta-h">책상을<br><em>펼쳐보세요.</em></h2>
+      <p class="cta-sub">설치도, 회원가입도 없습니다. 지금 바로.</p>
+      <div class="cta-btns">
+        <a href="#" class="btn btn-p">금융 사전<span class="kbd">G</span></a>
+        <a href="#" class="btn btn-g">계산기<span class="kbd">C</span></a>
+        <a href="#" class="btn btn-g">이벤트 →</a>
+      </div>
+      <div class="shortcuts">
+        <div class="sc"><span class="k">G</span>금융 사전</div>
+        <div class="sc"><span class="k">C</span>계산기</div>
+        <div class="sc"><span class="k">⌘K</span>빠른 검색</div>
+        <div class="sc"><span class="k">← →</span>용어 탐색</div>
+        <div class="sc"><span class="k">F</span>즐겨찾기</div>
+        <div class="sc"><span class="k">ESC</span>닫기</div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /stage -->
+
+<script>
+'use strict';
+// S0:홈 S1:철학 S2:숫자 S3:9패밀리통합 S4:사전 S5:계산기 S6:이벤트 S7:CTA
+const N=8,PX=1800,FF=0.45;
+const LABELS=['홈','철학','숫자로','9개 Family','금융 사전','계산기','이벤트','시작하기'];
+
+// ── 9 Family 데이터 ────────────────────────────────────────
+const FAM_C  =['fundamental','market','econ','risk','deriv','trading','industry','digital','tax'];
+const FAM_EN =['FUNDAMENTAL','MARKET','ECON','RISK','DERIV','TRADING','INDUSTRY','DIGITAL','TAX'];
+const FAM_KO =[
+  '펀더멘털 — 내재가치·재무제표',
+  '시장·상품 — 거래·ETF·공모',
+  '경제·거시 — CPI·금리·환율·채권',
+  '리스크·퀀트 — VaR·샤프·백테스트',
+  '파생·헤지 — 선물·옵션·Greeks',
+  '매매실전 — 기술적지표·차트패턴',
+  '산업·섹터 — AI·반도체·바이오',
+  '디지털자산 — 블록체인·DeFi',
+  '세금·제도 — 양도세·ISA·연금',
+];
+const FAM_DESC=[
+  '기업의 내재가치를 수치로 표현하는 도구들. PER부터 DCF·WACC까지, 얼마나 싼가 또는 비싼가를 묻는 언어. 재무제표와 회계의 기초도 포함합니다.',
+  '한국·해외 주식 시장 구조와 거래 메커니즘. ETF·펀드·공모주부터 시장미시구조·유동성까지. 투자자가 시장과 상호작용하는 방식을 다룹니다.',
+  '시장 전체를 움직이는 힘. CPI, 금리, 환율, GDP, 고용 — 투자 맥락을 읽기 위한 경제학 언어. 채권·국채수익률곡선도 이 그룹에 포함됩니다.',
+  '포트폴리오의 흔들림을 측정하고 최적화하는 언어. 샤프지수, VaR, 켈리 공식, 백테스트 검증까지. 퀀트 통계와 모델 리스크도 포함합니다.',
+  '선물·옵션·Greeks 등 파생상품의 세계. Black-Scholes부터 금리·크레딧·변동성 파생까지. 리스크를 구조화하고 헤지하는 언어입니다.',
+  '매매 현장에서 쓰이는 언어. 기술적 지표, 차트 패턴, 가격행동, 투자심리·행동편향, 오더플로우·실행관리까지. 체결창에서 마주치는 모든 것.',
+  'AI·반도체·SaaS·바이오·에너지·금융·소비재. 섹터별 고유 지표와 밸류에이션 언어. 종목 분석의 컨텍스트를 잡는 데 필수적인 그룹입니다.',
+  '암호화폐·블록체인·DeFi·토큰화. 전통 금융과 디지털 자산이 교차하는 지점의 언어. 리스크·규제 측면도 포함한 실전 중심의 그룹입니다.',
+  '양도세·금투세·ISA·연금계좌·배당소득세. 한국 투자자라면 반드시 알아야 할 세금과 제도 언어. 공시·법률·규제 용어도 이 그룹에 담겨있습니다.',
+];
+const FAM_TAGS=[
+  ['밸류에이션','기업재무','회계·재무제표','수익성','배당'],
+  ['한국시장','해외시장·지수','ETF·상장상품','시장구조·유동성','공시·기업행동'],
+  ['통화정책·금리','물가·인플레이션','환율·대외수지','채권·금리위험','GDP·경기순환'],
+  ['포트폴리오','퀀트통계','성과·리스크관리','VaR·백테스트'],
+  ['선물·옵션','옵션전략','파생헤지','변동성·분산','금리·크레딧 파생'],
+  ['기술적지표','차트패턴','투자심리','오더플로우','트레이딩 운영'],
+  ['AI·반도체','SaaS·플랫폼','에너지·전력','헬스케어·바이오','은행·보험'],
+  ['디지털자산·토큰화','DeFi·시장구조','블록체인 인프라','디지털자산 리스크'],
+  ['세금·계좌·제도','ISA·연금계좌','공시·법률·규제','결제·예탁·권리'],
+];
+
+// ── Family 통합 씬 구성 ────────────────────────────────────
+let selFam=0;
+const famNumEl  =document.getElementById('fam-num');
+const famNameEl =document.getElementById('fam-name');
+const famDescEl =document.getElementById('fam-desc');
+const famTagsEl =document.getElementById('fam-tags');
+const famBgEl   =document.getElementById('fam-bg');
+const famListEl =document.getElementById('fam-list');
+
+const FAM_NAME_KR=['펀더멘털','시장·상품','경제·거시','리스크·퀀트','파생·헤지','매매실전','산업·섹터','디지털자산','세금·제도'];
+
+function renderFamDetail(i){
+  const c='var(--'+FAM_C[i]+')';
+  famBgEl.textContent=String(i+1).padStart(2,'0');
+  famNumEl.textContent=String(i+1).padStart(2,'0')+' / '+FAM_EN[i];
+  famNumEl.style.color=c;
+  famNameEl.textContent=FAM_NAME_KR[i];
+  famNameEl.style.color=c;
+  famDescEl.textContent=FAM_DESC[i];
+  famTagsEl.innerHTML=FAM_TAGS[i].map(t=>
+    '<span class="f-tag" style="border-color:rgba(255,255,255,.12);color:'+c+'">'+t+'</span>'
+  ).join('');
+}
+
+function renderFamList(active){
+  famListEl.innerHTML=FAM_EN.map((en,i)=>
+    '<div class="frow'+(i===active?' on':'')+'" data-fi="'+i+'">'+
+    '<div class="frbar" style="background:var(--'+FAM_C[i]+')"></div>'+
+    '<div class="frbody">'+
+      '<div class="fren" style="color:var(--'+FAM_C[i]+')">'+(i+1<10?'0'+(i+1):i+1)+' · '+en+'</div>'+
+      '<div class="frko">'+FAM_KO[i]+'</div>'+
+    '</div></div>'
+  ).join('');
+  famListEl.querySelectorAll('.frow').forEach(row=>{
+    row.addEventListener('click',()=>{
+      const fi=parseInt(row.dataset.fi);
+      selFam=fi;
+      renderFamDetail(fi);
+      renderFamList(fi);
+    });
+  });
+}
+
+renderFamDetail(0);
+renderFamList(0);
+
+// ── 씬 엔진 ────────────────────────────────────────────────
+document.body.style.height=(N*PX+window.innerHeight)+'px';
+
+const scenes=Array.from({length:N},(_,i)=>document.getElementById('s'+i));
+const dotsEl=document.getElementById('dots');
+const tprog=document.getElementById('tprog');
+const dots=Array.from({length:N},(_,i)=>{
+  const d=document.createElement('div');d.className='dot';
+  d.onclick=()=>window.scrollTo({top:i*PX,behavior:'smooth'});
+  dotsEl.appendChild(d);return d;
+});
+const nav=document.getElementById('nav'),lnum=document.getElementById('lnum'),ltxt=document.getElementById('ltxt');
+
+function easeOut(t){return 1-Math.pow(1-t,3);}
+
+const opa=new Float64Array(N),yv=new Float64Array(N);
+let countersStarted=false,dbarDone=false,lastSY=-1,ai=0;
+
+function compute(sy){
+  for(let i=0;i<N;i++){
+    const d=(sy-i*PX)/PX;
+    let o=0,y=0;
+    if(d>=-FF&&d<0){const t=easeOut((d+FF)/FF);o=t;y=60*(1-t);}
+    else if(d>=0&&d<=1-FF){o=1;y=0;}
+    else if(d>1-FF&&d<=1){const t=easeOut((d-(1-FF))/FF);o=1-t;y=-60*t;}
+    else{o=0;y=d<-FF?60:-60;}
+    opa[i]=o;yv[i]=y;
+  }
+}
+
+function apply(){
+  let mx=-1;ai=0;
+  for(let i=0;i<N;i++){
+    const s=scenes[i];if(!s)continue;
+    const o=opa[i],y=yv[i];
+    s.style.opacity=o<.002?'0':o>.998?'1':o.toFixed(3);
+    s.style.transform='translate3d(0,'+y.toFixed(1)+'px,0)';
+    s.style.pointerEvents=o>.05?'auto':'none';
+    if(o>mx){mx=o;ai=i;}
+  }
+  nav.classList.toggle('ink',lastSY>20);
+  dots.forEach((d,i)=>d.classList.toggle('on',i===ai));
+  lnum.textContent=String(ai+1).padStart(2,'0');
+  ltxt.textContent=LABELS[ai]||'';
+  const pct=(lastSY/(N*PX))*100;
+  tprog.style.width=pct+'%';
+  tprog.style.opacity=pct>99?'0':'1';
+}
+
+function triggers(){
+  // S2(index 2): 카운터 + shimmer
+  if(ai===2&&!countersStarted){
+    countersStarted=true;
+    document.querySelectorAll('.num[data-to]').forEach(el=>{
+      const to=parseInt(el.dataset.to);let s=null;
+      (function step(ts){
+        if(!s)s=ts;
+        const p=Math.min((ts-s)/1800,1);
+        el.textContent=Math.floor((1-Math.pow(1-p,3))*to).toLocaleString();
+        if(p<1)requestAnimationFrame(step);
+        else el.textContent=to.toLocaleString();
+      })(performance.now());
+    });
+    document.querySelectorAll('.nstat').forEach((st,i)=>setTimeout(()=>st.classList.add('lit'),i*180));
+  }
+  // S5(index 5): A/B 델타 바
+  if(ai===5&&!dbarDone){dbarDone=true;const f=document.getElementById('dbf');if(f)setTimeout(()=>{f.style.width='68%';},300);}
+}
+
+function loop(){
+  const sy=window.scrollY;
+  if(sy!==lastSY){lastSY=sy;compute(sy);apply();triggers();}
+  requestAnimationFrame(loop);
+}
+
+compute(0);apply();
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
