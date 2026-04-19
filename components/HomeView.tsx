@@ -471,16 +471,18 @@ export default function HomeView({
           }} />
           <div style={{ position: 'relative', zIndex: 1, textAlign: 'center', padding: '0 24px' }}>
             <div className="hw-hero-title" style={{
-              fontFamily: 'Inter, sans-serif', fontWeight: 200,
-              fontSize: 'clamp(48px, 9.5vw, 132px)',
-              lineHeight: 1.0, letterSpacing: '-0.04em', color: txt,
+              fontFamily: 'var(--font-gmarket), sans-serif', fontWeight: 500,
+              fontSize: 'clamp(28px, 5.5vw, 72px)',
+              lineHeight: 1.3, letterSpacing: '-0.02em', color: txt,
             }}>
-              <div>주식의</div>
-              <div style={{ opacity: 0.38 }}>모든 언어를</div>
-              <div style={{ color: accent }}>한 곳에.</div>
+              <div style={{ opacity: 0.55, fontWeight: 300, fontSize: '0.65em', letterSpacing: '0.01em', marginBottom: 12 }}>가장 강력한 투자 무기는</div>
+              <div>
+                <span style={{ color: accent }}>'제대로 된 정보'</span>
+                <span>입니다.</span>
+              </div>
             </div>
             <p style={{ color: muted, fontSize: 'clamp(13px, 1.5vw, 15px)', marginTop: 28, marginBottom: 44, letterSpacing: '0.01em' }}>
-              {(totalTerms || 2400).toLocaleString()}개 금융 용어 &middot; 9개 패밀리 &middot; 30종 계산기 &middot; 이벤트 캘린더
+              {(totalTerms || 9632).toLocaleString()}개 금융 용어 &middot; 9개 패밀리 &middot; 30종 계산기 &middot; 이벤트 캘린더
             </p>
             <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
               <button onClick={() => setActiveTab?.('glossary')} style={{
@@ -506,14 +508,14 @@ export default function HomeView({
           <div className="hw-philosophy" style={{ maxWidth: 680, padding: '0 40px' }}>
             <div style={{ fontSize: 10, letterSpacing: '0.26em', color: accent, marginBottom: 32, fontWeight: 600 }}>PHILOSOPHY</div>
             <blockquote style={{
-              fontFamily: 'Georgia, serif', fontStyle: 'italic',
-              fontSize: 'clamp(20px, 3vw, 34px)', lineHeight: 1.7,
+              fontFamily: 'var(--font-gmarket), sans-serif', fontWeight: 300,
+              fontSize: 'clamp(18px, 2.6vw, 30px)', lineHeight: 1.8,
               color: txt, margin: 0,
               borderLeft: `2px solid ${accent}`, paddingLeft: 28,
             }}>
-              시장은 언어를 사용한다.<br />
-              <em style={{ color: accent }}>그 언어를 이해하는 자</em>만이<br />
-              기회를 읽을 수 있다.
+              데이터는 거짓말을 하지 않지만,<br />
+              <em style={{ color: accent }}>언어를 모르면</em><br />
+              데이터는 소음일 뿐입니다.
             </blockquote>
             <p style={{ color: muted, marginTop: 32, fontSize: 14, lineHeight: 1.9, paddingLeft: 28 }}>
               StockWiKi는 금융 용어를 단순히 설명하지 않습니다.
@@ -553,8 +555,10 @@ export default function HomeView({
           <div style={{ width: '100%', maxWidth: 1080, padding: '68px 28px 32px' }}>
             <div className="hw-fam-title" style={{ textAlign: 'center', marginBottom: 36 }}>
               <div style={{ fontSize: 10, letterSpacing: '0.26em', color: accent, marginBottom: 10, fontWeight: 600 }}>9 FAMILIES</div>
-              <div style={{ fontSize: 'clamp(18px, 3vw, 36px)', fontWeight: 200, color: txt, letterSpacing: '-0.03em', fontFamily: 'Inter, sans-serif' }}>
-                모든 금융 언어는 9개 패밀리로 분류됩니다
+              <div style={{ fontSize: 'clamp(16px, 2.4vw, 30px)', fontWeight: 200, color: txt, letterSpacing: '-0.02em', fontFamily: 'Inter, sans-serif' }}>
+                <span style={{ fontWeight: 600, color: accent }}>9</span>개의 패밀리,{' '}
+                <span style={{ fontWeight: 600, color: txt }}>{(totalTerms || 9632).toLocaleString()}</span>개의 용어.{' '}
+                <span style={{ opacity: 0.6 }}>당신의 투자 지도를 완성하세요.</span>
               </div>
             </div>
             <div className="hw-fam-grid">
@@ -642,12 +646,12 @@ export default function HomeView({
             {/* 좌: 텍스트 */}
             <div className="hw-feat-text">
               <div style={{ fontSize: 10, letterSpacing: '0.26em', color: accent, marginBottom: 24, fontWeight: 600 }}>CALCULATOR</div>
-              <div style={{ fontSize: 'clamp(28px, 4vw, 52px)', fontWeight: 200, color: txt, lineHeight: 1.15, letterSpacing: '-0.03em', fontFamily: 'Inter, sans-serif', marginBottom: 24 }}>
-                숫자로<br />
-                <span style={{ color: accent }}>직접 확인하세요.</span>
+              <div style={{ fontSize: 'clamp(24px, 3.5vw, 48px)', fontWeight: 200, color: txt, lineHeight: 1.2, letterSpacing: '-0.03em', fontFamily: 'Inter, sans-serif', marginBottom: 24 }}>
+                예측하지 말고<br />
+                <span style={{ color: accent }}>대응하세요.</span>
               </div>
               <p style={{ color: muted, fontSize: 14, lineHeight: 1.85, margin: '0 0 28px' }}>
-                30종 계산기 · A/B 시나리오 비교로 EPS가 25% 늘면 PER이 어떻게 달라지는지 실시간으로 확인합니다.
+                A/B 시나리오로 확인하는 투자 수익률 — EPS가 25% 늘면 PER이 어떻게 달라지는지 실시간으로 비교합니다.
               </p>
               <button onClick={() => setActiveTab?.('calc')} style={{
                 background: 'transparent', color: accent,
@@ -726,12 +730,13 @@ export default function HomeView({
             {/* 좌: 텍스트 */}
             <div className="hw-feat-text">
               <div style={{ fontSize: 10, letterSpacing: '0.26em', color: '#9a7ac8', marginBottom: 24, fontWeight: 600 }}>CALENDAR</div>
-              <div style={{ fontSize: 'clamp(28px, 4vw, 52px)', fontWeight: 200, color: txt, lineHeight: 1.15, letterSpacing: '-0.03em', fontFamily: 'Inter, sans-serif', marginBottom: 24 }}>
-                시장을 움직이는<br />
-                <span style={{ color: '#9a7ac8' }}>날짜를 미리 봅니다.</span>
+              <div style={{ fontSize: 'clamp(20px, 3vw, 42px)', fontWeight: 200, color: txt, lineHeight: 1.25, letterSpacing: '-0.03em', fontFamily: 'Inter, sans-serif', marginBottom: 24 }}>
+                FOMC부터 어닝 시즌까지,<br />
+                <span style={{ color: '#9a7ac8' }}>수익을 결정지을 D-Day</span>를<br />
+                <span style={{ opacity: 0.6 }}>관리하세요.</span>
               </div>
               <p style={{ color: muted, fontSize: 14, lineHeight: 1.85, margin: '0 0 28px' }}>
-                FOMC, CPI, NFP, 어닝시즌, K200 만기까지 — MACRO · EARNINGS · OPTIONS EXPIRY 탭으로 이벤트 종류를 한눈에 구분합니다.
+                CPI, NFP, K200 만기까지 — MACRO · EARNINGS · OPTIONS EXPIRY 탭으로 이벤트 종류를 한눈에 구분합니다.
               </p>
               <button onClick={() => setActiveTab?.('events')} style={{
                 background: 'transparent', color: '#9a7ac8',
@@ -786,10 +791,11 @@ export default function HomeView({
         <div id="hs7" className="hw-scene" style={sceneBase}>
           <div style={{ textAlign: 'center', padding: '0 40px', maxWidth: 640 }}>
             <div style={{ fontSize: 10, letterSpacing: '0.26em', color: accent, marginBottom: 32, fontWeight: 600 }}>GET STARTED</div>
-            <div style={{ fontSize: 'clamp(32px, 5.5vw, 72px)', fontWeight: 200, color: txt, lineHeight: 1.1, letterSpacing: '-0.04em', fontFamily: 'Inter, sans-serif', marginBottom: 20 }}>
-              지금 시작하세요.
+            <div style={{ fontSize: 'clamp(28px, 4.5vw, 60px)', fontWeight: 200, color: txt, lineHeight: 1.15, letterSpacing: '-0.04em', fontFamily: 'Inter, sans-serif', marginBottom: 20 }}>
+              언어를 이해하면<br />
+              <span style={{ color: accent }}>시장이 보입니다.</span>
             </div>
-            <p style={{ color: muted, fontSize: 15, lineHeight: 1.8, marginBottom: 44 }}>금융 언어를 이해하는 것이 투자의 시작입니다.</p>
+            <p style={{ color: muted, fontSize: 15, lineHeight: 1.8, marginBottom: 44 }}>지금 바로 9,632개 금융 용어의 세계로 들어오세요.</p>
             <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 48 }}>
               <button onClick={() => setActiveTab?.('glossary')} style={{
                 background: accent, color: '#fff', border: 'none',

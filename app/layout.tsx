@@ -7,24 +7,33 @@ import { SpeedInsights } from '@vercel/speed-insights/next';
 import { headers } from 'next/headers';
 import Script from 'next/script';
 
-// Noto Sans KR — 자체 호스팅
-// latin(14KB)만 preload, korean(530KB)은 swap으로 비차단 로딩
-const notoSansKR = localFont({
+// Pretendard Std — 본문·UI 전체 (Noto Sans KR 대체)
+const pretendard = localFont({
   src: [
-    { path: '../public/fonts/noto-sans-kr-latin-400-normal.woff2', weight: '400', style: 'normal' },
-    { path: '../public/fonts/noto-sans-kr-latin-500-normal.woff2', weight: '500', style: 'normal' },
-    { path: '../public/fonts/noto-sans-kr-latin-700-normal.woff2', weight: '700', style: 'normal' },
-    { path: '../public/fonts/noto-sans-kr-korean-400-normal.woff2', weight: '400', style: 'normal' },
-    { path: '../public/fonts/noto-sans-kr-korean-500-normal.woff2', weight: '500', style: 'normal' },
-    { path: '../public/fonts/noto-sans-kr-korean-700-normal.woff2', weight: '700', style: 'normal' },
+    { path: '../public/fonts/pretendard-std-400.woff2', weight: '400', style: 'normal' },
+    { path: '../public/fonts/pretendard-std-500.woff2', weight: '500', style: 'normal' },
+    { path: '../public/fonts/pretendard-std-600.woff2', weight: '600', style: 'normal' },
+    { path: '../public/fonts/pretendard-std-700.woff2', weight: '700', style: 'normal' },
   ],
   variable: '--font-sans',
-  display: 'optional',   // 폰트 없어도 렌더링 차단 안 함 — LCP 보호
-  preload: false,        // 1.6MB korean 파일 preload 금지
+  display: 'swap',
+  preload: true,
   adjustFontFallback: 'Arial',
 });
 
-// JetBrains Mono — 자체 호스팅 (Google Fonts 요청 완전 제거)
+// GmarketSans — 홈화면 히어로 타이틀 전용
+const gmarketSans = localFont({
+  src: [
+    { path: '../public/fonts/GmarketSansTTFLight.woff2',  weight: '300', style: 'normal' },
+    { path: '../public/fonts/GmarketSansTTFMedium.woff2', weight: '500', style: 'normal' },
+    { path: '../public/fonts/GmarketSansTTFBold.woff2',   weight: '700', style: 'normal' },
+  ],
+  variable: '--font-gmarket',
+  display: 'swap',
+  preload: false, // 홈화면 진입 시에만 필요
+});
+
+// JetBrains Mono — 모노스페이스 (숫자·코드·태그)
 const jetbrainsMono = localFont({
   src: [
     { path: '../public/fonts/jetbrains-mono-latin-400-normal.woff2', weight: '400', style: 'normal' },
@@ -75,7 +84,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const isAdmin = pathname.startsWith('/admin-stk-2026');
 
   return (
-    <html lang="ko" className={`${notoSansKR.variable} ${jetbrainsMono.variable}`}>
+    <html lang="ko" className={`${pretendard.variable} ${gmarketSans.variable} ${jetbrainsMono.variable}`}>
       <head>
         {/* FOUC 방지: hydration 전에 테마 클래스 적용 */}
         <script dangerouslySetInnerHTML={{ __html: `(function(){try{var t=localStorage.getItem('stockwiki_theme');if(t==='light')document.documentElement.classList.add('light');}catch(e){}})();` }} />
