@@ -502,84 +502,298 @@ export default function HomeView({
           </div>
         </div>
 
-        {/* S4 GLOSSARY */}
+        {/* S4 GLOSSARY — 실제 용어 카드 UI */}
         <div id="hs4" style={sceneBase}>
-          <div style={{ width: '100%', maxWidth: 960, padding: '0 40px' }}>
-            <div style={{ fontSize: 10, letterSpacing: '0.22em', color: accent, marginBottom: 12, fontWeight: 500 }}>FEATURE 01</div>
-            <div style={{ fontSize: 'clamp(24px, 4vw, 50px)', fontWeight: 200, color: txt, letterSpacing: '-0.03em', marginBottom: 10, fontFamily: 'Inter, sans-serif' }}>금융 사전</div>
-            <p style={{ color: muted, fontSize: 14, lineHeight: 1.8, marginBottom: 40, maxWidth: 440 }}>
-              {(totalTerms || 2400).toLocaleString()}개 용어를 9개 패밀리로 분류. 개요·심화·공식·예시·연결관계까지 한 화면에.
-            </p>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 12 }}>
-              {[
-                { term: 'PER', cat: 'FUNDAMENTAL', color: '#c8a96e', desc: '주가수익비율. 주가를 주당순이익으로 나눈 값으로 기업 고평가/저평가 판단 지표.' },
-                { term: 'VaR', cat: 'RISK',        color: '#c87a8b', desc: '최대 손실 가능성. 특정 기간 동안 발생할 수 있는 최대 손실 금액을 확률적으로 추정.' },
-                { term: 'ROE', cat: 'FUNDAMENTAL', color: '#c8a96e', desc: '자기자본이익률. 투자한 자기자본 대비 얼마나 수익을 창출했는지 보여주는 지표.' },
-              ].map((item) => (
-                <div key={item.term} style={{ background: bgCard, border: `1px solid ${border}`, padding: '16px 20px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-                    <span style={{ fontSize: 16, fontWeight: 700, color: item.color, fontFamily: 'Inter, sans-serif' }}>{item.term}</span>
-                    <span style={{ fontSize: 9, background: `${item.color}1e`, color: item.color, padding: '2px 7px', letterSpacing: '0.1em' }}>{item.cat}</span>
-                  </div>
-                  <p style={{ fontSize: 12, color: muted, lineHeight: 1.7, margin: 0 }}>{item.desc}</p>
+          <div style={{ width: '100%', maxWidth: 760, padding: '0 32px' }}>
+            {/* 실제 앱과 동일한 용어 카드 */}
+            <div style={{
+              background: isDark ? '#0d0d0d' : '#fff',
+              border: `1px solid ${border}`,
+              overflow: 'hidden',
+            }}>
+              {/* 카드 상단 헤더 */}
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 10,
+                padding: '14px 20px', borderBottom: `1px solid ${border}`,
+              }}>
+                <span style={{
+                  fontSize: 11, fontWeight: 600, letterSpacing: '0.06em',
+                  background: accent, color: '#0a0a0a',
+                  padding: '3px 10px',
+                }}>밸류에이션</span>
+                <span style={{
+                  fontSize: 11, color: muted,
+                  border: `1px solid ${border}`, padding: '3px 10px',
+                  letterSpacing: '0.06em', cursor: 'pointer',
+                }}>심화</span>
+              </div>
+              {/* 용어명 */}
+              <div style={{ padding: '20px 20px 0' }}>
+                <div style={{ fontSize: 'clamp(28px, 4vw, 44px)', fontWeight: 700, color: txt, letterSpacing: '-0.02em', lineHeight: 1 }}>
+                  PER
                 </div>
-              ))}
+                <div style={{
+                  fontFamily: 'Georgia, serif', fontStyle: 'italic',
+                  fontSize: 15, color: muted, marginTop: 6, marginBottom: 16,
+                }}>
+                  Price Earnings Ratio
+                </div>
+                {/* 공식 블록 */}
+                <div style={{
+                  background: isDark ? '#060606' : '#f8f7f3',
+                  borderLeft: `3px solid ${accent}`,
+                  padding: '12px 16px', marginBottom: 0,
+                }}>
+                  <div style={{ fontSize: 9, color: accent, letterSpacing: '0.18em', marginBottom: 6, fontFamily: 'monospace' }}>
+                    ƒ FORMULA
+                  </div>
+                  <div style={{ fontSize: 14, color: txt, fontFamily: 'monospace', letterSpacing: '0.04em' }}>
+                    PER = 주가 ÷ EPS
+                  </div>
+                </div>
+              </div>
+              {/* 수치 행 */}
+              <div style={{
+                display: 'grid', gridTemplateColumns: '1fr 1fr 1fr',
+                borderTop: `1px solid ${border}`, marginTop: 16,
+              }}>
+                {[
+                  { label: '주가', value: '50,000' },
+                  { label: 'EPS', value: '5,000' },
+                  { label: 'PER', value: '10.0배', highlight: true },
+                ].map((col, ci) => (
+                  <div key={ci} style={{
+                    padding: '14px 20px',
+                    borderRight: ci < 2 ? `1px solid ${border}` : undefined,
+                    background: ci === 2 ? (isDark ? '#060606' : '#f8f7f3') : undefined,
+                  }}>
+                    <div style={{ fontSize: 10, color: muted, letterSpacing: '0.12em', marginBottom: 6 }}>{col.label}</div>
+                    <div style={{
+                      fontSize: 20, fontWeight: 600, fontFamily: 'monospace',
+                      color: ci === 2 ? accent : txt, letterSpacing: '0.02em',
+                    }}>{col.value}</div>
+                  </div>
+                ))}
+              </div>
+              {/* 관련 용어 태그 */}
+              <div style={{
+                display: 'flex', gap: 8, padding: '12px 20px',
+                borderTop: `1px solid ${border}`, flexWrap: 'wrap',
+              }}>
+                {['EPS ↗', 'PEG', 'PBR', 'DCF', 'WACC'].map((tag) => (
+                  <span key={tag} style={{
+                    fontSize: 11, color: muted,
+                    border: `1px solid ${border}`,
+                    padding: '3px 10px', cursor: 'pointer',
+                    letterSpacing: '0.04em',
+                  }}>{tag}</span>
+                ))}
+              </div>
+            </div>
+            <div style={{ marginTop: 16, fontSize: 11, color: dimmer, letterSpacing: '0.1em', textAlign: 'center' }}>
+              {(totalTerms || 2400).toLocaleString()}개 용어 · 개요·심화·공식·예시·연결관계 수록
             </div>
           </div>
         </div>
 
-        {/* S5 CALCULATOR */}
+        {/* S5 CALCULATOR — 실제 A/B 비교 UI */}
         <div id="hs5" style={sceneBase}>
-          <div style={{ width: '100%', maxWidth: 960, padding: '0 40px' }}>
-            <div style={{ fontSize: 10, letterSpacing: '0.22em', color: '#c87a8b', marginBottom: 12, fontWeight: 500 }}>FEATURE 02</div>
-            <div style={{ fontSize: 'clamp(24px, 4vw, 50px)', fontWeight: 200, color: txt, letterSpacing: '-0.03em', marginBottom: 10, fontFamily: 'Inter, sans-serif' }}>금융 계산기</div>
-            <p style={{ color: muted, fontSize: 14, lineHeight: 1.8, marginBottom: 40, maxWidth: 440 }}>
-              복리·손익분기·PER/PBR·옵션 등 30종. A/B 비교 모드로 시나리오를 나란히 분석.
-            </p>
-            <div style={{ background: bgCard, border: `1px solid ${border}`, padding: '24px 28px', maxWidth: 500 }}>
-              <div style={{ fontSize: 11, color: muted, letterSpacing: '0.1em', marginBottom: 20 }}>A / B 수익률 비교</div>
-              {[
-                { label: 'A — 연 복리 8%, 10년', pct: '116%', color: accent, static: true },
-                { label: 'B — 단리 8%, 10년',   pct: '80%',  color: '#7ac8c0', static: false },
-              ].map((row, ri) => (
-                <div key={ri} style={{ marginBottom: ri === 0 ? 16 : 0 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                    <span style={{ fontSize: 12, color: muted }}>{row.label}</span>
-                    <span style={{ fontSize: 13, fontWeight: 600, color: row.color, fontFamily: 'Inter, sans-serif' }}>{row.pct}</span>
+          <div style={{ width: '100%', maxWidth: 820, padding: '0 32px' }}>
+            <div style={{
+              background: isDark ? '#0d0d0d' : '#fff',
+              border: `1px solid ${border}`,
+              overflow: 'hidden',
+            }}>
+              {/* 헤더 */}
+              <div style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '14px 20px', borderBottom: `1px solid ${border}`,
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <span style={{ fontSize: 11, color: '#6ea8c8', fontFamily: 'monospace', letterSpacing: '0.1em' }}>M—01</span>
+                  <span style={{ fontSize: 15, fontWeight: 600, color: txt, letterSpacing: '0.02em' }}>PER · EPS</span>
+                </div>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <span style={{ fontSize: 11, border: `1px solid ${border}`, color: muted, padding: '4px 12px', cursor: 'pointer' }}>단일</span>
+                  <span style={{ fontSize: 11, background: accent, color: '#0a0a0a', padding: '4px 12px', cursor: 'pointer', fontWeight: 600 }}>A/B</span>
+                </div>
+              </div>
+              {/* A/B 패널 */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr' }}>
+                {/* A 패널 */}
+                <div style={{ padding: '20px', background: isDark ? '#080808' : '#f9f8f4' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+                    <span style={{ fontSize: 10, fontWeight: 700, background: accent, color: '#0a0a0a', padding: '2px 8px' }}>A</span>
+                    <span style={{ fontSize: 11, color: muted, letterSpacing: '0.1em' }}>현재 기준</span>
                   </div>
-                  <div style={{ height: 5, background: border, borderRadius: 3, overflow: 'hidden' }}>
-                    {row.static
-                      ? <div style={{ height: '100%', background: row.color, width: '100%', borderRadius: 3 }} />
-                      : <div id="hw-dbf" className="hw-diff-fill" style={{ height: '100%', background: row.color, width: '0%', borderRadius: 3 }} />
-                    }
+                  {[{ label: 'PRICE', value: '50,000' }, { label: 'EPS', value: '5,000' }].map((r) => (
+                    <div key={r.label} style={{ marginBottom: 14 }}>
+                      <div style={{ fontSize: 10, color: dimmer, letterSpacing: '0.12em', marginBottom: 4 }}>{r.label}</div>
+                      <div style={{ fontSize: 18, fontFamily: 'monospace', color: txt, letterSpacing: '0.02em' }}>{r.value}</div>
+                    </div>
+                  ))}
+                  <div style={{ background: isDark ? '#060606' : '#fff', border: `1px solid ${border}`, padding: '14px 16px', marginTop: 8 }}>
+                    <div style={{ fontSize: 10, color: muted, letterSpacing: '0.12em', marginBottom: 6 }}>PER</div>
+                    <div style={{ fontFamily: 'monospace', color: accent }}>
+                      <span style={{ fontSize: 32, fontWeight: 600 }}>10.0</span>
+                      <span style={{ fontSize: 14, marginLeft: 2 }}>배</span>
+                    </div>
                   </div>
                 </div>
-              ))}
+                {/* 중앙 델타 */}
+                <div style={{
+                  width: 100, display: 'flex', flexDirection: 'column',
+                  alignItems: 'center', justifyContent: 'center',
+                  borderLeft: `1px solid ${border}`, borderRight: `1px solid ${border}`,
+                  padding: '20px 0', gap: 8,
+                }}>
+                  <div style={{ fontSize: 9, color: dimmer, letterSpacing: '0.14em', fontFamily: 'monospace' }}>§ △</div>
+                  <div style={{
+                    fontSize: 28, fontWeight: 600, fontFamily: 'monospace',
+                    color: '#c87a8b', letterSpacing: '-0.02em',
+                  }}>−2.5</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <span style={{ fontSize: 10, color: '#4a7045' }}>▼</span>
+                    <span style={{ fontSize: 12, color: '#4a7045', fontFamily: 'monospace', fontWeight: 600 }}>25%</span>
+                  </div>
+                  <div style={{ width: 52, height: 2, background: '#4a7045', borderRadius: 1, marginTop: 4 }} />
+                </div>
+                {/* B 패널 */}
+                <div style={{ padding: '20px', background: isDark ? '#080808' : '#f9f8f4' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+                    <span style={{ fontSize: 10, fontWeight: 700, background: '#4a7045', color: '#fff', padding: '2px 8px' }}>B</span>
+                    <span style={{ fontSize: 11, color: muted, letterSpacing: '0.1em' }}>EPS+25%</span>
+                  </div>
+                  {[{ label: 'PRICE', value: '52,000' }, { label: 'EPS', value: '6,875' }].map((r) => (
+                    <div key={r.label} style={{ marginBottom: 14 }}>
+                      <div style={{ fontSize: 10, color: dimmer, letterSpacing: '0.12em', marginBottom: 4 }}>{r.label}</div>
+                      <div style={{ fontSize: 18, fontFamily: 'monospace', color: txt, letterSpacing: '0.02em' }}>{r.value}</div>
+                    </div>
+                  ))}
+                  <div style={{ background: isDark ? '#060606' : '#fff', border: `1px solid ${border}`, padding: '14px 16px', marginTop: 8 }}>
+                    <div style={{ fontSize: 10, color: muted, letterSpacing: '0.12em', marginBottom: 6 }}>PER</div>
+                    <div style={{ fontFamily: 'monospace', color: '#4a7045' }}>
+                      <span style={{ fontSize: 32, fontWeight: 600 }}>7.6</span>
+                      <span style={{ fontSize: 14, marginLeft: 2 }}>배</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div style={{ marginTop: 14, fontSize: 11, color: dimmer, letterSpacing: '0.1em', textAlign: 'center' }}>
+              30종 계산기 · A/B 시나리오 비교 · 히스토리 저장
             </div>
           </div>
         </div>
 
-        {/* S6 CALENDAR */}
+        {/* S6 CALENDAR — 실제 월간 그리드 UI */}
         <div id="hs6" style={sceneBase}>
-          <div style={{ width: '100%', maxWidth: 960, padding: '0 40px' }}>
-            <div style={{ fontSize: 10, letterSpacing: '0.22em', color: '#9a7ac8', marginBottom: 12, fontWeight: 500 }}>FEATURE 03</div>
-            <div style={{ fontSize: 'clamp(24px, 4vw, 50px)', fontWeight: 200, color: txt, letterSpacing: '-0.03em', marginBottom: 10, fontFamily: 'Inter, sans-serif' }}>이벤트 캘린더</div>
-            <p style={{ color: muted, fontSize: 14, lineHeight: 1.8, marginBottom: 40, maxWidth: 440 }}>
-              FOMC·실적 발표·경제지표를 한눈에. 365일 마켓 이벤트 추적.
-            </p>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10, maxWidth: 680 }}>
+          <div style={{ width: '100%', maxWidth: 740, padding: '0 32px' }}>
+            <div style={{
+              background: isDark ? '#0d0d0d' : '#fff',
+              border: `1px solid ${border}`,
+              overflow: 'hidden',
+            }}>
+              {/* 헤더 */}
+              <div style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '16px 20px', borderBottom: `1px solid ${border}`,
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <span style={{ fontSize: 22, fontWeight: 300, fontFamily: 'monospace', color: txt, letterSpacing: '-0.02em' }}>2026.04</span>
+                  <span style={{ fontSize: 11, color: muted, letterSpacing: '0.16em' }}>APRIL · KST</span>
+                </div>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  {['‹', '›'].map((ch) => (
+                    <span key={ch} style={{
+                      width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      border: `1px solid ${border}`, color: muted, fontSize: 14, cursor: 'pointer',
+                    }}>{ch}</span>
+                  ))}
+                </div>
+              </div>
+              {/* 요일 헤더 */}
+              <div style={{
+                display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)',
+                borderBottom: `1px solid ${border}`,
+              }}>
+                {['MON','TUE','WED','THU','FRI','SAT','SUN'].map((d, di) => (
+                  <div key={d} style={{
+                    padding: '8px 0', textAlign: 'center',
+                    fontSize: 9, letterSpacing: '0.12em',
+                    color: di >= 5 ? '#c87a8b' : dimmer,
+                    borderRight: di < 6 ? `1px solid ${border}` : undefined,
+                  }}>{d}</div>
+                ))}
+              </div>
+              {/* 날짜 그리드 — 2026년 4월 */}
               {[
-                { date: 'APR 30', event: 'FOMC 금리 결정', type: 'HIGH', color: '#c87a8b' },
-                { date: 'MAY 02', event: '미국 고용지표',  type: 'MED',  color: accent },
-                { date: 'MAY 07', event: '삼성전자 실적',  type: 'HIGH', color: '#9a7ac8' },
-                { date: 'MAY 13', event: '美 CPI 발표',    type: 'HIGH', color: '#c87a8b' },
-              ].map((ev) => (
-                <div key={ev.date} style={{ background: bgCard, border: `1px solid ${border}`, padding: '14px 16px' }}>
-                  <div style={{ fontSize: 10, color: ev.color, letterSpacing: '0.1em', marginBottom: 6 }}>{ev.date}</div>
-                  <div style={{ fontSize: 13, color: txt, marginBottom: 6 }}>{ev.event}</div>
-                  <div style={{ fontSize: 9, color: ev.color, background: `${ev.color}18`, padding: '2px 7px', display: 'inline-block', letterSpacing: '0.1em' }}>{ev.type}</div>
+                [
+                  { d: '30', prev: true, events: [] },
+                  { d: '31', prev: true, events: [] },
+                  { d: '01', events: [{ label: '韓 CPI', color: '#9a7ac8' }] },
+                  { d: '02', events: [] },
+                  { d: '03', events: [{ label: 'NFP', color: '#c87a8b' }] },
+                  { d: '04', events: [], sat: true },
+                  { d: '05', events: [], sun: true },
+                ],
+                [
+                  { d: '06', events: [] },
+                  { d: '07', events: [{ label: '美 PPI', color: '#9a7ac8' }] },
+                  { d: '08', events: [{ label: 'K200만기', color: '#c8a96e' }] },
+                  { d: '09', events: [{ label: '美 CPI', color: '#9a7ac8', more: true }] },
+                  { d: '10', events: [{ label: 'JPMorgan', color: '#c87a8b' }] },
+                  { d: '11', events: [], sat: true },
+                  { d: '12', events: [], sun: true },
+                ],
+                [
+                  { d: '13', events: [] },
+                  { d: '14', events: [] },
+                  { d: '15', events: [] },
+                  { d: '16', events: [{ label: 'FOMC', color: '#c87a8b' }] },
+                  { d: '17', events: [{ label: 'TSMC실적', color: '#c87a8b' }] },
+                  { d: '18', events: [], sat: true },
+                  { d: '19', events: [], sun: true, today: true },
+                ],
+              ].map((week, wi) => (
+                <div key={wi} style={{
+                  display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)',
+                  borderBottom: wi < 2 ? `1px solid ${border}` : undefined,
+                }}>
+                  {week.map((cell, ci) => (
+                    <div key={ci} style={{
+                      minHeight: 56, padding: '6px 8px',
+                      borderRight: ci < 6 ? `1px solid ${border}` : undefined,
+                      position: 'relative',
+                    }}>
+                      <div style={{
+                        fontSize: 12, fontFamily: 'monospace',
+                        color: cell.today ? accent : (cell.prev ? dimmer : (cell.sat || cell.sun ? '#c87a8b55' : muted)),
+                        marginBottom: 4,
+                      }}>{cell.d}</div>
+                      {cell.today && (
+                        <div style={{
+                          position: 'absolute', top: 6, right: 8,
+                          width: 6, height: 6, borderRadius: '50%', background: accent,
+                        }} />
+                      )}
+                      {cell.events?.map((ev, ei) => (
+                        <div key={ei} style={{
+                          display: 'flex', alignItems: 'center', gap: 3, marginBottom: 2,
+                        }}>
+                          <div style={{ width: 2, height: 12, background: ev.color, borderRadius: 1, flexShrink: 0 }} />
+                          <span style={{ fontSize: 10, color: txt, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {ev.label}{ev.more ? ' ···' : ''}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  ))}
                 </div>
               ))}
+            </div>
+            <div style={{ marginTop: 14, fontSize: 11, color: dimmer, letterSpacing: '0.1em', textAlign: 'center' }}>
+              FOMC · 실적 발표 · 경제지표 · 만기일 · 365일 추적
             </div>
           </div>
         </div>
