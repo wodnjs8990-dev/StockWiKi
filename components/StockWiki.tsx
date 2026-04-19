@@ -7,8 +7,29 @@ const CalcPrefixContext = createContext<string>('');
 import { Search, Calculator, BookOpen, ChevronRight, ChevronLeft, X, ArrowUpRight, Star, Clock, Menu, Link as LinkIcon, Copy, Check, Share2, CalendarDays, Info, Keyboard, LayoutDashboard, TrendingUp } from 'lucide-react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { TERMS, CATEGORIES, CATEGORY_COLORS, HUE_FAMILIES, CATEGORY_FAMILY } from '@/data/terms';
+import { CATEGORIES, CATEGORY_COLORS, HUE_FAMILIES, CATEGORY_FAMILY } from '@/data/terms';
+import type { Term } from '@/data/terms';
 import { CALC_CATEGORIES } from '@/data/calcs';
+
+const TERMS_TOTAL = 9632; // 전체 용어 수 (빌드 시점 기준)
+
+// API fetch 헬퍼
+async function fetchTerms(q: string, cat: string, favs: string[], page: number, family?: string): Promise<{ items: Term[]; total: number; hasMore: boolean }> {
+  const params = new URLSearchParams({ q, cat, page: String(page) });
+  if (favs.length) params.set('favs', favs.join(','));
+  if (family) params.set('family', family);
+  const res = await fetch(`/api/terms?${params}`);
+  if (!res.ok) return { items: [], total: 0, hasMore: false };
+  return res.json();
+}
+
+// 단일 용어 ID로 조회
+async function fetchTermById(id: string): Promise<Term | null> {
+  const res = await fetch(`/api/terms?id=${encodeURIComponent(id)}`);
+  if (!res.ok) return null;
+  const data = await res.json();
+  return data.items?.[0] ?? null;
+}
 import EventsView from '@/components/EventsView';
 import HomeView from '@/components/HomeView';
 
@@ -110,7 +131,10 @@ export default function StockWiki({ features, customEvents }: { features?: Featu
   );
   const [selectedCalc, setSelectedCalc] = useState(initialCalc);
   const [selectedTerm, setSelectedTerm] = useState<any>(null);
+  const [selectedFamily, setSelectedFamily] = useState<string | null>(null);
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
+  // 클라이언트 측 용어 Map (API에서 조회된 용어 누적)
+  const termsMapRef = useRef<Map<string, Term>>(new Map());
   const [favMemos, setFavMemos] = useState<Record<string, string>>({}); // 즐겨찾기 메모
   const [recent, setRecent] = useState<any[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -139,8 +163,7 @@ export default function StockWiki({ features, customEvents }: { features?: Featu
   // URL의 term 파라미터에서 용어 로드 (마운트 시)
   useEffect(() => {
     if (termFromUrl) {
-      const t = TERMS.find(x => x.id === termFromUrl);
-      if (t) openTerm(t);
+      fetchTermById(termFromUrl).then(t => { if (t) openTerm(t); });
     }
   }, []); // 마운트 1회만
 
@@ -187,8 +210,9 @@ export default function StockWiki({ features, customEvents }: { features?: Featu
       const saved = localStorage.getItem('stockwiki_recent');
       if (saved) {
         const ids: string[] = JSON.parse(saved);
-        const terms = ids.map(id => TERMS.find(t => t.id === id)).filter(Boolean);
-        setRecent(terms);
+        Promise.all(ids.map(id => fetchTermById(id))).then(results => {
+          setRecent(results.filter(Boolean));
+        });
       }
     } catch {}
   }, []);
@@ -212,7 +236,7 @@ export default function StockWiki({ features, customEvents }: { features?: Featu
 
   // 검색 디바운스
   useEffect(() => {
-    const t = setTimeout(() => setDebouncedQuery(searchQuery), 150);
+    const t = setTimeout(() => setDebouncedQuery(searchQuery), 300);
     return () => clearTimeout(t);
   }, [searchQuery]);
 
@@ -298,21 +322,28 @@ export default function StockWiki({ features, customEvents }: { features?: Featu
     }
   };
 
-  const filteredTerms = useMemo(() => {
-    return TERMS.filter(t => {
-      const q = debouncedQuery.toLowerCase();
-      const matchSearch = !q ||
-        t.name.toLowerCase().includes(q) ||
-        t.fullName.toLowerCase().includes(q) ||
-        t.description.toLowerCase().includes(q) ||
-        t.en.toLowerCase().includes(q) ||
-        t.category.toLowerCase().includes(q);
-      const matchCat = selectedCategory === '전체' ||
-        (selectedCategory === '★ 즐겨찾기' && favorites.has(t.id)) ||
-        t.category === selectedCategory;
-      return matchSearch && matchCat;
+  // API 기반 terms 상태
+  const [filteredTerms, setFilteredTerms] = useState<Term[]>([]);
+  const [termsTotal, setTermsTotal] = useState(0);
+  const [termsPage, setTermsPage] = useState(0);
+  const [termsHasMore, setTermsHasMore] = useState(false);
+  const [termsLoading, setTermsLoading] = useState(false);
+
+  // 검색/카테고리/family 바뀌면 1페이지 fetch
+  useEffect(() => {
+    let cancelled = false;
+    setTermsLoading(true);
+    setTermsPage(0);
+    fetchTerms(debouncedQuery, selectedCategory, [...favorites], 0, selectedFamily ?? undefined).then(res => {
+      if (cancelled) return;
+      res.items.forEach((t: Term) => termsMapRef.current.set(t.id, t));
+      setFilteredTerms(res.items);
+      setTermsTotal(res.total);
+      setTermsHasMore(res.hasMore);
+      setTermsLoading(false);
     });
-  }, [debouncedQuery, selectedCategory, favorites]);
+    return () => { cancelled = true; };
+  }, [debouncedQuery, selectedCategory, selectedFamily, favorites]);
 
   const categoriesWithFav = favorites.size > 0
     ? ['전체', '★ 즐겨찾기', ...CATEGORIES.slice(1)]
@@ -477,7 +508,7 @@ export default function StockWiki({ features, customEvents }: { features?: Featu
         <div className="max-w-[1400px] mx-auto px-4 md:px-8 hidden md:flex border-t overflow-x-auto scroll-hide" style={{ borderColor: T.border }}>
           {[
             { id: 'home',       label: '홈',       icon: LayoutDashboard, idx: '00', count: null },
-            { id: 'glossary',   label: '금융 사전', icon: BookOpen,        idx: '01', count: TERMS.length },
+            { id: 'glossary',   label: '금융 사전', icon: BookOpen,        idx: '01', count: termsTotal || null },
             { id: 'calculator', label: '계산기',    icon: Calculator,      idx: '02', count: CALC_CATEGORIES.reduce((s, c) => s + c.calcs.length, 0) },
             { id: 'events',     label: '이벤트',    icon: CalendarDays,    idx: '03', count: null },
           ].filter(tab => tab.id === 'home' || feat[tab.id as keyof Features] !== false).map(tab => {
@@ -509,7 +540,7 @@ export default function StockWiki({ features, customEvents }: { features?: Featu
             T={T}
             isDark={isDark}
             feat={feat}
-            totalTerms={TERMS.length}
+            totalTerms={termsTotal}
             recent={recent}
             favorites={favorites}
             categoryColors={CATEGORY_COLORS}
@@ -523,6 +554,24 @@ export default function StockWiki({ features, customEvents }: { features?: Featu
         {activeTab === 'glossary' && feat.glossary && (
           <GlossaryView
             terms={filteredTerms}
+            termsTotal={termsTotal}
+            termsHasMore={termsHasMore}
+            termsLoading={termsLoading}
+            onLoadMore={() => {
+              const nextPage = termsPage + 1;
+              setTermsPage(nextPage);
+              fetchTerms(debouncedQuery, selectedCategory, [...favorites], nextPage, selectedFamily ?? undefined).then(res => {
+                res.items.forEach((t: Term) => termsMapRef.current.set(t.id, t));
+                setFilteredTerms(prev => [...prev, ...res.items]);
+                setTermsHasMore(res.hasMore);
+              });
+            }}
+            selectedFamily={selectedFamily}
+            setSelectedFamily={(fid: string | null) => {
+              setSelectedFamily(fid);
+              setSelectedCategory('전체');
+            }}
+            termsMap={termsMapRef.current}
             searchQuery={searchQuery}
             setSearchQuery={setSearchQuery}
             searchRef={searchRef}
@@ -532,7 +581,7 @@ export default function StockWiki({ features, customEvents }: { features?: Featu
             selectedTerm={selectedTerm}
             setSelectedTerm={openTerm}
             closeTerm={closeTerm}
-            totalCount={TERMS.length}
+            totalCount={termsTotal}
             categoryColors={CATEGORY_COLORS}
             favorites={favorites}
             toggleFav={toggleFav}
@@ -736,7 +785,6 @@ export default function StockWiki({ features, customEvents }: { features?: Featu
 
       {showCommandK && feat.commandK && (
         <CommandK
-          terms={TERMS}
           onClose={() => setShowCommandK(false)}
           onSelect={(term) => {
             openTerm(term);
@@ -788,15 +836,30 @@ export default function StockWiki({ features, customEvents }: { features?: Featu
 // ─────────────────────────────────────────────
 // CommandK 팔레트
 // ─────────────────────────────────────────────
-function CommandK({ terms, onClose, onSelect, T }) {
+function CommandK({ onClose, onSelect, T }) {
   const [q, setQ] = useState('');
   const [idx, setIdx] = useState(0);
+  const [results, setResults] = useState<Term[]>([]);
   const inputRef = useRef(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     inputRef.current?.focus();
+    // 초기 로드: 빠른 검색 8개
+    fetchTerms('', '전체', [], 0).then(res => setResults(res.items.slice(0, 8)));
   }, []);
+
+  // 검색어 바뀌면 API 호출
+  useEffect(() => {
+    let cancelled = false;
+    fetchTerms(q, '전체', [], 0).then(res => {
+      if (cancelled) return;
+      setResults(res.items.slice(0, 10));
+    });
+    return () => { cancelled = true; };
+  }, [q]);
+
+  useEffect(() => setIdx(0), [q]);
 
   // 포커스 트랩
   useEffect(() => {
@@ -818,19 +881,6 @@ function CommandK({ terms, onClose, onSelect, T }) {
     el.addEventListener('keydown', trap);
     return () => el.removeEventListener('keydown', trap);
   }, []);
-
-  const results = useMemo(() => {
-    if (!q) return terms.slice(0, 8);
-    const lower = q.toLowerCase();
-    return terms.filter(t =>
-      t.name.toLowerCase().includes(lower) ||
-      t.fullName.toLowerCase().includes(lower) ||
-      t.en.toLowerCase().includes(lower) ||
-      t.category.toLowerCase().includes(lower)
-    ).slice(0, 10);
-  }, [q, terms]);
-
-  useEffect(() => setIdx(0), [q]);
 
   const handleKey = (e) => {
     if (e.key === 'ArrowDown') { e.preventDefault(); setIdx(i => Math.min(i + 1, results.length - 1)); }
@@ -889,9 +939,8 @@ function CommandK({ terms, onClose, onSelect, T }) {
 // ─────────────────────────────────────────────
 // 용어 사전 뷰
 // ─────────────────────────────────────────────
-function GlossaryView({ terms, searchQuery, setSearchQuery, searchRef, categories, selectedCategory, setSelectedCategory, selectedTerm, setSelectedTerm, closeTerm, totalCount, categoryColors, favorites, toggleFav, favMemos, updateFavMemo, recent, T, isDark, showToast, setActiveTab }) {
+function GlossaryView({ terms, termsHasMore, termsLoading, onLoadMore, searchQuery, setSearchQuery, searchRef, categories, selectedCategory, setSelectedCategory, selectedTerm, setSelectedTerm, closeTerm, totalCount, categoryColors, favorites, toggleFav, favMemos, updateFavMemo, recent, T, isDark, showToast, setActiveTab, selectedFamily, setSelectedFamily: setSelectedFamilyProp, termsMap }: any) {
   // ── 2단 카테고리 필터: family(1단) + sub(2단)
-  const [selectedFamily, setSelectedFamily] = React.useState<string | null>(null);
   const [familyOpen, setFamilyOpen] = React.useState(false); // 모바일 접기/펼치기
 
   const FAMILY_LIST = [
@@ -908,59 +957,37 @@ function GlossaryView({ terms, searchQuery, setSearchQuery, searchRef, categorie
 
   // family 선택 시 sub-category 초기화
   const handleFamilyClick = (fid: string | null) => {
-    setSelectedFamily(fid);
-    setSelectedCategory('전체');
+    setSelectedFamilyProp(fid); // 부모 state 업데이트 (API 재쿼리 트리거)
     setFamilyOpen(false); // 선택 후 모바일 패널 닫기
   };
 
-  // family 필터링된 terms
-  const familyFilteredTerms = React.useMemo(() => {
-    if (!selectedFamily) return terms;
-    return terms.filter(t => CATEGORY_FAMILY[t.category]?.family === selectedFamily);
-  }, [terms, selectedFamily]);
-
-  // 현재 family의 sub-categories
+  // 현재 family의 sub-categories (UI 전용)
   const subCategories = React.useMemo(() => {
     if (!selectedFamily) return [];
-    return categories.filter(cat =>
+    return categories.filter((cat: string) =>
       cat !== '전체' && cat !== '★ 즐겨찾기' &&
       CATEGORY_FAMILY[cat]?.family === selectedFamily
     );
   }, [selectedFamily, categories]);
 
-  // 최종 표시 terms (전체 목록)
-  const displayTerms = React.useMemo(() => {
-    if (selectedCategory === '전체' || selectedCategory === '★ 즐겨찾기') return familyFilteredTerms;
-    return familyFilteredTerms.filter(t => t.category === selectedCategory);
-  }, [familyFilteredTerms, selectedCategory]);
-
-  // 무한스크롤: 처음엔 50개, 스크롤하면 50개씩 추가
-  const PAGE_SIZE = 50;
-  const [visibleCount, setVisibleCount] = React.useState(PAGE_SIZE);
+  // 무한스크롤 로더 ref
   const loaderRef = React.useRef<HTMLDivElement>(null);
 
-  // 카테고리/검색 바뀌면 visibleCount 리셋
-  React.useEffect(() => {
-    setVisibleCount(PAGE_SIZE);
-  }, [displayTerms]);
-
-  // IntersectionObserver로 무한스크롤
+  // IntersectionObserver로 무한스크롤 — onLoadMore 호출
   React.useEffect(() => {
     const el = loaderRef.current;
     if (!el) return;
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting) {
-          setVisibleCount(prev => Math.min(prev + PAGE_SIZE, displayTerms.length));
+        if (entries[0].isIntersecting && termsHasMore && !termsLoading) {
+          onLoadMore?.();
         }
       },
       { rootMargin: '200px' }
     );
     observer.observe(el);
     return () => observer.disconnect();
-  }, [displayTerms.length]);
-
-  const visibleTerms = displayTerms.slice(0, visibleCount);
+  }, [termsHasMore, termsLoading, onLoadMore]);
 
   return (
     <div>
@@ -1208,7 +1235,7 @@ function GlossaryView({ terms, searchQuery, setSearchQuery, searchRef, categorie
 
       {/* 용어 그리드 */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 border-t border-l" style={{ borderColor: T.borderSoft }}>
-        {visibleTerms.map((term) => {
+        {terms.map((term: any) => {
           const color = categoryColors[term.category];
           const isFav = favorites.has(term.id);
           return (
@@ -1275,7 +1302,7 @@ function GlossaryView({ terms, searchQuery, setSearchQuery, searchRef, categorie
                 {term.related && term.related.length > 0 && (
                   <div className="mt-2 flex flex-wrap gap-1">
                     {term.related.slice(0, 3).map((relId: string) => {
-                      const relTerm = TERMS.find(t => t.id === relId);
+                      const relTerm = termsMap?.get(relId);
                       if (!relTerm) return null;
                       return (
                         <span key={relId} className="text-[10px] mono px-1.5 py-0.5 border" style={{ borderColor: T.border, color: T.textDimmer }}>
@@ -1296,10 +1323,10 @@ function GlossaryView({ terms, searchQuery, setSearchQuery, searchRef, categorie
       </div>
 
       {/* 무한스크롤 로더 */}
-      {visibleCount < displayTerms.length && (
+      {termsHasMore && (
         <div ref={loaderRef} className="flex items-center justify-center py-8 border-x border-b" style={{ borderColor: T.borderSoft }}>
           <span className="mono text-[11px] uppercase tracking-widest animate-pulse" style={{ color: T.textFaint }}>
-            Loading {Math.min(PAGE_SIZE, displayTerms.length - visibleCount)} more / {displayTerms.length - visibleCount} remaining
+            {termsLoading ? 'Loading…' : 'Load more'}
           </span>
         </div>
       )}
@@ -1315,6 +1342,7 @@ function GlossaryView({ terms, searchQuery, setSearchQuery, searchRef, categorie
         <TermModal
           term={selectedTerm}
           termList={terms}
+          termsMap={termsMap}
           onClose={closeTerm}
           categoryColors={categoryColors}
           favorites={favorites}
@@ -1324,8 +1352,9 @@ function GlossaryView({ terms, searchQuery, setSearchQuery, searchRef, categorie
           T={T}
           showToast={showToast}
           onNavigate={(id) => {
-            const t = TERMS.find(x => x.id === id);
-            if (t) setSelectedTerm(t);
+            const cached = termsMap?.get(id);
+            if (cached) { setSelectedTerm(cached); return; }
+            fetchTermById(id).then(t => { if (t) { termsMap?.set(id, t); setSelectedTerm(t); } });
           }}
           onNavigateCalc={() => {
             closeTerm();
@@ -1345,7 +1374,7 @@ function GlossaryView({ terms, searchQuery, setSearchQuery, searchRef, categorie
   );
 }
 
-function TermModal({ term, termList, onClose, categoryColors, favorites, toggleFav, favMemos, updateFavMemo, onNavigate, onNavigateCalc, onPrev, onNext, T, showToast }: any): JSX.Element {
+function TermModal({ term, termList, termsMap, onClose, categoryColors, favorites, toggleFav, favMemos, updateFavMemo, onNavigate, onNavigateCalc, onPrev, onNext, T, showToast }: any): JSX.Element {
   const isFav = favorites.has(term.id);
   const memo = favMemos?.[term.id] || '';
   const [memoText, setMemoText] = useState(memo);
@@ -1399,7 +1428,7 @@ function TermModal({ term, termList, onClose, categoryColors, favorites, toggleF
       el.style.transform = 'translateY(0)';
     }
   };
-  const relatedTerms = term.related?.map(id => TERMS.find(t => t.id === id)).filter(Boolean) || [];
+  const relatedTerms = term.related?.map((id: string) => termsMap?.get(id)).filter(Boolean) || [];
   const hasDetailed = !!term.detailed;
   const hasRelations = term.relations && Object.keys(term.relations).length > 0;
   const hasImpact = !!term.marketImpact;
@@ -1414,13 +1443,18 @@ function TermModal({ term, termList, onClose, categoryColors, favorites, toggleF
   const [compareMode, setCompareMode] = useState(false);
   const [compareTerm, setCompareTerm] = useState<any>(null);
   const [compareSearch, setCompareSearch] = useState('');
-  const compareResults = useMemo(() => {
-    if (!compareSearch) return relatedTerms.slice(0, 6);
-    const q = compareSearch.toLowerCase();
-    return TERMS.filter(t =>
-      t.id !== term.id &&
-      (t.name.toLowerCase().includes(q) || t.fullName.toLowerCase().includes(q) || t.en.toLowerCase().includes(q))
-    ).slice(0, 8);
+  const [compareResults, setCompareResults] = useState<any[]>([]);
+  useEffect(() => {
+    if (!compareSearch) {
+      setCompareResults(relatedTerms.slice(0, 6));
+      return;
+    }
+    let cancelled = false;
+    fetchTerms(compareSearch, '전체', [], 0).then(res => {
+      if (cancelled) return;
+      setCompareResults(res.items.filter((t: any) => t.id !== term.id).slice(0, 8));
+    });
+    return () => { cancelled = true; };
   }, [compareSearch, term.id, relatedTerms]);
 
   // 키보드 ← → 네비게이션
@@ -1721,12 +1755,13 @@ function TermModal({ term, termList, onClose, categoryColors, favorites, toggleF
             <Section id="sec-relations" label="연결 관계 · Relations" color={categoryColors[term.category]?.bg} T={T}>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-3">
                 {Object.entries(term.relations).map(([key, value]) => {
-                  const matchTerm = TERMS.find(t =>
+                  // termsMap에서 이름 매칭 시도 (API 캐시 범위 내)
+                  const matchTerm = termsMap ? Array.from(termsMap.values()).find((t: any) =>
                     t.name === key ||
                     t.fullName === key ||
                     key.includes(t.name) ||
                     (t.en && key.toLowerCase().includes(t.en.toLowerCase()))
-                  );
+                  ) : null;
                   const matchColor = matchTerm ? categoryColors[matchTerm.category] : null;
                   return (
                     <div
@@ -2199,7 +2234,7 @@ function CalculatorView({ selectedCalc, setSelectedCalc, T, isDark }) {
 
   return (
     <div>
-      <MarketPulseRail T={T} totalTerms={TERMS.length} />
+      <MarketPulseRail T={T} totalTerms={TERMS_TOTAL} />
       {/* 상단 메타 바 */}
       <div className="mb-6 border-y" style={{ borderColor: T.border }}>
         <div className="flex items-center justify-between gap-3 py-2 border-b mono text-[12px] uppercase tracking-[0.2em] whitespace-nowrap" style={{ borderColor: T.border, color: T.textFaint }}>

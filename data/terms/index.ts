@@ -4,7 +4,9 @@ import { TERMS_FUNDAMENTAL } from './terms-fundamental';
 import { TERMS_MARKET } from './terms-market';
 import { TERMS_ECON } from './terms-econ';
 import { TERMS_DERIV } from './terms-deriv';
-import { TERMS_INDUSTRY } from './terms-industry';
+import { TERMS_INDUSTRY_A } from './terms-industry-a';
+import { TERMS_INDUSTRY_B } from './terms-industry-b';
+import { TERMS_INDUSTRY_C } from './terms-industry-c';
 import { TERMS_TRADING } from './terms-trading';
 import { TERMS_RISK } from './terms-risk';
 import { TERMS_TAX } from './terms-tax';
@@ -19,7 +21,9 @@ export const TERMS = [
   ...TERMS_MARKET,
   ...TERMS_ECON,
   ...TERMS_DERIV,
-  ...TERMS_INDUSTRY,
+  ...TERMS_INDUSTRY_A,
+  ...TERMS_INDUSTRY_B,
+  ...TERMS_INDUSTRY_C,
   ...TERMS_TRADING,
   ...TERMS_RISK,
   ...TERMS_TAX,
