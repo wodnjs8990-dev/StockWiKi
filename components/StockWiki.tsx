@@ -6933,10 +6933,50 @@ function HighDivTaxCalc() {
 // SlotNumber — 슬롯머신 카운트업 숫자
 // ─────────────────────────────────────────────
 function SlotNumber({ target, pad = 3, color, delay = 0 }: { target: number; pad?: number; color: string; delay?: number }) {
-  const [display, setDisplay] = React.useState('0'.repeat(pad));
+  const targetStr = String(target).padStart(pad, '0');
+  const digits = targetStr.length;
+  // 자릿수별 독립 상태 배열
+  const [cols, setCols] = React.useState<string[]>(() => Array(digits).fill('0'));
   const started = React.useRef(false);
+  const timers = React.useRef<ReturnType<typeof setInterval>[]>([]);
   const ref = React.useRef<HTMLSpanElement>(null);
 
+  // cleanup helper
+  const clearAll = () => {
+    timers.current.forEach(t => clearInterval(t));
+    timers.current = [];
+  };
+
+  const runAnimation = React.useCallback((tStr: string) => {
+    clearAll();
+    const TICK_MS = 55;     // 인터벌 간격
+    const TICKS = 20;       // 자릿수당 총 틱
+
+    tStr.split('').forEach((finalDigit, d) => {
+      // 자릿수마다 딜레이를 다르게 → 왼쪽부터 순서대로 시작
+      const startDelay = delay + d * 80;
+      let tick = 0;
+
+      const t = setTimeout(() => {
+        const iv = setInterval(() => {
+          tick++;
+          const isLast = tick >= TICKS;
+          const char = isLast ? finalDigit : String(Math.floor(Math.random() * 10));
+          setCols(prev => {
+            const next = [...prev];
+            next[d] = char;
+            return next;
+          });
+          if (isLast) clearInterval(iv);
+        }, TICK_MS);
+        timers.current.push(iv);
+      }, startDelay);
+
+      timers.current.push(t as unknown as ReturnType<typeof setInterval>);
+    });
+  }, [delay]);
+
+  // IntersectionObserver — 처음 뷰포트 진입 시 실행
   React.useEffect(() => {
     if (started.current) return;
     const observer = new IntersectionObserver(
@@ -6944,47 +6984,28 @@ function SlotNumber({ target, pad = 3, color, delay = 0 }: { target: number; pad
         if (!entry.isIntersecting) return;
         observer.disconnect();
         started.current = true;
-
-        const DURATION = 1100; // 전체 애니메이션 시간 ms
-        const SLOT_TICKS = 18; // 슬롯머신 틱 수
-        const targetStr = String(target).padStart(pad, '0');
-        const digits = targetStr.length;
-
-        // 각 자릿수별로 타이머
-        for (let d = 0; d < digits; d++) {
-          const digitDelay = delay + d * 60; // 왼쪽 자릿수부터 순서대로
-          const finalDigit = targetStr[d];
-
-          let tick = 0;
-          const interval = setInterval(() => {
-            tick++;
-            const rand = String(Math.floor(Math.random() * 10));
-            setDisplay(prev => {
-              const arr = prev.split('');
-              arr[d] = tick < SLOT_TICKS ? rand : finalDigit;
-              return arr.join('');
-            });
-            if (tick >= SLOT_TICKS) clearInterval(interval);
-          }, (DURATION / SLOT_TICKS) + digitDelay / digits);
-        }
+        runAnimation(String(target).padStart(pad, '0'));
       },
-      { threshold: 0.3 }
+      { threshold: 0.2 }
     );
     if (ref.current) observer.observe(ref.current);
-    return () => observer.disconnect();
-  }, [target, pad, delay]);
+    return () => { observer.disconnect(); clearAll(); };
+  }, []); // eslint-disable-line
 
-  // target 바뀌면 (FAV 등) 즉시 반영
+  // target 변경 시 (FAV 실시간 등) — 이미 애니메이션 완료 후라면 슬롯 재실행
   React.useEffect(() => {
-    if (started.current) {
-      setDisplay(String(target).padStart(pad, '0'));
-    }
-  }, [target, pad]);
+    if (!started.current) return;
+    const newStr = String(target).padStart(pad, '0');
+    // 자릿수 맞춰두고 재애니메이션
+    setCols(Array(newStr.length).fill('0'));
+    runAnimation(newStr);
+    return clearAll;
+  }, [target]); // eslint-disable-line
 
   return (
     <span ref={ref} className="mono font-medium whitespace-nowrap"
-      style={{ fontSize: 'clamp(20px,4vw,28px)', color, letterSpacing: '-0.02em' }}>
-      {display}
+      style={{ fontSize: 'clamp(22px,5vw,28px)', color, letterSpacing: '-0.02em' }}>
+      {cols.join('')}
     </span>
   );
 }
