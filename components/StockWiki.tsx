@@ -2032,6 +2032,24 @@ function CalculatorView({ selectedCalc, setSelectedCalc, T, isDark }) {
       case 'winrate': return <WinRateCalc />;
       case 'margincheck': return <MarginCheckCalc />;
       case 'derivtax': return <DerivTaxCalc />;
+      // 신규 계산기 (2026년 검토 추가)
+      case 'stockpnl': return <StockPnLCalc />;
+      case 'rrmultiple': return <RRMultipleCalc />;
+      case 'stopprice': return <StopPriceCalc />;
+      case 'tickvalue': return <TickValueCalc />;
+      case 'optionpayoff': return <OptionPayoffCalc />;
+      case 'atrsize': return <ATRSizeCalc />;
+      case 'losestreak': return <LoseStreakCalc />;
+      case 'foreignstockpnl': return <ForeignStockPnLCalc />;
+      case 'durationimpact': return <DurationImpactCalc />;
+      case 'etfpremium': return <ETFPremiumCalc />;
+      case 'trackingdiff': return <TrackingDiffCalc />;
+      case 'isa_tax': return <ISATaxCalc />;
+      case 'isa_pension': return <ISAPensionCalc />;
+      case 'oversea_cg_tax': return <OverseaCGTaxCalc />;
+      case 'dividend_tax': return <DividendTaxCalc />;
+      case 'private_pension_tax': return <PrivatePensionTaxCalc />;
+      case 'highdiv_tax': return <HighDivTaxCalc />;
       default: return null;
     }
   };
@@ -3445,18 +3463,38 @@ function CommissionCalc() {
   const [qty, setQty] = useState('');
   const [feeRate, setFeeRate] = useState('0.015');
   const [type, setType] = useState('sell');
+  // 2026년 기준 시장별 증권거래세율 (매도 시만)
+  // 코스피: 거래세 0.05% + 농특세 0.15% = 0.20%
+  // 코스닥·K-OTC: 0.20%, 코넥스: 0.10%, 비상장·장외: 0.35%
+  const [market, setMarket] = useState<'kospi'|'kosdaq'|'konex'|'unlisted'>('kospi');
+  const taxRateMap = { kospi: 0.20, kosdaq: 0.20, konex: 0.10, unlisted: 0.35 };
+  const taxRatePct = taxRateMap[market];
+
   const amount = price && qty ? Number(price) * Number(qty) : 0;
   const fee = amount * Number(feeRate) / 100;
-  const tax = type === 'sell' ? amount * 0.18 / 100 : 0;
+  const tax = type === 'sell' ? amount * taxRatePct / 100 : 0;
   const total = type === 'buy' ? amount + fee : amount - fee - tax;
+
+  const marketLabel = { kospi: 'KOSPI', kosdaq: 'KOSDAQ·K-OTC', konex: 'KONEX', unlisted: '비상장·장외' };
+
   return (
     <div>
-      <CalcHeader num="16" title="수수료 · 세금 계산" desc="주식 거래 수수료와 증권거래세를 산출합니다." color="#8A8A8A" />
-      <div className="flex mb-5 border" style={{ borderColor: _BORDER }}>
+      <CalcHeader num="16" title="수수료 · 세금 계산" desc="주식 거래 수수료와 증권거래세를 산출합니다. 2026년 기준." color="#8A8A8A" />
+      <div className="flex mb-4 border" style={{ borderColor: _BORDER }}>
         <button onClick={() => setType('buy')} className="flex-1 py-3 text-sm font-medium transition-all border-r"
           style={{ borderColor: _BORDER, background: type === 'buy' ? '#4A7045' : 'transparent', color: type === 'buy' ? _T.textPrimary : _T.textMuted }}>매수</button>
         <button onClick={() => setType('sell')} className="flex-1 py-3 text-sm font-medium transition-all"
           style={{ background: type === 'sell' ? '#A63D33' : 'transparent', color: type === 'sell' ? _T.textPrimary : _T.textMuted }}>매도</button>
+      </div>
+      {/* 시장 선택 (매도 시만 의미 있음) */}
+      <div className="flex mb-5 border" style={{ borderColor: _BORDER, opacity: type === 'buy' ? 0.4 : 1 }}>
+        {(['kospi','kosdaq','konex','unlisted'] as const).map((m, i, arr) => (
+          <button key={m} onClick={() => setMarket(m)}
+            className="flex-1 py-2 text-xs font-medium transition-all"
+            style={{ borderRight: i < arr.length-1 ? `1px solid ${_BORDER}` : 'none', background: market === m ? '#8A8A8A33' : 'transparent', color: market === m ? _T.textPrimary : _T.textMuted }}>
+            {marketLabel[m]}
+          </button>
+        ))}
       </div>
       <div className="grid md:grid-cols-3 gap-5 mb-8">
         <NumInput label="주가" value={price} onChange={setPrice} unit="원" placeholder="50,000" />
@@ -3466,28 +3504,27 @@ function CommissionCalc() {
       <div className={`grid ${type === 'sell' ? 'md:grid-cols-4' : 'md:grid-cols-3'} border`} style={{ borderColor: _BORDER }}>
         <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="거래금액" value={fmt(amount, 0)} unit="원" /></div>
         <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="수수료" value={fmt(fee, 0)} unit="원" /></div>
-        {type === 'sell' && <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="증권거래세" value={fmt(tax, 0)} unit="원" /></div>}
+        {type === 'sell' && <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label={`증권거래세 (${taxRatePct}%)`} value={fmt(tax, 0)} unit="원" /></div>}
         <ResultBox label={type === 'buy' ? '총 매수대금' : '실수령액'} value={fmt(total, 0)} unit="원" highlight color="#8A8A8A" />
       </div>
       <CalcNote
         how={[
-          '매수/매도 선택에 유의하세요. 세금은 매도할 때만 발생합니다.',
-          '주가 × 수량 = 거래금액',
-          '수수료율 (증권사별 상이, 일반 0.015% 전후)',
-          '매도 시 추가로 증권거래세 0.18% 발생',
+          '매수/매도 선택 후 시장 구분(코스피·코스닥·코넥스·비상장) 선택',
+          '거래세는 매도 시만 발생, 매수 시 없음',
+          '수수료율은 증권사별 상이 (MTS 비대면 개설 시 0.015% 전후)',
         ]}
         example={[
-          '삼성전자 70,000원 × 100주 = 700만원 매도, 수수료 0.015%',
+          '삼성전자 70,000원 × 100주 코스피 매도, 수수료 0.015%',
           '수수료 = 700만 × 0.015% = 1,050원',
-          '거래세 = 700만 × 0.18% = 12,600원',
-          '실수령액 = 7,000,000 − 1,050 − 12,600 = 6,986,350원',
+          '거래세(코스피) = 700만 × 0.20% = 14,000원',
+          '실수령액 = 7,000,000 − 1,050 − 14,000 = 6,984,950원',
         ]}
         tip={[
-          '왕복 수수료 + 거래세 약 0.21~0.25% → 단타는 불리',
-          '세금 계산: 코스피·코스닥 0.18%, 미국주식은 SEC fee 0.00229% (매도 시만)',
-          '증권사 수수료 비교는 필수입니다. 비대면 개설 시 평생 무료 혜택을 제공하는 증권사가 많습니다.',
-          '대형증권사 전화주문 0.5% → 반드시 HTS/MTS 사용',
-          'ISA 계좌 활용 시 세금 일부 절감 가능',
+          '2026년 기준 — 코스피·코스닥 0.20% (거래세 0.05% + 농특세 0.15%)',
+          '코넥스 0.10%, 비상장·장외 0.35%',
+          '미국주식: SEC fee 약 0.00229% (매도 시만, 별도 계산기 이용)',
+          '비대면 계좌 개설 시 수수료 무료 혜택 많으니 비교 필수',
+          '※ 세율은 변경될 수 있습니다. 최신 정보는 국세청 확인 권장.',
         ]}
       />
     </div>
@@ -3497,7 +3534,7 @@ function CommissionCalc() {
 function BreakevenCalc() {
   const [buyPrice, setBuyPrice] = useState('');
   const [feeRate, setFeeRate] = useState('0.015');
-  const taxRate = 0.18;
+  const taxRate = 0.20; // 증권거래세 0.20% (2026년 코스피·코스닥 기준)
   const bp = Number(buyPrice) || 0;
   const buyFee = bp * Number(feeRate) / 100;
   const totalCost = bp + buyFee;
@@ -4224,7 +4261,7 @@ function CapitalGainCalc() {
 
   return (
     <div>
-      <CalcHeader num="38" title="양도소득세" desc="국내·해외·비상장주식 양도소득세를 계산합니다. 2024년 기준." color="#5B8DB8" />
+      <CalcHeader num="38" title="양도소득세" desc="국내 대주주·해외·비상장주식 양도소득세를 계산합니다. 2026년 기준. ※ 국내 상장주식 소액주주 장내거래는 양도세 비과세." color="#5B8DB8" />
       <div className="flex mb-5 border" style={{ borderColor: _BORDER }}>
         <button onClick={() => setType('domestic')} className="flex-1 py-3 text-sm font-medium transition-all border-r" style={{ borderColor: _BORDER, background: type === 'domestic' ? '#4A7045' : 'transparent', color: type === 'domestic' ? _T.textPrimary : _T.textMuted }}>국내대주주</button>
         <button onClick={() => setType('foreign')} className="flex-1 py-3 text-sm font-medium transition-all border-r" style={{ borderColor: _BORDER, background: type === 'foreign' ? '#5B8DB8' : 'transparent', color: type === 'foreign' ? _T.textPrimary : _T.textMuted }}>해외주식</button>
@@ -4243,23 +4280,22 @@ function CapitalGainCalc() {
       </div>
       <CalcNote
         how={[
-          '국내대주주: 총가액 10억 이상 또는 지분율 기준 (코스피 1%, 코스닥 2%)',
-          '해외주식: 연간 250만원 기본공제 후 22% (지방소득세 포함)',
-          '비상장주식: 중소기업 10%, 일반 20%, 대주호 20~25%',
-          '양도차익 = (매도가 - 취득비용) - (매수가 + 거래비용)',
+          '국내대주주: 코스피 지분 1% 이상 또는 종목 보유액 10억 이상 (코스닥 2% 또는 10억)',
+          '해외주식: 연간 양도차익에서 250만원 기본공제 후 22% (국세 20% + 지방소득세 2%)',
+          '비상장주식: 중소기업 10%, 일반법인 20%, 대주주 20~25%',
+          '양도차익 = 매도금액 − 취득금액 − 필요경비(수수료 등)',
         ]}
         example={[
-          '국내대주주: 삼성전자 5만원 × 100주 = 500만원 구매 → 7만원 × 100주 = 700만원 판매',
-          '양도차익 = 700만 - 500만 = 200만원',
-          '세금 = 200만 × 20% × 1.1 (지방소득세) = 440만원',
-          '해외주식: 50만원 이익 → (50만 - 25만) × 22% = 5.5만원',
+          '해외주식: 매수 500만 → 매도 750만, 차익 250만 → 기본공제 250만 = 과세표준 0원 → 세금 없음',
+          '해외주식 차익 500만: (500만 - 250만) × 22% = 55,000원',
+          '국내대주주: 차익 200만 × 20%(지방세 포함 22%) = 44만원',
         ]}
         tip={[
-          '비상장주식은 중소기업 여부, 거래 사유에 따라 세율 다름',
-          '손실 통산: 2년 이내 다른 양도소득으로 손실 상쇄 가능',
-          '기본공제 (해외): 연간 250만원 (부부 합산시 500만원)',
-          '국내 상장주식 소액주주는 일반적으로 비과세 (대주주 제외)',
-          '※ 세법은 변경될 수 있으며, 정확한 납세액은 세무사 확인을 권장합니다.',
+          '국내 상장주식 소액주주 장내거래: 양도세 비과세 (증권거래세만 납부)',
+          '해외주식 기본공제 250만원: 국내 비상장·파생과 합산 적용',
+          '손실 이월공제: 해외주식은 다음 연도로 이월 가능 (5년)',
+          '부부 합산: 각자 계좌에서 각각 250만 공제 가능',
+          '※ 세법은 변경될 수 있습니다. 정확한 납세액은 세무사 확인 권장.',
         ]}
       />
     </div>
@@ -4267,58 +4303,89 @@ function CapitalGainCalc() {
 }
 
 function HealthInsuranceCalc() {
+  const [memberType, setMemberType] = useState<'employee'|'dependent'>('employee');
   const [financialIncome, setFinancialIncome] = useState('');
-  const [otherIncome, setOtherIncome] = useState('');
-  const [dependentStatus, setDependentStatus] = useState('independent');
+
+  // 2026년 기준
+  const HEALTH_RATE = 0.0719;       // 건강보험료율 7.19%
+  const LTC_RATE_OF_HEALTH = 0.1314; // 장기요양보험료 = 건보료 × 13.14%
 
   const fi = Number(financialIncome) || 0;
-  const oi = Number(otherIncome) || 0;
-  const totalIncome = fi + oi;
 
-  const isGrossIncome = fi > 20000000;
-  const isDependentLost = totalIncome > 20000000;
+  // 직장가입자 보수 외 소득월액보험료:
+  // 연 금융소득이 2,000만원 초과분에만 적용 (초과분 ÷ 12 = 월액)
+  const EXTRA_THRESHOLD = 20000000;
+  const extraAnnual = Math.max(0, fi - EXTRA_THRESHOLD);
+  const extraMonthly = extraAnnual / 12;
+  const employeeExtra = extraMonthly * HEALTH_RATE;
+  const employeeLtc = employeeExtra * LTC_RATE_OF_HEALTH;
+  const employeeTotal = employeeExtra + employeeLtc;
 
-  const monthlyIncome = totalIncome / 12;
-  const insurancePremium = monthlyIncome * 0.0709;
-  const longTermCareRate = 0.1295;
-  const totalMonthlyPremium = insurancePremium * (1 + longTermCareRate);
+  // 피부양자: 금융소득 합산소득 2,000만원 초과 시 탈락
+  const isDependentLost = fi > EXTRA_THRESHOLD;
+  const isGrossIncome = fi > EXTRA_THRESHOLD; // 종합과세 여부
 
   return (
     <div>
-      <CalcHeader num="39" title="건강보험료 (금융소득 피부양자)" desc="금융소득 2천만원 초과 시 피부양자 탈락. 2024년 기준." color="#5B8DB8" />
-      <div className="grid md:grid-cols-2 gap-5 mb-8">
-        <NumInput label="금융소득 (이자+배당)" value={financialIncome} onChange={setFinancialIncome} unit="원" placeholder="30,000,000" />
-        <NumInput label="기타소득 (근로·사업·기타)" value={otherIncome} onChange={setOtherIncome} unit="원" placeholder="0" />
+      <CalcHeader num="39" title="건강보험료 (금융소득 영향)" desc="금융소득이 건강보험료에 미치는 영향을 계산합니다. 2026년 기준. ※ 지역가입자는 별도 계산 구조로 이 계산기 결과가 맞지 않습니다." color="#5B8DB8" />
+      <div className="flex mb-5 border" style={{ borderColor: _BORDER }}>
+        <button onClick={() => setMemberType('employee')} className="flex-1 py-3 text-sm font-medium transition-all border-r"
+          style={{ borderColor: _BORDER, background: memberType === 'employee' ? '#5B8DB8' : 'transparent', color: memberType === 'employee' ? '#fff' : _T.textMuted }}>직장가입자</button>
+        <button onClick={() => setMemberType('dependent')} className="flex-1 py-3 text-sm font-medium transition-all"
+          style={{ background: memberType === 'dependent' ? '#8A8A8A' : 'transparent', color: memberType === 'dependent' ? '#fff' : _T.textMuted }}>피부양자</button>
       </div>
-      <div className="grid md:grid-cols-2 border" style={{ borderColor: _BORDER }}>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}>
-          <ResultBox label="종합과세 여부" value={isGrossIncome ? '과세' : '비과세'} unit="" />
-        </div>
-        <ResultBox label="피부양자 탈락" value={isDependentLost ? '예' : '아니오'} unit="" />
+      <div className="mb-8">
+        <NumInput label="연간 금융소득 (이자+배당)" value={financialIncome} onChange={setFinancialIncome} unit="원" placeholder="30,000,000" />
       </div>
-      <div className="mt-5 border" style={{ borderColor: _BORDER }}>
-        <ResultBox label="예상 월 보험료 (건강+장기요양)" value={fmt(totalMonthlyPremium, 0)} unit="원" highlight color="#5B8DB8" />
-      </div>
+
+      {memberType === 'employee' ? (
+        <>
+          <div className="mb-3 px-4 py-3 border text-sm" style={{ borderColor: extraAnnual > 0 ? '#A63D33' : '#4A7045', color: extraAnnual > 0 ? '#A63D33' : '#4A7045' }}>
+            {extraAnnual > 0
+              ? `⚠ 금융소득 ${fmt(fi/10000,0)}만원 — 2,000만원 초과분 ${fmt(extraAnnual/10000,0)}만원에 보수외소득 보험료 부과`
+              : `✓ 금융소득 ${fmt(fi/10000,0)}만원 — 2,000만원 이하로 추가 보험료 없음`}
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 border" style={{ borderColor: _BORDER }}>
+            <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="보수외 월 건강보험료" value={fmt(employeeExtra, 0)} unit="원/월" /></div>
+            <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="장기요양보험료" value={fmt(employeeLtc, 0)} unit="원/월" /></div>
+            <ResultBox label="추가 월 보험료 합계" value={fmt(employeeTotal, 0)} unit="원/월" highlight color="#5B8DB8" />
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="mb-3 px-4 py-3 border text-sm" style={{ borderColor: isDependentLost ? '#A63D33' : '#4A7045', color: isDependentLost ? '#A63D33' : '#4A7045' }}>
+            {isDependentLost
+              ? `⚠ 금융소득 ${fmt(fi/10000,0)}만원 — 2,000만원 초과로 피부양자 자격 탈락`
+              : `✓ 금융소득 ${fmt(fi/10000,0)}만원 — 2,000만원 이하로 피부양자 유지`}
+          </div>
+          <div className="border" style={{ borderColor: _BORDER }}>
+            <ResultBox label="피부양자 탈락 여부" value={isDependentLost ? '탈락 (지역가입자 전환)' : '유지'} unit="" highlight={isDependentLost} color="#A63D33" />
+          </div>
+          {isDependentLost && (
+            <div className="mt-3 px-4 py-3 border text-sm" style={{ borderColor: _BORDER, color: _T.textMuted }}>
+              탈락 후 지역가입자 보험료는 소득·재산·자동차를 종합 산정하며, 단순 세율 계산이 불가합니다. 국민건강보험공단 모의계산기를 이용하세요.
+            </div>
+          )}
+        </>
+      )}
       <CalcNote
         how={[
-          '금융소득(이자+배당) 2,000만원 초과 시 종합과세 대상',
-          '금융소득 포함 연 합산소득 2,000만원 초과 시 피부양자 탈락',
-          '건강보험료 = 소득월액 × 7.09% (2024년)',
-          '장기요양보험료 = 건강보험료 × 12.95%',
+          '직장가입자: 연 금융소득 2,000만원 초과분에만 보수외소득월액보험료 부과',
+          '초과분 ÷ 12 = 월액 → 월액 × 7.19% (건강) + 건보료 × 13.14% (장기요양)',
+          '피부양자: 금융소득 합산 2,000만원 초과 시 자격 탈락 → 지역가입자 전환',
         ]}
         example={[
-          '금융소득 3,000만원, 근로소득 0원 → 종합과세, 피부양자 탈락',
-          '월소득 = 3,000만 ÷ 12 = 250만원',
-          '건강보험료 = 250만 × 7.09% ≈ 17.7만원',
-          '장기요양료 = 17.7만 × 12.95% ≈ 2.3만원',
-          '총 월보험료 ≈ 20만원',
+          '직장가입자, 금융소득 3,000만원',
+          '초과분 1,000만 ÷ 12 = 월 83.3만원',
+          '추가 건보료 = 83.3만 × 7.19% ≈ 5.99만원/월',
+          '장기요양 = 5.99만 × 13.14% ≈ 0.79만원/월',
         ]}
         tip={[
-          '피부양자 탈락 시 자영업자 기준으로 지역가입자 보험료 전액 부담',
-          '부부합산소득: 배우자 소득도 함께 계산 (기본공제 후)',
-          'ISA 계좌 이자·배당은 피부양자 판정에서 제외됨',
-          '건강보험료 산정 시 최소금액(약 12만원)이 적용될 수 있음',
-          '※ 세법은 변경될 수 있으며, 정확한 납세액은 세무사 확인을 권장합니다.',
+          '2026년 건강보험료율: 7.19% (근로자·사용자 각 3.595% 부담)',
+          '장기요양보험료율: 소득 대비 0.9448% (건강보험료 대비 13.14%)',
+          'ISA 계좌 내 이자·배당은 피부양자 판정 소득에서 제외',
+          '지역가입자 보험료는 소득+재산+자동차 합산 — 이 계산기로 추정 불가',
+          '※ 2026년 기준. 보험료율은 매년 변경될 수 있습니다.',
         ]}
       />
     </div>
@@ -4753,7 +4820,7 @@ function ShortSellCalc() {
   const br = Number(borrowRate) / 100;
   const pnl = (ep - xp) * q;                          // 공매도: 하락 시 이익
   const borrowCost = ep * q * br * (d / 365);          // 대차료
-  const sellTax = ep * q * 0.0018;                     // 증권거래세 0.18%
+  const sellTax = ep * q * 0.0020;                     // 증권거래세 0.20% (2026년 코스피·코스닥 기준)
   const netPnl = pnl - borrowCost - sellTax;
   const retPct = ep * q ? (netPnl / (ep * q)) * 100 : 0;
   return (
@@ -4777,7 +4844,7 @@ function ShortSellCalc() {
       </div>
       <CalcNote
         how={['진입가(숏 진입)와 청산가 입력', '대차금리는 증권사/종목별 상이 — 대차 잔고 많을수록 높아짐', '순손익 = 주가차익 − 대차료 − 증권거래세']}
-        example={['50,000원 숏 100주, 45,000원 청산, 10일 보유, 대차금리 2%', '주가차익 = (50,000−45,000) × 100 = 50만원', '대차료 = 5,000,000 × 2% × 10/365 ≈ 2,740원', '거래세 = 5,000,000 × 0.18% = 9,000원', '순손익 ≈ 488,260원']}
+        example={['50,000원 숏 100주, 45,000원 청산, 10일 보유, 대차금리 2%', '주가차익 = (50,000−45,000) × 100 = 50만원', '대차료 = 5,000,000 × 2% × 10/365 ≈ 2,740원', '거래세 = 5,000,000 × 0.20% = 10,000원', '순손익 ≈ 487,260원']}
         tip={['대차금리가 높은 종목(숏스퀴즈 위험) 주의', '공매도는 이론적으로 손실 무한 — 손절 기준 반드시 설정', '개인 공매도 가능 종목 확인 후 거래 (2025년 전면 재개 이후)', '대주 물량 부족 시 강제 청산(콜백) 가능성 유의']}
       />
     </div>
@@ -5497,7 +5564,13 @@ function GapCalc() {
       <CalcNote
         how={['전일 종가 입력 → 상하한가(±30%) 자동 계산', '구간별 갭(1~20%) 상승/하락 가격 테이블 제공']}
         example={['전일 종가 50,000원', '상한가 = 65,000원, 하한가 = 35,000원', '5% 상승 시 52,500원 / 5% 하락 시 47,500원']}
-        tip={['한국 주식 상하한가: ±30% (2015년 6월 확대)', '선물은 상하한가 없음 (서킷브레이커 별도)', '갭업/갭다운 발생 시 전일 종가 기준으로 계산']}
+        tip={[
+          '한국 주식(코스피·코스닥) 상하한가: ±30% (2015년 6월 확대)',
+          '⚠ ETF·ETN: 일반적으로 ±30% 동일, 레버리지 ETF·ETN은 ±60% 적용',
+          '⚠ 관리종목·투자위험종목은 상하한가가 다를 수 있음',
+          '선물·옵션: 상하한가 없음 (서킷브레이커 별도 적용)',
+          '상장 첫날(IPO): 공모가 기준 상하한 60~400% 별도 적용',
+        ]}
       />
     </div>
   );
@@ -5552,7 +5625,14 @@ function MarginLiquidCalc() {
       <CalcNote
         how={['매수단가 × 수량 = 총 매수금액', '대출금 = 총금액 × (1 - 개시증거금률)', '반대매매가 = 대출금 ÷ (수량 × (1 - 유지증거금률))']}
         example={['50,000원 × 100주 = 500만원, 증거금 40%', '대출금 = 300만원', '유지율 20% 시 반대매매가 = 300만 ÷ (100 × 0.8) = 37,500원']}
-        tip={['증권사마다 유지증거금률 상이 (보통 20~140%)', '신용거래: 유지율 140% 이하 → 반대매매', '미수거래: D+2일까지 미결제 시 강제청산', '하한가 근접 시 반대매매 리스크 급증']}
+        tip={[
+          '⚠ 이 계산기는 단순 공식 추정치입니다. 실제 반대매매가는 증권사별 상이',
+          '신용거래: 증권사마다 담보유지비율 기준이 다름 (보통 130~140%)',
+          '미수거래: D+2일까지 미결제 시 D+3 강제청산 (전량 시장가)',
+          '반대매매 발생 전 증권사에서 추가 담보 납입 통지 → 대응 가능',
+          '하한가 연속 시 반대매매도 체결 불가 → 손실 무한 확대 위험',
+          '반드시 거래하는 증권사에 정확한 반대매매 기준을 확인하세요.',
+        ]}
       />
     </div>
   );
@@ -5869,8 +5949,10 @@ function DerivTaxCalc() {
   const deduction = 2500000; // 250만원 기본공제
   const afterCarryover = netGain - carryover;
   const taxableGain = Math.max(0, afterCarryover - deduction);
-  const taxRate = 20; // 파생상품 20%
-  const localTaxRate = 2; // 지방소득세 10% of 20%
+  // 2026년 기준: 파생상품 양도소득세 10% + 지방소득세 1% = 합계 11%
+  // (구 22% = 국세 20%+지방세 2% 는 오류였음)
+  const taxRate = 10; // 국세 10%
+  const localTaxRate = 1; // 지방소득세 10% of 10%
   const tax = taxableGain * (taxRate / 100);
   const localTax = taxableGain * (localTaxRate / 100);
   const totalTax = tax + localTax;
@@ -5878,7 +5960,7 @@ function DerivTaxCalc() {
 
   return (
     <div>
-      <CalcHeader num="52" title="파생상품 양도소득세" desc="선물·옵션 연간 손익 합산 후 250만원 공제를 적용한 양도세를 계산합니다." color="#5B8DB8" />
+      <CalcHeader num="52" title="파생상품 양도소득세" desc="선물·옵션 연간 손익 합산 후 250만원 공제를 적용한 양도세를 계산합니다. 2026년 기준." color="#5B8DB8" />
       <div className="grid md:grid-cols-2 gap-5 mb-5">
         <NumInput label="연간 총 이익 합계" value={totalProfit} onChange={setTotalProfit} unit="원" placeholder="10,000,000" />
         <NumInput label="연간 총 손실 합계" value={totalLoss} onChange={setTotalLoss} unit="원" placeholder="3,000,000" />
@@ -5897,9 +5979,846 @@ function DerivTaxCalc() {
         </div>
       )}
       <CalcNote
-        how={['순손익 = 총이익 − 총손실 (연간 합산)', '이월결손금 차감 후 250만원 기본공제', '과세표준 × 20% + 지방소득세 2% (합계 22%)']}
+        how={['순손익 = 총이익 − 총손실 (연간 합산)', '이월결손금 차감 후 250만원 기본공제', '과세표준 × 10% (국세) + 지방소득세 1% = 합계 11%']}
+        example={['총이익 1,000만, 총손실 300만, 이월결손 0', '순손익 700만 − 250만(공제) = 과세표준 450만원', '세금 = 450만 × 11% = 49.5만원']}
+        tip={['파생상품(선물·옵션) 양도세율: 국세 10% + 지방소득세 1% = 합계 11%', '기본공제 250만원: 매년 리셋 (해외주식 기본공제와 합산)', '국내·해외 파생상품 손익 통산 가능', '손실 이월: 5년간 이월공제 가능 (법정 요건 충족 시)', '다음 해 5월 종합소득세 신고 시 함께 신고', '※ 세율은 변경될 수 있습니다. 정확한 납세액은 세무사 확인 권장.']}
+      />
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// 매매실전: 주식 총손익
+// ─────────────────────────────────────────────
+function StockPnLCalc() {
+  const [buyPrice, setBuyPrice] = useState('');
+  const [sellPrice, setSellPrice] = useState('');
+  const [qty, setQty] = useState('');
+  const [feeRate, setFeeRate] = useState('0.015');
+  const [market, setMarket] = useState<'kospi'|'kosdaq'|'konex'|'unlisted'>('kospi');
+  const taxRateMap = { kospi: 0.20, kosdaq: 0.20, konex: 0.10, unlisted: 0.35 };
+  const bp = Number(buyPrice) || 0;
+  const sp = Number(sellPrice) || 0;
+  const q = Number(qty) || 0;
+  const fee = Number(feeRate) / 100;
+  const buyFee = bp * q * fee;
+  const sellFee = sp * q * fee;
+  const sellTax = sp * q * taxRateMap[market] / 100;
+  const grossPnl = (sp - bp) * q;
+  const totalFee = buyFee + sellFee + sellTax;
+  const netPnl = grossPnl - totalFee;
+  const retPct = bp && q ? (netPnl / (bp * q)) * 100 : 0;
+  const marketLabels = { kospi: 'KOSPI', kosdaq: 'KOSDAQ·K-OTC', konex: 'KONEX', unlisted: '비상장·장외' };
+  return (
+    <div>
+      <CalcHeader num="10" title="주식 총손익" desc="수수료·증권거래세 차감 후 실제 순손익과 수익률을 계산합니다." color="#8A8A8A" />
+      <div className="grid md:grid-cols-2 gap-5 mb-4">
+        <NumInput label="매수가" value={buyPrice} onChange={setBuyPrice} unit="원" placeholder="50,000" />
+        <NumInput label="매도가" value={sellPrice} onChange={setSellPrice} unit="원" placeholder="55,000" />
+        <NumInput label="수량" value={qty} onChange={setQty} unit="주" placeholder="100" />
+        <NumInput label="수수료율 (편도)" value={feeRate} onChange={setFeeRate} unit="%" placeholder="0.015" />
+      </div>
+      <div className="flex gap-2 mb-6 flex-wrap">
+        {(Object.keys(marketLabels) as (keyof typeof marketLabels)[]).map(m => (
+          <button key={m} onClick={() => setMarket(m)}
+            className="px-3 py-1.5 text-xs border transition-all"
+            style={{ borderColor: market === m ? _T.accent : _BORDER, color: market === m ? _T.accent : _T.textMuted, background: market === m ? `${_T.accent}15` : 'transparent' }}>
+            {marketLabels[m]}
+          </button>
+        ))}
+      </div>
+      <div className="grid grid-cols-2 md:grid-cols-4 border" style={{ borderColor: _BORDER }}>
+        <div className="border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="총수수료+세금" value={fmt(totalFee, 0)} unit="원" /></div>
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="세전 손익" value={fmt(grossPnl, 0)} unit="원" /></div>
+        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="순손익" value={fmt(netPnl, 0)} unit="원" highlight color="#8A8A8A" /></div>
+        <ResultBox label="실수익률" value={fmt(retPct, 2)} unit="%" />
+      </div>
+      <CalcNote
+        how={['매수가·매도가·수량·수수료율 입력', '시장 선택 (증권거래세율 자동 적용)', '수수료는 매수·매도 양방향 모두 적용, 거래세는 매도 시만 적용']}
+        example={['5만원 매수, 5.5만원 매도, 100주, 수수료 0.015%, KOSPI', '세전 손익 = 500,000원', '수수료 = 50,000×0.00015×2 ≈ 1,650원, 거래세 = 55,000×100×0.002 = 11,000원', '순손익 ≈ 487,350원, 실수익률 ≈ 9.75%']}
+        tip={['단타일수록 수수료+세금 비중이 커짐에 주의', '거래세율: KOSPI·KOSDAQ 0.20%, KONEX 0.10%, 비상장 0.35% (2026년 기준)', '미국주식 등 해외 매매는 별도 환율·세금 계산기 이용']}
+      />
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// 매매실전: R-멀티플
+// ─────────────────────────────────────────────
+function RRMultipleCalc() {
+  const [entry, setEntry] = useState('');
+  const [stop, setStop] = useState('');
+  const [target, setTarget] = useState('');
+  const ep = Number(entry) || 0;
+  const sl = Number(stop) || 0;
+  const tp = Number(target) || 0;
+  const risk = ep && sl ? Math.abs(ep - sl) : 0;
+  const reward = ep && tp ? Math.abs(tp - ep) : 0;
+  const rrRatio = risk ? reward / risk : 0;
+  // 최소 기대값: 승률 p에서 기대값 양수 조건
+  const minWinRate = rrRatio ? (1 / (1 + rrRatio)) * 100 : 0;
+  return (
+    <div>
+      <CalcHeader num="11" title="R-멀티플" desc="진입가·손절가·목표가 기반으로 리스크 대비 보상 비율(RR)을 계산합니다." color="#8A8A8A" />
+      <div className="grid md:grid-cols-3 gap-5 mb-8">
+        <NumInput label="진입가" value={entry} onChange={setEntry} unit="원" placeholder="50,000" />
+        <NumInput label="손절가 (Stop Loss)" value={stop} onChange={setStop} unit="원" placeholder="47,000" />
+        <NumInput label="목표가 (Take Profit)" value={target} onChange={setTarget} unit="원" placeholder="59,000" />
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 border" style={{ borderColor: _BORDER }}>
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="리스크 (R)" value={fmt(risk, 0)} unit="원/주" /></div>
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="보상" value={fmt(reward, 0)} unit="원/주" /></div>
+        <ResultBox label="RR 비율" value={fmt(rrRatio, 2)} unit=":1" highlight color="#8A8A8A" />
+      </div>
+      <div className="border border-t-0" style={{ borderColor: _BORDER }}>
+        <ResultBox label="기대값 0 이상의 최소 승률" value={fmt(minWinRate, 1)} unit="%" />
+      </div>
+      <CalcNote
+        how={['진입가, 손절가, 목표가 입력', 'R = |진입가 − 손절가|, 보상 = |목표가 − 진입가|', 'RR = 보상 / R']}
+        example={['진입 50,000원, 손절 47,000원, 목표 59,000원', 'R = 3,000원, 보상 = 9,000원', 'RR = 3.0 → 33.3%만 맞아도 기대값 양수']}
+        tip={['일반적으로 RR ≥ 2.0 이상인 매매만 진입하는 것이 원칙', 'RR이 높아도 목표가가 비현실적이면 의미 없음', '손절 없는 매매는 RR 계산 자체가 불가능 = 리스크 관리 없음']}
+      />
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// 매매실전: 손절가 역산
+// ─────────────────────────────────────────────
+function StopPriceCalc() {
+  const [entry, setEntry] = useState('');
+  const [capital, setCapital] = useState('');
+  const [riskPct, setRiskPct] = useState('2');
+  const [qty, setQty] = useState('');
+  const ep = Number(entry) || 0;
+  const cap = Number(capital) || 0;
+  const rp = Number(riskPct) || 0;
+  const q = Number(qty) || 0;
+  const riskAmt = cap * rp / 100;
+  // 손절가 = 진입가 - (허용손실액 / 수량)
+  const stopPrice = q && ep ? ep - riskAmt / q : 0;
+  const stopPct = ep ? ((ep - stopPrice) / ep) * 100 : 0;
+  return (
+    <div>
+      <CalcHeader num="12" title="손절가 역산" desc="총자본과 허용 리스크 비율을 입력하면 반드시 지켜야 할 손절가를 역산합니다." color="#8A8A8A" />
+      <div className="grid md:grid-cols-2 gap-5 mb-8">
+        <NumInput label="총 투자자본" value={capital} onChange={setCapital} unit="원" placeholder="100,000,000" />
+        <NumInput label="1회 허용 리스크" value={riskPct} onChange={setRiskPct} unit="%" placeholder="2" hint="보통 1~2%" />
+        <NumInput label="진입가" value={entry} onChange={setEntry} unit="원" placeholder="50,000" />
+        <NumInput label="보유 수량" value={qty} onChange={setQty} unit="주" placeholder="200" />
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 border" style={{ borderColor: _BORDER }}>
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="허용 손실액" value={fmt(riskAmt, 0)} unit="원" /></div>
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="손절가" value={fmt(stopPrice, 0)} unit="원" highlight color="#8A8A8A" /></div>
+        <ResultBox label="하락 허용 폭" value={fmt(stopPct, 2)} unit="%" />
+      </div>
+      <CalcNote
+        how={['총자본 × 허용 리스크% = 허용 손실액 계산', '손절가 = 진입가 − 허용손실액 / 수량', '이 가격 이하면 무조건 손절']}
+        example={['자본 1억, 2% 리스크, 진입가 50,000원, 200주 보유', '허용손실 = 200만원', '손절가 = 50,000 − 200만/200 = 40,000원 (−20%)']}
+        tip={['이 계산기는 "손절가를 얼마로 할까?" 가 아니라 "내 수량이 너무 많은가?" 를 확인하는 용도', 'ATR 기반 손절을 원하면 ATR 포지션 사이징 계산기 활용', '손절가를 지키지 않는 것이 계좌 폭발의 가장 큰 원인']}
+      />
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// 선물·옵션: 틱가치·틱손익
+// ─────────────────────────────────────────────
+function TickValueCalc() {
+  const [tickSize, setTickSize] = useState('0.05');
+  const [multiplier, setMultiplier] = useState('250000');
+  const [ticks, setTicks] = useState('');
+  const [contracts, setContracts] = useState('1');
+  const tv = (Number(tickSize) || 0) * (Number(multiplier) || 0);
+  const pnl = tv * (Number(ticks) || 0) * (Number(contracts) || 0);
+  const presets = [
+    { name: 'KOSPI200 선물', tick: '0.05', mult: '250000' },
+    { name: 'KOSPI200 옵션', tick: '0.01', mult: '100000' },
+    { name: 'Mini KOSPI200', tick: '0.05', mult: '50000' },
+    { name: 'KOSDAQ150 선물', tick: '0.05', mult: '10000' },
+    { name: '달러선물(KRX)', tick: '0.1', mult: '10000' },
+  ];
+  return (
+    <div>
+      <CalcHeader num="26" title="틱가치·틱손익" desc="선물·옵션 계약의 틱당 손익과 보유 계약 총손익을 계산합니다." color="#6B6B6B" />
+      <div className="flex gap-2 mb-5 flex-wrap">
+        {presets.map(p => (
+          <button key={p.name} onClick={() => { setTickSize(p.tick); setMultiplier(p.mult); }}
+            className="px-3 py-1.5 text-xs border transition-all"
+            style={{ borderColor: tickSize === p.tick && multiplier === p.mult ? _T.accent : _BORDER, color: tickSize === p.tick && multiplier === p.mult ? _T.accent : _T.textMuted, background: tickSize === p.tick && multiplier === p.mult ? `${_T.accent}15` : 'transparent' }}>
+            {p.name}
+          </button>
+        ))}
+      </div>
+      <div className="grid md:grid-cols-2 gap-5 mb-8">
+        <NumInput label="틱 크기 (Tick Size)" value={tickSize} onChange={setTickSize} unit="" placeholder="0.05" />
+        <NumInput label="계약 승수 (Multiplier)" value={multiplier} onChange={setMultiplier} unit="원" placeholder="250000" />
+        <NumInput label="이동 틱 수" value={ticks} onChange={setTicks} unit="틱" placeholder="10" hint="음수 = 손실 방향" />
+        <NumInput label="보유 계약 수" value={contracts} onChange={setContracts} unit="계약" placeholder="1" />
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 border" style={{ borderColor: _BORDER }}>
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="틱당 손익 (1계약)" value={fmt(tv, 0)} unit="원/틱" /></div>
+        <ResultBox label="총손익" value={fmt(pnl, 0)} unit="원" highlight color="#6B6B6B" />
+      </div>
+      <CalcNote
+        how={['틱 크기 × 계약 승수 = 틱당 금액 계산', '이동 틱수 × 계약수 × 틱당 금액 = 총손익']}
+        example={['KOSPI200 선물: 틱 0.05, 승수 250,000', '틱당 = 0.05 × 250,000 = 12,500원/계약', '10틱 상승, 2계약 → 손익 = 12,500 × 10 × 2 = 250,000원']}
+        tip={['틱가치를 암기하면 실시간 손익 계산이 훨씬 빠름', 'KOSPI200 선물 1틱 = 12,500원, 10틱 = 125,000원', '미국 선물(ES, NQ 등)은 달러 기준 틱가치 별도 확인']}
+      />
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// 선물·옵션: 옵션 만기손익표
+// ─────────────────────────────────────────────
+function OptionPayoffCalc() {
+  const [optType, setOptType] = useState<'call'|'put'>('call');
+  const [position, setPosition] = useState<'long'|'short'>('long');
+  const [strike, setStrike] = useState('');
+  const [premium, setPremium] = useState('');
+  const [multiplier, setMultiplier] = useState('100000');
+  const K = Number(strike) || 0;
+  const prem = Number(premium) || 0;
+  const mult = Number(multiplier) || 100000;
+  // 만기 기준점들: 행사가 ±20% 구간
+  const points = K > 0 ? Array.from({ length: 11 }, (_, i) => K * (0.8 + i * 0.04)) : [];
+  const calcPayoff = (S: number) => {
+    let intrinsic = 0;
+    if (optType === 'call') intrinsic = Math.max(0, S - K);
+    else intrinsic = Math.max(0, K - S);
+    const raw = position === 'long' ? intrinsic - prem : prem - intrinsic;
+    return raw * mult;
+  };
+  const bepPrice = optType === 'call'
+    ? (position === 'long' ? K + prem : K + prem)
+    : (position === 'long' ? K - prem : K - prem);
+  const maxProfit = position === 'long'
+    ? (optType === 'call' ? Infinity : (K - prem) * mult)
+    : prem * mult;
+  const maxLoss = position === 'long'
+    ? prem * mult
+    : (optType === 'call' ? Infinity : (K - prem) * mult);
+  return (
+    <div>
+      <CalcHeader num="27" title="옵션 만기손익표" desc="콜·풋 옵션의 만기 시 기초자산 가격별 손익을 표로 보여줍니다." color="#6B6B6B" />
+      <div className="flex gap-2 mb-4 flex-wrap">
+        <div className="flex gap-2">
+          {(['call','put'] as const).map(t => (
+            <button key={t} onClick={() => setOptType(t)}
+              className="px-4 py-1.5 text-sm border transition-all"
+              style={{ borderColor: optType === t ? _T.accent : _BORDER, color: optType === t ? _T.accent : _T.textMuted, background: optType === t ? `${_T.accent}15` : 'transparent' }}>
+              {t === 'call' ? '콜 (Call)' : '풋 (Put)'}
+            </button>
+          ))}
+        </div>
+        <div className="flex gap-2">
+          {(['long','short'] as const).map(p => (
+            <button key={p} onClick={() => setPosition(p)}
+              className="px-4 py-1.5 text-sm border transition-all"
+              style={{ borderColor: position === p ? _T.accent : _BORDER, color: position === p ? _T.accent : _T.textMuted, background: position === p ? `${_T.accent}15` : 'transparent' }}>
+              {p === 'long' ? '매수 (Long)' : '매도 (Short)'}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="grid md:grid-cols-3 gap-5 mb-6">
+        <NumInput label="행사가 (Strike)" value={strike} onChange={setStrike} unit="" placeholder="400.00" />
+        <NumInput label="프리미엄" value={premium} onChange={setPremium} unit="" placeholder="5.00" />
+        <NumInput label="계약 승수" value={multiplier} onChange={setMultiplier} unit="원" placeholder="100000" />
+      </div>
+      {K > 0 && (
+        <div className="mb-6">
+          <div className="grid grid-cols-3 border mb-0" style={{ borderColor: _BORDER }}>
+            <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="손익분기" value={fmt(bepPrice, 2)} unit="" /></div>
+            <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="최대이익" value={maxProfit === Infinity ? '무한대' : fmt(maxProfit, 0)} unit={maxProfit !== Infinity ? '원' : ''} highlight color="#6B6B6B" /></div>
+            <ResultBox label="최대손실" value={maxLoss === Infinity ? '무한대' : fmt(maxLoss, 0)} unit={maxLoss !== Infinity ? '원' : ''} />
+          </div>
+          <div className="border border-t-0 overflow-x-auto" style={{ borderColor: _BORDER }}>
+            <table className="w-full text-xs mono">
+              <thead>
+                <tr style={{ borderBottom: `1px solid ${_BORDER}` }}>
+                  <th className="px-3 py-2 text-left font-normal" style={{ color: _T.textFaint }}>기초자산 가격</th>
+                  <th className="px-3 py-2 text-right font-normal" style={{ color: _T.textFaint }}>만기 손익 (원)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {points.map((S, i) => {
+                  const pnl = calcPayoff(S);
+                  return (
+                    <tr key={i} style={{ borderBottom: i < points.length-1 ? `1px solid ${_BORDER}` : 'none', background: Math.abs(S - bepPrice) < K * 0.01 ? `${_T.accent}18` : 'transparent' }}>
+                      <td className="px-3 py-2" style={{ color: _T.textMuted }}>{fmt(S, 2)}</td>
+                      <td className="px-3 py-2 text-right" style={{ color: pnl >= 0 ? '#4A7045' : '#A63D33' }}>{pnl >= 0 ? '+' : ''}{fmt(pnl, 0)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+      <CalcNote
+        how={['콜/풋, 매수/매도 선택', '행사가·프리미엄·승수 입력', '행사가 ±20% 구간에서 만기 손익 자동 산출']}
+        example={['콜 매수, 행사가 400, 프리미엄 5, 승수 100,000', '손익분기 = 405', '기초자산 420 시: (420−400−5) × 100,000 = 1,500,000원 이익']}
+        tip={['옵션 매도는 이론상 무한 손실 가능 → 리스크 관리 필수', '프리미엄은 포인트 단위 입력 (계약 승수 별도 적용)', '실제 P&L은 수수료·슬리피지 추가 차감']}
+      />
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// 리스크관리: ATR 포지션 사이징
+// ─────────────────────────────────────────────
+function ATRSizeCalc() {
+  const [capital, setCapital] = useState('');
+  const [riskPct, setRiskPct] = useState('2');
+  const [atr, setAtr] = useState('');
+  const [atrMult, setAtrMult] = useState('2');
+  const [entry, setEntry] = useState('');
+  const cap = Number(capital) || 0;
+  const rp = Number(riskPct) || 0;
+  const atrVal = Number(atr) || 0;
+  const mult = Number(atrMult) || 2;
+  const ep = Number(entry) || 0;
+  const riskAmt = cap * rp / 100;
+  const stopDist = atrVal * mult;
+  const stopPrice = ep ? ep - stopDist : 0;
+  const shares = stopDist ? Math.floor(riskAmt / stopDist) : 0;
+  const posValue = shares * ep;
+  const posPct = cap ? (posValue / cap) * 100 : 0;
+  return (
+    <div>
+      <CalcHeader num="36" title="ATR 포지션 사이징" desc="ATR(평균진폭) 기반으로 변동성에 맞는 적정 수량을 계산합니다." color="#4F7E7C" />
+      <div className="grid md:grid-cols-2 gap-5 mb-8">
+        <NumInput label="총 투자자본" value={capital} onChange={setCapital} unit="원" placeholder="100,000,000" />
+        <NumInput label="1회 허용 리스크" value={riskPct} onChange={setRiskPct} unit="%" placeholder="2" hint="1~2% 권장" />
+        <NumInput label="ATR (평균진폭)" value={atr} onChange={setAtr} unit="원" placeholder="1,500" hint="14일 ATR 권장" />
+        <NumInput label="ATR 배수 (손절폭)" value={atrMult} onChange={setAtrMult} unit="×" placeholder="2" hint="보통 1.5~3" />
+        <NumInput label="진입가" value={entry} onChange={setEntry} unit="원" placeholder="50,000" />
+      </div>
+      <div className="grid grid-cols-2 md:grid-cols-4 border" style={{ borderColor: _BORDER }}>
+        <div className="border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="ATR 손절폭" value={fmt(stopDist, 0)} unit="원" /></div>
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="손절가" value={fmt(stopPrice, 0)} unit="원" /></div>
+        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="매수 수량" value={fmt(shares, 0)} unit="주" highlight color="#4F7E7C" /></div>
+        <ResultBox label="포지션 비중" value={fmt(posPct, 1)} unit="%" />
+      </div>
+      <CalcNote
+        how={['ATR × 배수 = 손절폭 설정', '허용손실액 ÷ 손절폭 = 적정 수량', '시장 변동성이 클수록 수량을 줄여 일정 리스크 유지']}
+        example={['자본 1억, 리스크 2%, ATR=1,500원, 배수=2, 진입 50,000원', '손절폭 = 3,000원, 허용손실 200만원', '수량 = 200만 ÷ 3,000 = 666주, 포지션 = 3,330만원 (33%)']}
+        tip={['ATR은 HTS/MTS "Average True Range" 지표 값을 사용', '변동성 장세(ATR 상승)에서는 자동으로 수량이 줄어 위험 관리됨', 'ATR 배수 2~3배 손절이 일반적 — 1배 미만은 노이즈에 걸릴 위험']}
+      />
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// 리스크관리: 연속손실 한도
+// ─────────────────────────────────────────────
+function LoseStreakCalc() {
+  const [capital, setCapital] = useState('');
+  const [riskPct, setRiskPct] = useState('2');
+  const [streak, setStreak] = useState('5');
+  const [drawdownLimit, setDrawdownLimit] = useState('20');
+  const cap = Number(capital) || 0;
+  const rp = Number(riskPct) || 0;
+  const n = Math.round(Number(streak) || 5);
+  const ddLimit = Number(drawdownLimit) || 20;
+  // n번 연속 손실 후 잔고
+  const remainPct = Math.pow(1 - rp / 100, n) * 100;
+  const remainAmt = cap * Math.pow(1 - rp / 100, n);
+  const drawdownPct = 100 - remainPct;
+  // 한도 초과 여부
+  const exceeded = drawdownPct > ddLimit;
+  // 한도 내 최대 연속손실
+  const maxStreak = Math.floor(Math.log(1 - ddLimit / 100) / Math.log(1 - rp / 100));
+  return (
+    <div>
+      <CalcHeader num="37" title="연속손실 한도" desc="연속 손절 시 자본 감소를 시뮬레이션하고 한도 초과 여부를 확인합니다." color="#4F7E7C" />
+      <div className="grid md:grid-cols-2 gap-5 mb-8">
+        <NumInput label="총 투자자본" value={capital} onChange={setCapital} unit="원" placeholder="100,000,000" />
+        <NumInput label="1회 리스크" value={riskPct} onChange={setRiskPct} unit="%" placeholder="2" />
+        <NumInput label="연속 손절 횟수 시뮬레이션" value={streak} onChange={setStreak} unit="회" placeholder="5" />
+        <NumInput label="MDD 허용 한도" value={drawdownLimit} onChange={setDrawdownLimit} unit="%" placeholder="20" hint="이 이상이면 매매 중단" />
+      </div>
+      <div className="grid grid-cols-2 md:grid-cols-3 border mb-4" style={{ borderColor: _BORDER }}>
+        <div className="border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label={`${n}연패 후 잔고`} value={fmt(remainAmt, 0)} unit="원" highlight color="#4F7E7C" /></div>
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="손실률" value={fmt(drawdownPct, 2)} unit="%" /></div>
+        <ResultBox label={`한도 내 최대 연패`} value={String(maxStreak)} unit="회" />
+      </div>
+      {exceeded && (
+        <div className="border px-4 py-3 mb-4 text-sm" style={{ borderColor: '#A63D33', color: '#A63D33', background: '#A63D3318' }}>
+          ⚠ {n}연패 시 MDD {fmt(drawdownPct, 1)}%로 허용한도 {drawdownLimit}%를 초과합니다. 1회 리스크를 줄이거나 한도를 재설정하세요.
+        </div>
+      )}
+      <CalcNote
+        how={['연속 손실 시 복리로 자본 감소: (1−r%)^n', '한도 내 최대 연패 = log(1−한도%) / log(1−r%) (내림)']}
+        example={['자본 1억, 1회 리스크 2%, 10연패', '잔고 = 1억 × 0.98^10 = 8,170만원 (−18.3%)', '20% 한도 기준 최대 연패 = 10.3 → 10회']}
+        tip={['2% 룰로 50연패를 해도 자본의 36%가 남음 (파산 없음)', '5% 룰은 20연패면 35% 손실 — 연속 손절에 매우 취약', '연패 후 본전 회복의 비대칭: −20% = +25%, −50% = +100% 필요']}
+      />
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// 거시·환율: 해외주식 원화 총손익
+// ─────────────────────────────────────────────
+function ForeignStockPnLCalc() {
+  const [buyPrice, setBuyPrice] = useState('');
+  const [sellPrice, setSellPrice] = useState('');
+  const [qty, setQty] = useState('');
+  const [buyFx, setBuyFx] = useState('');
+  const [sellFx, setSellFx] = useState('');
+  const [feeRate, setFeeRate] = useState('0.25');
+  const bp = Number(buyPrice) || 0;
+  const sp = Number(sellPrice) || 0;
+  const q = Number(qty) || 0;
+  const bfx = Number(buyFx) || 0;
+  const sfx = Number(sellFx) || 0;
+  const fee = Number(feeRate) / 100;
+  const buyKRW = bp * q * bfx;
+  const sellKRW = sp * q * sfx;
+  const buyFeeKRW = buyKRW * fee;
+  const sellFeeKRW = sellKRW * fee;
+  const netPnl = sellKRW - buyKRW - buyFeeKRW - sellFeeKRW;
+  const fxEffect = (sfx - bfx) * bp * q; // 환차손익 (매수 수량 기준)
+  const stockEffect = (sp - bp) * q * sfx; // 주가 손익
+  const retPct = buyKRW ? (netPnl / buyKRW) * 100 : 0;
+  return (
+    <div>
+      <CalcHeader num="38" title="해외주식 원화 총손익" desc="매수·매도 시 환율 차이를 반영한 실제 원화 기준 순손익을 계산합니다." color="#7C6A9B" />
+      <div className="grid md:grid-cols-2 gap-5 mb-4">
+        <NumInput label="매수가 (외화)" value={buyPrice} onChange={setBuyPrice} unit="" placeholder="100.00" />
+        <NumInput label="매도가 (외화)" value={sellPrice} onChange={setSellPrice} unit="" placeholder="120.00" />
+        <NumInput label="수량" value={qty} onChange={setQty} unit="주" placeholder="10" />
+        <NumInput label="수수료율 (편도)" value={feeRate} onChange={setFeeRate} unit="%" placeholder="0.25" />
+        <NumInput label="매수 시 환율" value={buyFx} onChange={setBuyFx} unit="원" placeholder="1,320.00" hint="매수 당시 적용 환율" />
+        <NumInput label="매도 시 환율" value={sellFx} onChange={setSellFx} unit="원" placeholder="1,380.00" hint="매도 당시 적용 환율" />
+      </div>
+      <div className="grid grid-cols-2 md:grid-cols-4 border" style={{ borderColor: _BORDER }}>
+        <div className="border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="매수 원화비용" value={fmt(buyKRW+buyFeeKRW, 0)} unit="원" /></div>
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="주가 손익(원화)" value={fmt(stockEffect, 0)} unit="원" /></div>
+        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="환차 손익" value={fmt(fxEffect, 0)} unit="원" /></div>
+        <ResultBox label="순손익" value={fmt(netPnl, 0)} unit="원" highlight color="#7C6A9B" />
+      </div>
+      <div className="border border-t-0" style={{ borderColor: _BORDER }}>
+        <ResultBox label="원화 기준 수익률" value={fmt(retPct, 2)} unit="%" />
+      </div>
+      <CalcNote
+        how={['매수·매도 각 시점의 환율을 따로 입력', '원화 손익 = 주가 손익 + 환차 손익 − 수수료(양방향)']}
+        example={['100달러 매수(환율 1,320), 120달러 매도(환율 1,380), 10주, 수수료 0.25%', '주가손익 = 20 × 10 × 1,380 = 276,000원', '환차익 = (1,380−1,320) × 100 × 10 = 60,000원', '수수료 약 55,650원 → 순손익 ≈ 280,350원']}
+        tip={['환율이 오르면 이미 달러 자산은 원화 기준 추가 수익', '반대로 환율 하락 시 주가 상승해도 원화 손실 가능', '미국주식 매도세: 양도차익 250만 초과분 22% (해외주식 양도소득세 계산기 참고)']}
+      />
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// 거시·환율: 채권 듀레이션 민감도
+// ─────────────────────────────────────────────
+function DurationImpactCalc() {
+  const [duration, setDuration] = useState('');
+  const [yieldChange, setYieldChange] = useState('');
+  const [faceValue, setFaceValue] = useState('');
+  const D = Number(duration) || 0;
+  const dy = Number(yieldChange) || 0; // in bps
+  const fv = Number(faceValue) || 0;
+  // 가격 변화율 ≈ −D × Δy (Δy를 bps → % 변환)
+  const priceChangePct = -D * (dy / 100);
+  const priceChangeAmt = fv * priceChangePct / 100;
+  const modDuration = D; // 수정 듀레이션 직접 입력 방식
+  return (
+    <div>
+      <CalcHeader num="39" title="채권 듀레이션 민감도" desc="수정 듀레이션과 금리 변화 폭으로 채권 가격 변동률을 추정합니다." color="#7C6A9B" />
+      <div className="grid md:grid-cols-3 gap-5 mb-8">
+        <NumInput label="수정 듀레이션 (Modified Duration)" value={duration} onChange={setDuration} unit="년" placeholder="5.0" />
+        <NumInput label="금리 변화" value={yieldChange} onChange={setYieldChange} unit="bp" placeholder="25" hint="+25 = 0.25% 상승" />
+        <NumInput label="채권 평가액 (원)" value={faceValue} onChange={setFaceValue} unit="원" placeholder="100,000,000" />
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 border" style={{ borderColor: _BORDER }}>
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}>
+          <ResultBox label="가격 변동률" value={fmt(priceChangePct, 3)} unit="%" highlight color="#7C6A9B" />
+        </div>
+        <ResultBox label="평가손익 (추정)" value={fmt(priceChangeAmt, 0)} unit="원" />
+      </div>
+      <CalcNote
+        how={['가격 변화율 ≈ −수정듀레이션 × 금리변화(bp/100)', '금리 상승 → 채권 가격 하락 (음의 관계)']}
+        example={['수정듀레이션 5년, 금리 +25bp, 평가액 1억', '가격 변동 ≈ −5 × 0.25% = −1.25%', '평가손 ≈ −1,250,000원']}
+        tip={['듀레이션이 길수록 금리 민감도 상승 (장기채 변동성 큼)', '이 공식은 볼록성(Convexity) 미반영 — 대규모 금리 변동 시 오차 존재', '금리 1%p 상승 시 10년물 채권 ≈ −9% 손실 (듀레이션 9 기준)']}
+      />
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// 시장·ETF: ETF 괴리율
+// ─────────────────────────────────────────────
+function ETFPremiumCalc() {
+  const [nav, setNav] = useState('');
+  const [price, setPrice] = useState('');
+  const navVal = Number(nav) || 0;
+  const priceVal = Number(price) || 0;
+  const premium = navVal ? ((priceVal - navVal) / navVal) * 100 : 0;
+  const isPremium = premium > 0;
+  return (
+    <div>
+      <CalcHeader num="50" title="ETF 괴리율" desc="시장가와 순자산가치(NAV)의 괴리율을 계산합니다." color="#6B9B6B" />
+      <div className="grid md:grid-cols-2 gap-5 mb-8">
+        <NumInput label="NAV (순자산가치)" value={nav} onChange={setNav} unit="원" placeholder="10,500" hint="전일 종가 NAV 사용 가능" />
+        <NumInput label="현재 시장가 (ETF 가격)" value={price} onChange={setPrice} unit="원" placeholder="10,480" />
+      </div>
+      <div className="border" style={{ borderColor: _BORDER }}>
+        <ResultBox label={isPremium ? '프리미엄 (시장가 > NAV)' : '디스카운트 (시장가 < NAV)'} value={fmt(Math.abs(premium), 3)} unit="%" highlight color="#6B9B6B" />
+      </div>
+      {Math.abs(premium) > 0.5 && (
+        <div className="mt-3 border px-4 py-3 text-sm" style={{ borderColor: '#A63D33', color: '#A63D33', background: '#A63D3318' }}>
+          ⚠ 괴리율 {fmt(Math.abs(premium), 2)}% — 0.5% 초과 시 유동성 부족 또는 시장 충격 가능성이 있습니다.
+        </div>
+      )}
+      <CalcNote
+        how={['괴리율 = (시장가 − NAV) ÷ NAV × 100', '양수 = 프리미엄 (시장가 고평가), 음수 = 디스카운트']}
+        example={['NAV 10,500원, 시장가 10,480원', '괴리율 = (10,480 − 10,500) ÷ 10,500 × 100 = −0.19%', '→ 소폭 디스카운트 — 정상 범위']}
+        tip={['국내 ETF 정상 괴리율: ±0.5% 이내', '거래량 적은 ETF는 괴리율 커질 수 있음 → 지정참가회사(AP) 부재 시 악화', '괴리율 크면 NAV 대비 손해볼 수 있으므로 주의', '레버리지·인버스 ETF는 일별 복리 효과로 장기 보유 시 추가 손익 발생']}
+      />
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// 시장·ETF: ETF 추적차이
+// ─────────────────────────────────────────────
+function TrackingDiffCalc() {
+  const [etfReturn, setEtfReturn] = useState('');
+  const [indexReturn, setIndexReturn] = useState('');
+  const [period, setPeriod] = useState('1');
+  const er = Number(etfReturn) || 0;
+  const ir = Number(indexReturn) || 0;
+  const y = Number(period) || 1;
+  const trackingDiff = er - ir;
+  const annualized = y > 0 ? trackingDiff / y : trackingDiff;
+  return (
+    <div>
+      <CalcHeader num="51" title="ETF 추적차이" desc="ETF 수익률과 추종 지수 수익률의 차이를 계산합니다." color="#6B9B6B" />
+      <div className="grid md:grid-cols-3 gap-5 mb-8">
+        <NumInput label="ETF 수익률" value={etfReturn} onChange={setEtfReturn} unit="%" placeholder="12.5" />
+        <NumInput label="기초지수 수익률" value={indexReturn} onChange={setIndexReturn} unit="%" placeholder="13.0" />
+        <NumInput label="측정 기간" value={period} onChange={setPeriod} unit="년" placeholder="1" />
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 border" style={{ borderColor: _BORDER }}>
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}>
+          <ResultBox label="추적차이 (Tracking Difference)" value={fmt(trackingDiff, 3)} unit="%" highlight color="#6B9B6B" />
+        </div>
+        <ResultBox label="연환산 추적차이" value={fmt(annualized, 3)} unit="%/년" />
+      </div>
+      <CalcNote
+        how={['추적차이 = ETF 수익률 − 기초지수 수익률', '음수 = ETF가 지수보다 덜 벌었음 (비용 등으로 인한 언더퍼폼)']}
+        example={['ETF 1년 수익 12.5%, 지수 13.0%', '추적차이 = −0.5%/년', '→ 운용보수+거래비용 등으로 연 0.5% 손실']}
+        tip={['추적차이 vs 추적오차(Tracking Error): 추적차이는 수익률 차이, 추적오차는 표준편차', '국내 ETF 운용보수: 0.05~0.5%, 추적차이는 이보다 클 수 있음', '장기 투자일수록 추적차이 누적 손실 주의', 'ETF 선택 시 TER(총비용비율)과 함께 추적차이 확인 권장']}
+      />
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// 세금·절세: ISA 절세효과
+// ─────────────────────────────────────────────
+function ISATaxCalc() {
+  const [annualReturn, setAnnualReturn] = useState('');
+  const [principal, setPrincipal] = useState('');
+  const [years, setYears] = useState('5');
+  const [isaType, setIsaType] = useState<'general'|'youth'|'service'>('general');
+  const exemptMap = { general: 2000000, youth: 4000000, service: 4000000 };
+  const exempt = exemptMap[isaType];
+  const p = Number(principal) || 0;
+  const r = (Number(annualReturn) || 0) / 100;
+  const y = Number(years) || 5;
+  const totalReturn = p * (Math.pow(1 + r, y) - 1);
+  // ISA 세금
+  const isaExcess = Math.max(0, totalReturn - exempt);
+  const isaTax = isaExcess * 0.099; // 9.9% 분리과세
+  // 일반 계좌 (이자·배당 15.4%)
+  const generalTax = totalReturn * 0.154;
+  const saving = generalTax - isaTax;
+  const isaEffRate = totalReturn ? (isaTax / totalReturn) * 100 : 0;
+  const typeLabels = { general: '일반형 (비과세 200만)', youth: '청년형 (비과세 400만)', service: '서민·농어민형 (비과세 400만)' };
+  return (
+    <div>
+      <CalcHeader num="53" title="ISA 절세효과" desc="ISA 계좌의 비과세·분리과세 혜택으로 절약되는 세금을 계산합니다." color="#5B8DB8" />
+      <div className="flex gap-2 mb-5 flex-wrap">
+        {(Object.keys(typeLabels) as (keyof typeof typeLabels)[]).map(t => (
+          <button key={t} onClick={() => setIsaType(t)}
+            className="px-3 py-1.5 text-xs border transition-all"
+            style={{ borderColor: isaType === t ? _T.accent : _BORDER, color: isaType === t ? _T.accent : _T.textMuted, background: isaType === t ? `${_T.accent}15` : 'transparent' }}>
+            {typeLabels[t]}
+          </button>
+        ))}
+      </div>
+      <div className="grid md:grid-cols-3 gap-5 mb-8">
+        <NumInput label="투자원금" value={principal} onChange={setPrincipal} unit="원" placeholder="50,000,000" />
+        <NumInput label="연 수익률" value={annualReturn} onChange={setAnnualReturn} unit="%" placeholder="5" />
+        <NumInput label="운용 기간" value={years} onChange={setYears} unit="년" placeholder="5" hint="최소 3년 유지 필요" />
+      </div>
+      <div className="grid grid-cols-2 md:grid-cols-4 border" style={{ borderColor: _BORDER }}>
+        <div className="border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="총수익" value={fmt(totalReturn, 0)} unit="원" /></div>
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="ISA 세금" value={fmt(isaTax, 0)} unit="원" /></div>
+        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="일반 계좌 세금" value={fmt(generalTax, 0)} unit="원" /></div>
+        <ResultBox label="절세 효과" value={fmt(saving, 0)} unit="원" highlight color="#5B8DB8" />
+      </div>
+      <div className="border border-t-0" style={{ borderColor: _BORDER }}>
+        <ResultBox label="ISA 실효세율" value={fmt(isaEffRate, 2)} unit="%" />
+      </div>
+      <CalcNote
+        how={['수익 중 비과세 한도(200만/400만) 차감 후 초과분에 9.9% 분리과세', '일반 계좌는 이자·배당 전액 15.4% 원천징수와 비교']}
+        example={['5,000만 투자, 연 5%, 5년 운용, 일반형', '총수익 ≈ 1,381만원, 비과세 200만', '초과 1,181만 × 9.9% = 117만원 (일반 213만 대비 96만 절약)']}
+        tip={['최소 3년 유지해야 비과세·분리과세 혜택 적용', '연 최대 납입 2,000만원, 5년 총 1억 한도', '만기 후 IRP/연금저축으로 이전 시 추가 세액공제 가능', '청년형(만 19~34세, 근로소득 5,000만 이하)은 비과세 400만원']}
+      />
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// 세금·절세: ISA 만기 연금전환
+// ─────────────────────────────────────────────
+function ISAPensionCalc() {
+  const [isaBalance, setIsaBalance] = useState('');
+  const [transferPct, setTransferPct] = useState('100');
+  const [income, setIncome] = useState('');
+  const bal = Number(isaBalance) || 0;
+  const tPct = Math.min(100, Number(transferPct) || 100);
+  const transferAmt = bal * tPct / 100;
+  const inc = Number(income) || 0;
+  const isLow = inc <= 55000000;
+  const creditRate = isLow ? 0.165 : 0.132;
+  // 추가 세액공제 한도: 이전액의 10%, 최대 300만
+  const extraCredit = Math.min(transferAmt * 0.10, 3000000);
+  const taxCredit = extraCredit * creditRate;
+  return (
+    <div>
+      <CalcHeader num="54" title="ISA 만기 연금 전환" desc="ISA 만기 자금을 IRP/연금저축으로 이전 시 추가 세액공제 혜택을 계산합니다." color="#5B8DB8" />
+      <div className="grid md:grid-cols-3 gap-5 mb-8">
+        <NumInput label="ISA 만기 잔액" value={isaBalance} onChange={setIsaBalance} unit="원" placeholder="60,000,000" />
+        <NumInput label="연금 이전 비율" value={transferPct} onChange={setTransferPct} unit="%" placeholder="100" hint="이전 금액의 10%, 최대 300만 공제" />
+        <NumInput label="연간 총소득" value={income} onChange={setIncome} unit="원" placeholder="60,000,000" hint="세액공제율 결정" />
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 border" style={{ borderColor: _BORDER }}>
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="연금 이전 금액" value={fmt(transferAmt, 0)} unit="원" /></div>
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="추가 세액공제 한도" value={fmt(extraCredit, 0)} unit="원" /></div>
+        <ResultBox label="환급 세액" value={fmt(taxCredit, 0)} unit="원" highlight color="#5B8DB8" />
+      </div>
+      <CalcNote
+        how={['ISA 만기 자금 → IRP/연금저축 이전 시 이전액의 10%(최대 300만원) 추가 세액공제', '세액공제율: 총소득 5,500만 이하 16.5%, 초과 13.2%']}
+        example={['ISA 잔액 6,000만원 전액 이전, 소득 6,000만원', '추가 공제한도 = 6,000만 × 10% = 600만 → 최대 300만 적용', '세액공제 = 300만 × 13.2% = 396,000원 추가 환급']}
+        tip={['ISA 만기(3년 이후) → 60일 이내에 연금 계좌로 이전해야 혜택 적용', '기존 IRP/연금저축 납입 한도(연 900만)와 별도로 추가 공제', '노후 자금 마련과 세금 절약을 동시에 실현하는 핵심 전략']}
+      />
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// 세금·절세: 해외주식 양도소득세
+// ─────────────────────────────────────────────
+function OverseaCGTaxCalc() {
+  const [totalProfit, setTotalProfit] = useState('');
+  const [totalLoss, setTotalLoss] = useState('');
+  const [prevCarryover, setPrevCarryover] = useState('');
+  const profit = Number(totalProfit) || 0;
+  const loss = Number(totalLoss) || 0;
+  const carryover = Number(prevCarryover) || 0;
+  const netGain = profit - loss;
+  const deduction = 2500000; // 250만원 기본공제 (파생상품과 합산)
+  const afterCarryover = netGain - carryover;
+  const taxableGain = Math.max(0, afterCarryover - deduction);
+  // 해외주식 양도소득세: 국세 20% + 지방소득세 2% = 22%
+  const tax = taxableGain * 0.20;
+  const localTax = taxableGain * 0.02;
+  const totalTax = tax + localTax;
+  const effectiveRate = netGain > 0 ? (totalTax / netGain) * 100 : 0;
+  return (
+    <div>
+      <CalcHeader num="55" title="해외주식 양도소득세" desc="해외주식 연간 손익 합산 후 250만원 공제를 적용한 양도세를 계산합니다. 2026년 기준." color="#5B8DB8" />
+      <div className="grid md:grid-cols-2 gap-5 mb-5">
+        <NumInput label="연간 총 이익 합계" value={totalProfit} onChange={setTotalProfit} unit="원" placeholder="10,000,000" />
+        <NumInput label="연간 총 손실 합계" value={totalLoss} onChange={setTotalLoss} unit="원" placeholder="3,000,000" />
+      </div>
+      <div className="mb-6">
+        <NumInput label="전년도 이월결손금 (있는 경우)" value={prevCarryover} onChange={setPrevCarryover} unit="원" placeholder="0" />
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 border mb-4" style={{ borderColor: _BORDER }}>
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="순손익" value={fmt(netGain, 0)} unit="원" /></div>
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="과세표준 (공제 후)" value={fmt(taxableGain, 0)} unit="원" /></div>
+        <ResultBox label="납부세액 (국세+지방)" value={fmt(totalTax, 0)} unit="원" highlight color="#5B8DB8" />
+      </div>
+      {taxableGain > 0 && (
+        <div className="border border-t-0 mb-4" style={{ borderColor: _BORDER }}>
+          <ResultBox label="실효세율 (순이익 대비)" value={fmt(effectiveRate, 2)} unit="%" />
+        </div>
+      )}
+      <CalcNote
+        how={['순손익 = 총이익 − 총손실 (연간 합산)', '이월결손금 차감 후 250만원 기본공제', '과세표준 × 22% (국세 20% + 지방소득세 2%)']}
         example={['총이익 1,000만, 총손실 300만, 이월결손 0', '순손익 700만 − 250만(공제) = 과세표준 450만원', '세금 = 450만 × 22% = 99만원']}
-        tip={['파생상품(선물·옵션): 세율 20% + 지방세 2% = 22%', '기본공제 250만원: 매년 리셋', '손실 이월: 5년간 이월공제 가능 (법정 요건 충족 시)', '해외선물도 동일 세율 적용, 환산 손익으로 계산', '5월 종합소득세 신고 시 함께 신고', '※ 정확한 납세액은 세무사 확인을 권장합니다.']}
+        tip={['기본공제 250만원: 해외주식·파생상품 합산 공제 (각각 250만이 아님)', '손실 이월: 5년간 이월공제 가능', '매년 5월 종합소득세 신고 시 함께 신고', '환차손익은 별도 — 원화 기준 취득가액과 양도가액으로 계산', '※ 세율은 변경될 수 있습니다. 정확한 납세액은 세무사 확인 권장.']}
+      />
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// 세금·절세: 배당소득세
+// ─────────────────────────────────────────────
+function DividendTaxCalc() {
+  const [dividend, setDividend] = useState('');
+  const [country, setCountry] = useState<'domestic'|'us'|'other'>('domestic');
+  const [grossUp, setGrossUp] = useState(true);
+  const div = Number(dividend) || 0;
+  // 국내 주식 배당: 15.4% (소득세 14% + 지방소득세 1.4%)
+  // 미국 주식 배당: 미국에서 15% 원천징수, 한국에서 15.4% 기준으로 외국납부세액공제
+  const domesticTax = div * 0.154;
+  const domesticNetDiv = div - domesticTax;
+  // Gross-up: 배당 × 10% 가산 후 세액 계산, 배당세액공제
+  const grossUpAmount = div * 0.10;
+  const grossUpBase = div + grossUpAmount;
+  const grossUpTax = grossUpBase * 0.14; // 14% 소득세 (지방 제외, 단순화)
+  const dividendCredit = grossUpAmount * 0.10; // 가산액의 10%
+  const grossUpNetTax = grossUpTax - dividendCredit;
+  // 미국 주식: 현지 15% 원천징수
+  const usTax = div * 0.15;
+  const usKrTax = Math.max(0, div * 0.14 - usTax); // 외국납부세액공제 후 추가 납부
+  const usTotalTax = usTax + usKrTax;
+  return (
+    <div>
+      <CalcHeader num="56" title="배당소득세" desc="국내외 배당소득에 대한 원천징수세와 실수령액을 계산합니다." color="#5B8DB8" />
+      <div className="flex gap-2 mb-5">
+        {(['domestic','us','other'] as const).map(c => (
+          <button key={c} onClick={() => setCountry(c)}
+            className="px-3 py-1.5 text-sm border transition-all"
+            style={{ borderColor: country === c ? _T.accent : _BORDER, color: country === c ? _T.accent : _T.textMuted, background: country === c ? `${_T.accent}15` : 'transparent' }}>
+            {c === 'domestic' ? '국내주식' : c === 'us' ? '미국주식' : '기타 해외'}
+          </button>
+        ))}
+      </div>
+      <div className="mb-8">
+        <NumInput label="배당금 (세전)" value={dividend} onChange={setDividend} unit="원" placeholder="1,000,000" />
+      </div>
+      {country === 'domestic' && (
+        <div className="grid grid-cols-1 md:grid-cols-3 border" style={{ borderColor: _BORDER }}>
+          <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="원천징수세 (15.4%)" value={fmt(domesticTax, 0)} unit="원" /></div>
+          <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="실수령 배당금" value={fmt(domesticNetDiv, 0)} unit="원" highlight color="#5B8DB8" /></div>
+          <ResultBox label="실효세율" value="15.4" unit="%" />
+        </div>
+      )}
+      {country === 'us' && (
+        <div className="grid grid-cols-1 md:grid-cols-3 border" style={{ borderColor: _BORDER }}>
+          <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="미국 원천세 (15%)" value={fmt(usTax, 0)} unit="원" /></div>
+          <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="추가 납부 (한국)" value={fmt(usKrTax, 0)} unit="원" /></div>
+          <ResultBox label="실수령 배당금" value={fmt(div - usTotalTax, 0)} unit="원" highlight color="#5B8DB8" />
+        </div>
+      )}
+      {country === 'other' && (
+        <div className="border p-4 text-sm" style={{ borderColor: _BORDER, color: _T.textMuted }}>
+          기타 해외주식은 국가별 원천세율이 다릅니다. 해당 국가의 한국과의 조세조약을 확인하세요. 일반적으로 현지 원천세 차감 후 한국 세율 15.4%와의 차액을 추가 납부합니다.
+        </div>
+      )}
+      <CalcNote
+        how={['국내: 배당 × 15.4% 원천징수 (소득세 14% + 지방소득세 1.4%)', '미국: 현지 15% 원천징수 후 한국 기준(14%) 초과분 환급 → 사실상 15% 과세', '금융소득 2,000만 초과 시 종합과세 대상']}
+        example={['국내 배당 100만원 → 세금 154,000원, 실수령 846,000원', '미국 배당 100만원 → 미국세 15만원, 추가 납부 없음, 실수령 85만원']}
+        tip={['배당소득 종합과세: 연간 금융소득(이자+배당) 2,000만 초과 시 적용', '국내 법인 상장주식 배당의 Gross-up(가산): 종합과세 대상인 경우에만 적용', '미국 ETF 배당은 일반 배당과 동일하게 15% 원천징수']}
+      />
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// 세금·절세: 사적연금 세후수령액
+// ─────────────────────────────────────────────
+function PrivatePensionTaxCalc() {
+  const [annualPension, setAnnualPension] = useState('');
+  const [age, setAge] = useState('65');
+  const [pensionType, setPensionType] = useState<'irp'|'pension_saving'>('irp');
+  const [hasOtherPension, setHasOtherPension] = useState(false);
+  const [otherPension, setOtherPension] = useState('');
+  const amount = Number(annualPension) || 0;
+  const ageNum = Number(age) || 65;
+  const other = Number(otherPension) || 0;
+  const totalPension = amount + (hasOtherPension ? other : 0);
+  // 연금소득세율 (나이 기준)
+  const pensionTaxRate = ageNum >= 80 ? 3.3 : ageNum >= 70 ? 4.4 : 5.5;
+  // 연간 1,500만 초과 시 종합과세 또는 16.5% 분리과세 선택
+  const isComprehensive = totalPension > 15000000;
+  const pensionTax = amount * pensionTaxRate / 100;
+  const netPension = amount - pensionTax;
+  const separateTax15 = amount * 0.165; // 종합과세 회피 시 16.5%
+  return (
+    <div>
+      <CalcHeader num="57" title="사적연금 세후수령액" desc="IRP·연금저축 연금 수령 시 나이별 세율을 적용한 실수령액을 계산합니다." color="#5B8DB8" />
+      <div className="grid md:grid-cols-2 gap-5 mb-4">
+        <NumInput label="연간 수령 예정액" value={annualPension} onChange={setAnnualPension} unit="원" placeholder="12,000,000" />
+        <NumInput label="수령 시작 나이" value={age} onChange={setAge} unit="세" placeholder="65" hint="55~69세 5.5%, 70~79세 4.4%, 80세+ 3.3%" />
+      </div>
+      <div className="flex items-center gap-3 mb-6">
+        <button onClick={() => setHasOtherPension(!hasOtherPension)}
+          className="flex items-center gap-2 px-3 py-1.5 border text-sm"
+          style={{ borderColor: hasOtherPension ? _T.accent : _BORDER, color: hasOtherPension ? _T.accent : _T.textMuted }}>
+          <span className="w-3 h-3 border flex items-center justify-center" style={{ borderColor: 'currentColor' }}>
+            {hasOtherPension && <span className="w-1.5 h-1.5" style={{ background: 'currentColor' }} />}
+          </span>
+          다른 사적연금 합산
+        </button>
+        {hasOtherPension && (
+          <NumInput label="기타 연금 수령액" value={otherPension} onChange={setOtherPension} unit="원" placeholder="5,000,000" />
+        )}
+      </div>
+      {isComprehensive && (
+        <div className="border px-4 py-3 mb-4 text-sm" style={{ borderColor: '#A63D33', color: '#A63D33', background: '#A63D3318' }}>
+          ⚠ 사적연금 연수령 합계 {fmt(totalPension/10000, 0)}만원 — 1,500만원 초과로 종합과세 또는 16.5% 분리과세를 선택해야 합니다.
+        </div>
+      )}
+      <div className="grid grid-cols-1 md:grid-cols-3 border" style={{ borderColor: _BORDER }}>
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label={`연금소득세 (${pensionTaxRate}%)`} value={fmt(pensionTax, 0)} unit="원" /></div>
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="실수령액" value={fmt(netPension, 0)} unit="원" highlight color="#5B8DB8" /></div>
+        <ResultBox label={isComprehensive ? '16.5% 분리과세 선택 시' : '실효세율'} value={isComprehensive ? fmt(separateTax15, 0) : fmt(pensionTaxRate, 1)} unit={isComprehensive ? '원' : '%'} />
+      </div>
+      <CalcNote
+        how={['나이별 연금소득세 분리과세: 55~69세 5.5%, 70~79세 4.4%, 80세+ 3.3%', '연간 수령액 합계 1,500만원 초과 시 종합과세 또는 16.5% 분리과세 선택']}
+        example={['65세, 연금저축 연 1,200만원 수령', '세율 5.5%, 세금 = 66만원, 실수령 1,134만원 (월 약 94.5만원)']}
+        tip={['1,500만원 이하로 쪼개서 수령하면 최저 세율(5.5~3.3%) 유지 가능', '배우자·자녀 연금계좌 분산으로 1인당 1,500만원 이하 관리', '국민연금(공적연금)은 별도 공제 적용 — 이 계산기는 사적연금 전용', '퇴직금을 IRP로 수령 시 퇴직소득세 30~40% 감면 (별도 계산 필요)']}
+      />
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// 세금·절세: 고배당 분리과세
+// ─────────────────────────────────────────────
+function HighDivTaxCalc() {
+  const [dividend, setDividend] = useState('');
+  const [applyPolicy, setApplyPolicy] = useState(true);
+  const div = Number(dividend) || 0;
+  // 현행: 15.4% 일반 배당세
+  const currentTax = div * 0.154;
+  // 고배당 분리과세(정책 시행 가정): 9.9% 저율 분리과세 (입법 예고 기준)
+  // ※ 2025년 이후 정책 방향으로, 실제 시행 여부·세율은 확정 법령 확인 필요
+  const policyTax = div * 0.099;
+  const saving = currentTax - policyTax;
+  const currentNet = div - currentTax;
+  const policyNet = div - policyTax;
+  return (
+    <div>
+      <CalcHeader num="58" title="고배당 분리과세 시뮬레이터" desc="고배당주 투자 시 현행 세율 vs 분리과세 정책 적용 시 세금 차이를 비교합니다." color="#5B8DB8" />
+      <div className="mb-4 border px-4 py-3 text-[13px]" style={{ borderColor: '#A63D33', color: '#A63D33', background: '#A63D3318' }}>
+        ⚠ 고배당 분리과세 정책은 입법 논의 중으로, 실제 세율·적용 대상은 확정 법령을 확인하세요. 이 계산기는 시뮬레이션 목적입니다.
+      </div>
+      <div className="mb-8">
+        <NumInput label="연간 배당소득 (세전)" value={dividend} onChange={setDividend} unit="원" placeholder="10,000,000" />
+      </div>
+      <div className="grid grid-cols-2 md:grid-cols-4 border" style={{ borderColor: _BORDER }}>
+        <div className="border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="현행 세금 (15.4%)" value={fmt(currentTax, 0)} unit="원" /></div>
+        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="정책 세금 (9.9%)" value={fmt(policyTax, 0)} unit="원" /></div>
+        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="절세 효과" value={fmt(saving, 0)} unit="원" highlight color="#5B8DB8" /></div>
+        <ResultBox label="정책 시행 시 실수령" value={fmt(policyNet, 0)} unit="원" />
+      </div>
+      <CalcNote
+        how={['현행: 배당소득 × 15.4% 원천징수', '정책(시뮬레이션): 배당소득 × 9.9% 저율 분리과세']}
+        example={['배당소득 1,000만원', '현행 세금 154만원, 정책 적용 시 99만원', '절세 효과 55만원']}
+        tip={['고배당 분리과세 정책은 배당소득 증대 및 코리아 디스카운트 해소 목적', '2,000만원 초과 종합과세 부담 완화 효과 기대', '실제 적용 여부는 세법 개정 확정 후 확인 필수', '리츠(REIT)·고배당 ETF 투자 시 절세 효과 극대화 가능']}
       />
     </div>
   );
