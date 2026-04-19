@@ -7011,377 +7011,619 @@ function SlotNumber({ target, pad = 3, color, delay = 0 }: { target: number; pad
 }
 
 // ─────────────────────────────────────────────
-// Home View — 대시보드 탭
+// Home View — 풀스크린 랜딩 씬 (eced78ef 포팅)
 // ─────────────────────────────────────────────
 function HomeView({ T, isDark, feat, totalTerms, recent, favorites, categoryColors, setActiveTab, setSelectedTerm, setSelectedCalc, setSearchQuery, searchRef }: any) {
-  const [now, setNow] = React.useState(() => new Date());
+  /* ─── CSS-in-JS 스타일 ─── */
+  const css = `
+    @keyframes gridShift{from{background-position:0 0}to{background-position:80px 80px}}
+    @keyframes gp{0%,100%{transform:translate(-50%,-50%) scale(1)}50%{transform:translate(-50%,-50%) scale(1.12)}}
+    @keyframes pd{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.2;transform:scale(.5)}}
+    @keyframes sl{0%{transform:scaleY(0) translateY(-50%);opacity:0}40%{transform:scaleY(1) translateY(0);opacity:1}80%,100%{transform:scaleY(0) translateY(50%);opacity:0}}
+    .hw-scene{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;will-change:opacity,transform;}
+    .hw-scene.on{pointer-events:auto}
+    .hw-hero-grid{position:absolute;inset:0;pointer-events:none;background-image:linear-gradient(#1c1c1c 1px,transparent 1px),linear-gradient(90deg,#1c1c1c 1px,transparent 1px);background-size:80px 80px;mask-image:radial-gradient(ellipse 80% 80% at 50% 50%,black 0%,transparent 100%);animation:gridShift 20s linear infinite;opacity:.6;}
+    .hw-glow{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:100%;height:100%;background:radial-gradient(ellipse 60% 50% at 50% 50%,rgba(200,150,80,.07) 0%,transparent 70%);pointer-events:none;animation:gp 6s ease-in-out infinite;}
+    .hw-h-dot{width:5px;height:5px;border-radius:50%;background:#C89650;animation:pd 2.4s ease-in-out infinite;display:inline-block;}
+    .hw-scrl-line{width:1px;height:52px;background:linear-gradient(to bottom,transparent,#76726e,transparent);animation:sl 2s ease-in-out infinite;}
+    .hw-frow{display:flex;align-items:stretch;flex:1;border-bottom:1px solid #1c1c1c;position:relative;cursor:pointer;transition:background .25s;}
+    .hw-frow:last-child{border-bottom:none;}
+    .hw-frow:hover,.hw-frow.on{background:rgba(255,255,255,.025);}
+    .hw-frbar{width:3px;flex-shrink:0;transition:opacity .35s;}
+    .hw-frow:not(.on) .hw-frbar{opacity:.12;}
+    .hw-frbody{padding:16px 22px;flex:1;}
+    .hw-fren{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.32em;text-transform:uppercase;margin-bottom:4px;transition:color .3s;}
+    .hw-frko{font-size:14px;color:#ede9df;opacity:.25;transition:opacity .3s;font-weight:300;}
+    .hw-frow.on .hw-frko{opacity:1;}
+    .hw-nstat{padding:36px 28px;border-right:1px solid #1c1c1c;border-bottom:1px solid #1c1c1c;position:relative;overflow:hidden;background:transparent;transition:background .3s;}
+    .hw-nstat:last-child{border-right:none}
+    .hw-nstat::after{content:'';position:absolute;inset:0;background:linear-gradient(135deg,transparent 40%,rgba(255,255,255,.025) 50%,transparent 60%);transform:translateX(-100%);transition:transform 1s ease;}
+    .hw-nstat.lit::after{transform:translateX(100%);}
+    .hw-nbar{position:absolute;bottom:0;left:0;right:0;height:2px;transform:scaleX(0);transform-origin:left;transition:transform 1.4s cubic-bezier(.16,1,.3,1);}
+    .hw-nstat.lit .hw-nbar{transform:scaleX(1);}
+    .hw-dbf{height:100%;width:0;transition:width 1.6s cubic-bezier(.16,1,.3,1);border-radius:1px;}
+    .hw-ft-link{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:#C89650;background:none;border:none;cursor:pointer;display:inline-flex;align-items:center;gap:8px;position:relative;padding:0;}
+    .hw-ft-link::after{content:'';position:absolute;bottom:-2px;left:0;width:0;height:1px;background:#C89650;transition:width .3s}
+    .hw-ft-link:hover::after{width:100%}
+    .hw-arr{display:inline-block;transition:transform .25s}
+    .hw-ft-link:hover .hw-arr{transform:translateX(4px)}
+    .hw-dot-nav{width:4px;height:4px;border-radius:50%;background:#2e2e2e;cursor:pointer;transition:all .3s ease;}
+    .hw-dot-nav.on{background:#C89650;height:20px;border-radius:2px;}
+    .hw-mock-tag:hover{border-color:#C89650!important;color:#C89650!important;}
+  `;
+
+  /* ─── 상수 ─── */
+  const N = 12;
+  const PX = 1800;
+  const FF = 0.45;
+  const LABELS = ['홈','철학','숫자로','가치','수익','리스크','거시','실전','금융 사전','계산기','이벤트','시작하기'];
+  const FAM_C  = ['val','profit','risk','macro','trade'];
+  const FAM_EN = ['VALUE','PROFIT','RISK','MACRO','TRADE'];
+  const FAM_KO = ['가치 — 기업 내재가치','수익 — 수익성·배당','리스크 — 포트폴리오','거시 — 시장 전체','실전 — 매매 현장'];
+  const FAM_COLORS: Record<string,string> = {
+    val:'#C89650', profit:'#A63D33', risk:'#4F7E7C', macro:'#7C6A9B', trade:'#6B6B6B'
+  };
+
+  /* ─── Refs ─── */
+  const containerRef = React.useRef<HTMLDivElement>(null);
+  const sceneRefs    = React.useRef<(HTMLDivElement|null)[]>(Array(N).fill(null));
+  const tprogRef     = React.useRef<HTMLDivElement>(null);
+  const lnumRef      = React.useRef<HTMLSpanElement>(null);
+  const ltxtRef      = React.useRef<HTMLSpanElement>(null);
+  const dotRefs      = React.useRef<(HTMLDivElement|null)[]>(Array(N).fill(null));
+  const numRefs      = React.useRef<(HTMLSpanElement|null)[]>(Array(4).fill(null));
+  const nstatRefs    = React.useRef<(HTMLDivElement|null)[]>(Array(4).fill(null));
+  const dbfRef       = React.useRef<HTMLDivElement>(null);
+
+  /* ─── State ─── */
+  const [activeFam, setActiveFam] = React.useState(0);
+
+  /* ─── RAF 스크롤 루프 ─── */
   React.useEffect(() => {
-    const id = setInterval(() => setNow(new Date()), 1000);
-    return () => clearInterval(id);
+    const con = containerRef.current;
+    if (!con) return;
+
+    const opa = new Float64Array(N);
+    const yv  = new Float64Array(N);
+    let countersStarted = false;
+    let dbarDone = false;
+    let lastSY = -1;
+    let aiCur = 0;
+    let rafId = 0;
+
+    function easeOut(t: number) { return 1 - Math.pow(1-t, 3); }
+
+    function compute(sy: number) {
+      for (let i = 0; i < N; i++) {
+        const d = (sy - i * PX) / PX;
+        let o = 0, y = 0;
+        if      (d >= -FF && d < 0)      { const t = easeOut((d+FF)/FF); o = t;   y = 60*(1-t); }
+        else if (d >= 0  && d <= 1-FF)  { o = 1; y = 0; }
+        else if (d > 1-FF && d <= 1)    { const t = easeOut((d-(1-FF))/FF); o = 1-t; y = -60*t; }
+        else { o = 0; y = d < -FF ? 60 : -60; }
+        opa[i] = o; yv[i] = y;
+      }
+    }
+
+    function apply() {
+      let mx = -1; aiCur = 0;
+      for (let i = 0; i < N; i++) {
+        const s = sceneRefs.current[i];
+        if (!s) continue;
+        const o = opa[i], y = yv[i];
+        s.style.opacity    = o < .002 ? '0' : o > .998 ? '1' : o.toFixed(3);
+        s.style.transform  = `translate3d(0,${y.toFixed(1)}px,0)`;
+        s.style.pointerEvents = o > .05 ? 'auto' : 'none';
+        if (o > mx) { mx = o; aiCur = i; }
+      }
+      // dots
+      dotRefs.current.forEach((d, i) => {
+        if (!d) return;
+        d.classList.toggle('on', i === aiCur);
+      });
+      // label
+      if (lnumRef.current) lnumRef.current.textContent = String(aiCur+1).padStart(2,'0');
+      if (ltxtRef.current) ltxtRef.current.textContent = LABELS[aiCur] ?? '';
+      // top progress
+      const pct = (lastSY / (N * PX)) * 100;
+      if (tprogRef.current) {
+        tprogRef.current.style.width = pct + '%';
+        tprogRef.current.style.opacity = pct > 99 ? '0' : '1';
+      }
+    }
+
+    function triggers() {
+      if (aiCur === 2 && !countersStarted) {
+        countersStarted = true;
+        const TARGETS = [totalTerms, 69, 9, 200];
+        numRefs.current.forEach((el, idx) => {
+          if (!el) return;
+          const to = TARGETS[idx];
+          const start = performance.now();
+          const dur = 1500;
+          function step(ts: number) {
+            const p = Math.min((ts - start) / dur, 1);
+            el.textContent = String(Math.floor(easeOut(p) * to));
+            if (p < 1) requestAnimationFrame(step);
+            else el.textContent = String(to);
+          }
+          requestAnimationFrame(step);
+        });
+        nstatRefs.current.forEach((st, i) => {
+          if (!st) return;
+          setTimeout(() => st.classList.add('lit'), i * 180);
+        });
+      }
+      if (aiCur === 9 && !dbarDone) {
+        dbarDone = true;
+        if (dbfRef.current) setTimeout(() => { if(dbfRef.current) dbfRef.current.style.width = '68%'; }, 300);
+      }
+      // family 씬 active 업데이트 (S3~S7 = ai 3~7)
+      if (aiCur >= 3 && aiCur <= 7) {
+        setActiveFam(aiCur - 3);
+      }
+    }
+
+    function loop() {
+      const sy = con.scrollTop;
+      if (sy !== lastSY) { lastSY = sy; compute(sy); apply(); triggers(); }
+      rafId = requestAnimationFrame(loop);
+    }
+
+    // init
+    con.scrollTop = 0;
+    compute(0); apply(); triggers();
+    rafId = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(rafId);
+  }, [totalTerms]);
+
+  /* ─── 탭 전환 시 스크롤 복원 ─── */
+  React.useEffect(() => {
+    return () => {
+      if (containerRef.current) containerRef.current.scrollTop = 0;
+    };
   }, []);
-  const timeStr = now.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false, timeZone: 'Asia/Seoul' });
-  const dateStr = now.toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit', weekday: 'short', timeZone: 'Asia/Seoul' });
-  const kstH = parseInt(now.toLocaleTimeString('ko-KR', { hour: '2-digit', hour12: false, timeZone: 'Asia/Seoul' }));
-  const kstM = parseInt(now.toLocaleTimeString('ko-KR', { minute: '2-digit', timeZone: 'Asia/Seoul' }));
-  const kstD = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Seoul' })).getDay();
-  // isOpen: 하위 호환용 (EventsView 등에서 사용할 수 있음)
-  const isOpen = kstD >= 1 && kstD <= 5 && (kstH > 9 || (kstH === 9 && kstM >= 0)) && (kstH < 15 || (kstH === 15 && kstM <= 30));
 
-  const FAMILY_LIST = [
-    { id: 'fundamental', name: '펀더멘털',    en: 'FUNDAMENTAL', color: HUE_FAMILIES.fundamental.base,   desc: '내재가치·재무제표·밸류에이션',   cats: ['밸류에이션','수익성','기업재무','회계·재무제표','현금흐름·운전자본','재무안정성','자본배분·주주환원','배당'] },
-    { id: 'market',      name: '시장·상품',   en: 'MARKET',      color: HUE_FAMILIES.market.base,        desc: '거래·ETF·공모주·시장구조',        cats: ['한국시장','해외시장·지수','ETF·상장상품','시장구조·유동성','시장거래','공시·기업행동 심화'] },
-    { id: 'macro',       name: '경제·거시',   en: 'ECON',        color: HUE_FAMILIES.macro.base,         desc: 'CPI·금리·환율·채권·GDP',          cats: ['통화정책·금리','물가·인플레이션','환율·대외수지','채권·금리위험','성장·경기순환','고용·소비·생산'] },
-    { id: 'risk',        name: '리스크·퀀트', en: 'RISK',        color: HUE_FAMILIES.risk.base,          desc: 'VaR·샤프·켈리·백테스트',          cats: ['포트폴리오','성과·리스크관리','퀀트통계','위험관리 운영','모델리스크·백테스트 검증'] },
-    { id: 'derivatives', name: '파생·헤지',   en: 'DERIV',       color: HUE_FAMILIES.derivatives.base,   desc: '선물·옵션·Greeks·변동성',         cats: ['선물옵션','옵션전략 심화','파생헤지','변동성·분산 파생','금리·크레딧 파생'] },
-    { id: 'trading',     name: '매매실전',    en: 'TRADING',     color: HUE_FAMILIES.trading.base,       desc: '기술적지표·차트패턴·오더플로우',  cats: ['기술적지표','차트패턴·가격행동','투자심리·행동편향','오더플로우·실행관리','트레이딩 운영·프로세스'] },
-    { id: 'industry',    name: '산업·섹터',   en: 'INDUSTRY',    color: HUE_FAMILIES.industry.base,      desc: 'AI·반도체·SaaS·바이오·에너지',    cats: ['AI·반도체','SaaS·플랫폼 지표','에너지·전력·인프라','헬스케어·바이오 심화','은행·보험 심화'] },
-    { id: 'digital',     name: '디지털자산',  en: 'DIGITAL',     color: HUE_FAMILIES.digital.base,       desc: '블록체인·DeFi·토큰화·규제',       cats: ['디지털자산·토큰화','DeFi·시장구조 심화','블록체인 인프라 심화','디지털자산 리스크·규제'] },
-    { id: 'tax',         name: '세금·제도',   en: 'TAX',         color: HUE_FAMILIES.tax.base,           desc: '양도세·ISA·연금계좌·공시',        cats: ['세금·계좌·제도','세금·계좌 심화','결제·예탁·권리관리','공시·법률·규제 용어'] },
-  ];
+  /* ─── Family 인덱스 패널 ─── */
+  function FamIndex({ activeIdx }: { activeIdx: number }) {
+    return (
+      <div style={{ width: '45%', display: 'flex', flexDirection: 'column' }}>
+        {FAM_EN.map((en, i) => (
+          <div key={i}
+            className={`hw-frow${i === activeIdx ? ' on' : ''}`}
+            style={{ flex: 1 }}>
+            <div className="hw-frbar" style={{ background: FAM_COLORS[FAM_C[i]] }} />
+            <div className="hw-frbody">
+              <div className="hw-fren" style={{ color: FAM_COLORS[FAM_C[i]] }}>{en}</div>
+              <div className="hw-frko">{FAM_KO[i]}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
 
-  const QUICK_CALCS = [
-    { id: 'per',    name: 'PER 계산기',    desc: '주가수익비율' },
-    { id: 'pbr',    name: 'PBR 계산기',    desc: '주가순자산비율' },
-    { id: 'roe',    name: 'ROE 계산기',    desc: '자기자본이익률' },
-    { id: 'dcf',    name: 'DCF 계산기',    desc: '내재가치 산출' },
-    { id: 'kelly',  name: '켈리 기준',     desc: '최적 베팅 비율' },
-    { id: 'var',    name: 'VaR 계산기',    desc: '포트폴리오 위험' },
-  ];
+  /* ─── 씬 공통 래퍼 ─── */
+  function sceneStyle(i: number): React.CSSProperties {
+    return { position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none', willChange: 'opacity, transform' };
+  }
+
+  const mono: React.CSSProperties = { fontFamily: "'IBM Plex Mono', monospace" };
+  const bg = '#080808';
+  const ink = '#ede9df';
+  const muted = '#76726e';
+  const faint = '#2e2e2e';
+  const border = '#1c1c1c';
+  const border2 = '#252525';
+  const accent = '#C89650';
+  const bg1 = '#0d0d0d';
+  const ok = '#6f9c6a';
 
   return (
-    <div>
-      {/* ── 에디토리얼 히어로 ── */}
-      <div className="border mb-8 relative overflow-hidden" style={{ borderColor: T.border, background: T.bgCard }}>
-        {/* 그리드 배경 */}
-        <div className="absolute inset-0 pointer-events-none" style={{
-          opacity: 0.03,
-          backgroundImage: `repeating-linear-gradient(0deg, ${T.textPrimary} 0 1px, transparent 1px 40px), repeating-linear-gradient(90deg, ${T.textPrimary} 0 1px, transparent 1px 40px)`
-        }} />
-        {/* ball joint 코너 */}
-        {['top-0 left-0 -translate-x-1/2 -translate-y-1/2','top-0 right-0 translate-x-1/2 -translate-y-1/2','bottom-0 left-0 -translate-x-1/2 translate-y-1/2','bottom-0 right-0 translate-x-1/2 translate-y-1/2'].map((pos, i) => (
-          <span key={i} className={`absolute w-3 h-3 rounded-full border-2 z-10 ${pos}`}
-            style={{ borderColor: T.borderMid, background: T.bgPage }} />
-        ))}
-        <div className="relative px-6 md:px-10 py-8 md:py-10">
-          <div className="flex items-start justify-between gap-8">
-            <div className="flex-1 min-w-0">
-              <div className="mono text-[11px] uppercase tracking-[0.2em] mb-3" style={{ color: T.textFaint }}>
-                § stockwiki · kr
+    <>
+      <style>{css}</style>
+      {/* 풀스크린 오버레이 */}
+      <div style={{ position: 'fixed', inset: 0, top: 52, zIndex: 50, background: bg, overflow: 'hidden' }}>
+
+        {/* Top Progress */}
+        <div ref={tprogRef} style={{ position: 'absolute', top: 0, left: 0, height: 1, zIndex: 300, background: `linear-gradient(90deg,${accent},transparent)`, width: 0, transition: 'width .05s linear' }} />
+
+        {/* Side dots */}
+        <div style={{ position: 'absolute', right: 20, top: '50%', transform: 'translateY(-50%)', display: 'flex', flexDirection: 'column', gap: 10, zIndex: 100 }}>
+          {Array.from({ length: N }, (_, i) => (
+            <div key={i} ref={el => { dotRefs.current[i] = el; }} className="hw-dot-nav"
+              onClick={() => { if (containerRef.current) containerRef.current.scrollTop = i * PX; }} />
+          ))}
+        </div>
+
+        {/* Bottom label */}
+        <div style={{ position: 'absolute', left: '5vw', bottom: 24, zIndex: 100, ...mono, fontSize: 9, letterSpacing: '.3em', textTransform: 'uppercase', color: faint, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <b ref={lnumRef} style={{ color: accent, fontWeight: 400 }}>01</b>
+          <span ref={ltxtRef}>홈</span>
+        </div>
+
+        {/* Scroll container */}
+        <div ref={containerRef}
+          style={{ position: 'absolute', inset: 0, overflowY: 'scroll', overflowX: 'hidden' }}
+          className="scroll-hide">
+
+          {/* tall scroll space */}
+          <div style={{ height: N * PX + window.innerHeight }} />
+        </div>
+
+        {/* Stage (fixed씬들) */}
+        <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none' }}>
+
+          {/* ── S0: HERO ── */}
+          <div ref={el => { sceneRefs.current[0] = el; }} className="hw-scene"
+            style={{ flexDirection: 'column', textAlign: 'center', padding: '0 5vw', inset: 0, position: 'absolute', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div className="hw-hero-grid" />
+            <div className="hw-glow" />
+            <div style={{ position: 'relative', zIndex: 1, textAlign: 'center' }}>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 10, ...mono, fontSize: 10, letterSpacing: '.38em', textTransform: 'uppercase', color: muted, marginBottom: 32 }}>
+                <span className="hw-h-dot" />
+                전업투자자를 위한 금융 책상
               </div>
-              <h1 className="font-light leading-tight tracking-tight mb-4"
-                style={{ fontSize: 'clamp(22px, 2.8vw, 36px)', color: T.textPrimary }}>
-                주식의 모든 언어를{' '}
-                <span style={{ color: T.accent }}>한 곳에.</span>
+              <h1 style={{ fontSize: 'clamp(56px,12vw,152px)', fontWeight: 200, letterSpacing: '-.045em', lineHeight: .86, color: ink, marginBottom: 28, position: 'relative', zIndex: 1 }}>
+                주식의<br />
+                <span style={{ color: 'rgba(232,228,214,.45)' }}>모든 언어를</span><br />
+                <em style={{ fontStyle: 'normal', color: accent }}>한 곳에.</em>
               </h1>
-              <p className="text-sm leading-relaxed mb-6 max-w-sm" style={{ color: T.textMuted }}>
-                <strong style={{ color: T.textSecondary }}>{totalTerms.toLocaleString()}개</strong> 금융 용어부터{' '}
-                <strong style={{ color: T.textSecondary }}>69개</strong> 실전 계산기,<br />
+              <p style={{ fontSize: 'clamp(14px,1.5vw,18px)', fontWeight: 300, color: muted, maxWidth: 500, margin: '0 auto 44px', lineHeight: 1.65, position: 'relative', zIndex: 1 }}>
+                <strong style={{ color: ink, fontWeight: 400 }}>{totalTerms.toLocaleString()}개</strong> 금융 용어부터 <strong style={{ color: ink, fontWeight: 400 }}>69개</strong> 실전 계산기,<br />
                 어닝·거시 이벤트 캘린더까지 — 흐름을 끊지 않고.
               </p>
-              <div className="flex flex-wrap gap-3">
+              <div style={{ display: 'flex', gap: 10, justifyContent: 'center', position: 'relative', zIndex: 1, flexWrap: 'wrap' }}>
                 {feat?.glossary !== false && (
-                  <button onClick={() => { setActiveTab('glossary'); setTimeout(() => searchRef.current?.focus(), 100); }}
-                    className="flex items-center gap-2 px-4 py-2.5 text-sm border transition-all hover:opacity-80"
-                    style={{ borderColor: T.accent, background: T.accent, color: '#0a0a0a' }}>
-                    <Search size={13} />
-                    <span className="font-medium">용어 검색</span>
-                    <span className="mono text-[11px] opacity-60 ml-1">⌘K</span>
+                  <button onClick={() => setActiveTab('glossary')}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '13px 24px', fontSize: 13, cursor: 'pointer', border: `1px solid ${accent}`, fontFamily: 'inherit', background: accent, color: '#000', fontWeight: 500, letterSpacing: '-.01em', transition: 'all .2s' }}>
+                    사전 열기
+                    <span style={{ ...mono, fontSize: 10, border: '1px solid rgba(0,0,0,.3)', padding: '1px 5px', opacity: .55, borderRadius: 2 }}>G</span>
                   </button>
                 )}
                 {feat?.calculator !== false && (
                   <button onClick={() => setActiveTab('calculator')}
-                    className="flex items-center gap-2 px-4 py-2.5 text-sm border transition-all hover:opacity-80"
-                    style={{ borderColor: T.border, color: T.textSecondary }}>
-                    <Calculator size={13} />
-                    <span>계산기</span>
-                  </button>
-                )}
-                {feat?.events !== false && (
-                  <button onClick={() => setActiveTab('events')}
-                    className="flex items-center gap-2 px-4 py-2.5 text-sm border transition-all hover:opacity-80"
-                    style={{ borderColor: T.border, color: T.textSecondary }}>
-                    <CalendarDays size={13} />
-                    <span>이벤트 캘린더</span>
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '13px 24px', fontSize: 13, cursor: 'pointer', border: `1px solid ${border2}`, fontFamily: 'inherit', background: 'transparent', color: muted, letterSpacing: '-.01em', transition: 'all .2s' }}>
+                    계산기 보기 →
                   </button>
                 )}
               </div>
             </div>
-            {/* 시계 + 시장 상태 — 데스크탑 */}
-            <div className="shrink-0 hidden md:flex flex-col items-end gap-3">
-              <div className="text-right">
-                <div className="mono text-[10px] uppercase tracking-[0.3em] mb-1" style={{ color: T.textFaint }}>KST</div>
-                <div className="mono font-medium" style={{ fontSize: 32, letterSpacing: '-0.02em', color: T.textPrimary }}>{timeStr}</div>
-                <div className="mono text-[11px] mt-1" style={{ color: T.textDimmer }}>{dateStr}</div>
+            <div style={{ position: 'absolute', bottom: 28, left: '50%', transform: 'translateX(-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+              <div className="hw-scrl-line" />
+              <span style={{ ...mono, fontSize: 8.5, letterSpacing: '.4em', textTransform: 'uppercase', color: faint }}>scroll</span>
+            </div>
+          </div>
+
+          {/* ── S1: PHILOSOPHY ── */}
+          <div ref={el => { sceneRefs.current[1] = el; }} style={{ ...sceneStyle(1), flexDirection: 'column', padding: '0 8vw', textAlign: 'center', background: bg, position: 'absolute', inset: 0 }}>
+            <div className="hw-glow" style={{ background: 'radial-gradient(ellipse 50% 60% at 50% 50%,rgba(200,150,80,.04),transparent)' }} />
+            <div style={{ textAlign: 'center', padding: '0 8vw', position: 'relative', zIndex: 1 }}>
+              <div style={{ ...mono, fontSize: 10, letterSpacing: '.35em', textTransform: 'uppercase', color: faint, marginBottom: 36, display: 'flex', alignItems: 'center', gap: 12, justifyContent: 'center' }}>
+                <span style={{ display: 'inline-block', width: 40, height: 1, background: border2 }} />
+                Philosophy
+                <span style={{ display: 'inline-block', width: 40, height: 1, background: border2 }} />
               </div>
-              {/* 시장 상태 5개 세로 */}
-              <div className="flex flex-col gap-1.5 items-end">
-                {(() => {
-                  // ── 한국 KOSPI: KST 평일 09:00–15:30
-                  const krOpen = kstD >= 1 && kstD <= 5
-                    && (kstH > 9 || (kstH === 9 && kstM >= 0))
-                    && (kstH < 15 || (kstH === 15 && kstM <= 30));
+              <div style={{ fontSize: 'clamp(30px,5.5vw,72px)', fontWeight: 200, letterSpacing: '-.035em', lineHeight: 1.05, color: ink, maxWidth: 900, margin: '0 auto 28px' }}>
+                검색창을 열고 또 열며<br />
+                흐름이 끊기는 순간,<br />
+                <em style={{ fontStyle: 'italic', color: accent, fontWeight: 200 }}>StockWiKi가 시작됐습니다.</em>
+              </div>
+              <p style={{ fontSize: 'clamp(14px,1.4vw,17px)', fontWeight: 300, color: muted, maxWidth: 620, margin: '0 auto', lineHeight: 1.8 }}>
+                투자·경제 관련 용어, 계산기, 일정을 한 곳에 모아<br />
+                <strong style={{ color: 'rgba(232,228,214,.7)', fontWeight: 400 }}>흐름을 끊지 않고 바로 찾고, 바로 이해</strong>할 수 있도록.
+              </p>
+            </div>
+          </div>
 
-                  // ── 한국 NXT (야간 주식): KST 평일 18:00–22:00
-                  // 금요일(5) 18:00–22:00 포함, 토·일 제외
-                  const nxtOpen = kstD >= 1 && kstD <= 5
-                    && kstH >= 18 && kstH < 22;
-
-                  // ── 한국 야간선물: KST 평일 18:00–익일 06:00
-                  // 당일 18:00~23:59 (월~금) OR 익일 00:00~06:00 (화~토, 전날이 월~금)
-                  const nightFutOpen = (() => {
-                    if (kstD === 0) return false; // 일요일 제외 (토→일 새벽은 토 야간 연장이므로 허용 안 함)
-                    // 당일 18:00~23:59: 월~금
-                    if (kstD >= 1 && kstD <= 5 && kstH >= 18) return true;
-                    // 익일 00:00~05:59: 화~토 (전날이 월~금)
-                    if (kstD >= 2 && kstD <= 6 && kstH < 6) return true;
-                    return false;
-                  })();
-
-                  // ── 미국 NYSE: America/New_York 평일 09:30–16:00 (서머타임 자동)
-                  const etParts = new Intl.DateTimeFormat('en-US', {
-                    timeZone: 'America/New_York',
-                    hour: 'numeric', minute: 'numeric', weekday: 'short', hour12: false,
-                  }).formatToParts(now);
-                  const etH = parseInt(etParts.find(p => p.type === 'hour')?.value ?? '0');
-                  const etM = parseInt(etParts.find(p => p.type === 'minute')?.value ?? '0');
-                  const etWd = etParts.find(p => p.type === 'weekday')?.value ?? '';
-                  const etWeekday = ['Mon','Tue','Wed','Thu','Fri'].includes(etWd);
-                  const usOpen = etWeekday && (etH > 9 || (etH === 9 && etM >= 30)) && etH < 16;
-
-                  // ── 크립토: 24/7
-                  const markets = [
-                    { label: 'KOSPI',    sub: '한국 정규',    open: krOpen,       color: HUE_FAMILIES.fundamental.base,   night: false },
-                    { label: 'NXT',      sub: '한국 야간주식', open: nxtOpen,      color: HUE_FAMILIES.fundamental.tones[2], night: true },
-                    { label: '야간선물', sub: 'KRX 야간',     open: nightFutOpen, color: HUE_FAMILIES.derivatives.base,   night: true },
-                    { label: 'NYSE',     sub: '미국',         open: usOpen,       color: HUE_FAMILIES.market.base,        night: false },
-                    { label: 'Crypto',   sub: '24/7',         open: true,         color: HUE_FAMILIES.trading.base,       night: false },
-                  ];
-                  return markets.map(m => {
-                    // 장중: 라이트=초록 dot+border / 다크=초록 glow + 흰색 박스 테두리
-                    const dotColor  = m.open ? '#22c55e' : T.textDimmer;
-                    const dotGlow   = m.open ? '0 0 6px #22c55e, 0 0 14px #22c55e80' : 'none';
-                    const boxBorder = m.open
-                      ? (isDark ? 'rgba(255,255,255,0.60)' : '#22c55e99')
-                      : T.border;
-                    const textColor = m.open ? (isDark ? '#e8e4dc' : '#22c55e') : T.textDimmer;
-                    return (
-                    <div key={m.label} className="flex items-center gap-2 border px-3 py-1"
-                      style={{ borderColor: boxBorder }}>
-                      <span className="w-1.5 h-1.5 rounded-full shrink-0"
-                        style={{ background: dotColor, boxShadow: dotGlow }} />
-                      <span className="mono text-[10px] tracking-[0.08em] w-16 shrink-0"
-                        style={{ color: textColor }}>{m.label}</span>
-                      <span className="mono text-[9px] opacity-50 w-14 shrink-0 hidden lg:block"
-                        style={{ color: textColor }}>{m.sub}</span>
-                      <span className="mono text-[10px] uppercase tracking-[0.15em]"
-                        style={{ color: textColor }}>
-                        {m.open ? '장중' : '장외'}
+          {/* ── S2: STATS ── */}
+          <div ref={el => { sceneRefs.current[2] = el; }} style={{ ...sceneStyle(2), flexDirection: 'column', padding: '48px 5vw 0', alignItems: 'stretch', position: 'absolute', inset: 0 }}>
+            <div style={{ width: '100%', padding: '0 5vw' }}>
+              <div style={{ ...mono, fontSize: 9.5, letterSpacing: '.35em', textTransform: 'uppercase', color: faint, marginBottom: 40, display: 'flex', alignItems: 'center', gap: 14 }}>
+                <span style={{ color: accent }}>§</span>
+                Numbers · 숫자로 보는 StockWiKi
+                <span style={{ flex: 1, height: 1, background: border }} />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', borderTop: `1px solid ${border}` }}>
+                {[
+                  { k: 'Terms · 용어',         bar: accent,   desc: `주식·선물·옵션·거시·회계·퀀트 ${9}개 패밀리` },
+                  { k: 'Calculators · 계산기',  bar: '#A63D33', desc: 'PER·DCF·Black-Scholes·Kelly·VaR·양도세' },
+                  { k: 'Hue Families · 색 그룹', bar: '#7C6A9B', desc: '펀더멘털·시장·거시·리스크·파생·매매·산업·디지털·세금' },
+                  { k: 'Events · 이벤트',       bar: '#4F7E7C', desc: 'FOMC·CPI·어닝시즌·K200 만기' },
+                ].map((s, i) => (
+                  <div key={i} ref={el => { nstatRefs.current[i] = el; }} className="hw-nstat">
+                    <div className="hw-nbar" style={{ background: s.bar }} />
+                    <div style={{ ...mono, fontSize: 9, letterSpacing: '.3em', textTransform: 'uppercase', color: muted, marginBottom: 16 }}>{s.k}</div>
+                    <div style={{ ...mono, fontSize: 'clamp(44px,5.5vw,72px)', fontWeight: 400, letterSpacing: '-.025em', color: ink, lineHeight: 1, marginBottom: 10 }}>
+                      <span ref={el => { numRefs.current[i] = el; }}>0</span>
+                      <span style={{ fontSize: '.38em', color: muted, marginLeft: 6, verticalAlign: 'top', marginTop: 14, display: 'inline-block' }}>
+                        {i === 0 ? '개' : i === 1 ? '개' : i === 2 ? '개' : '+개'}
                       </span>
                     </div>
-                    );
-                  });
-                })()}
+                    <div style={{ fontSize: 12.5, color: faint, lineHeight: 1.55 }}>{s.desc}</div>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
-        </div>
 
-        {/* stats rail */}
-        <div className="grid border-t" style={{ gridTemplateColumns: 'repeat(4,1fr)', borderColor: T.border }}>
+          {/* ── S3~S7: FAMILIES ── */}
           {[
-            { k: 'TERMS',    v: totalTerms,              pad: 4, color: HUE_FAMILIES.fundamental.base },
-            { k: 'CALCS',    v: 69,                      pad: 3, color: HUE_FAMILIES.market.base },
-            { k: 'FAMILIES', v: 9,                       pad: 3, color: HUE_FAMILIES.macro.base },
-            { k: 'FAV',      v: favorites?.size ?? 0,    pad: 3, color: T.accent },
-          ].map((s, i, arr) => (
-            <div key={s.k} className="flex flex-col gap-1 px-3 md:px-6 py-4 border-r min-w-0"
-              style={{ borderColor: i < arr.length - 1 ? T.border : 'transparent' }}>
-              <span className="mono text-[10px] tracking-[0.2em] uppercase" style={{ color: T.textFaint }}>{s.k}</span>
-              <SlotNumber target={s.v} pad={s.pad} color={s.color} delay={i * 120} />
-            </div>
-          ))}
-        </div>
-
-        {/* ── 모바일 전용: 시장 상태 가로 스크롤 바 ── */}
-        <div className="flex md:hidden border-t overflow-x-auto scroll-hide" style={{ borderColor: T.border }}>
-          {(() => {
-            const now2 = new Date();
-            const kstParts2 = new Intl.DateTimeFormat('en-US', {
-              timeZone: 'Asia/Seoul',
-              hour: 'numeric', minute: 'numeric', weekday: 'short', hour12: false,
-            }).formatToParts(now2);
-            const kstH2 = parseInt(kstParts2.find(p => p.type === 'hour')?.value ?? '0');
-            const kstM2 = parseInt(kstParts2.find(p => p.type === 'minute')?.value ?? '0');
-            const kstWd2 = kstParts2.find(p => p.type === 'weekday')?.value ?? '';
-            const kstD2 = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].indexOf(kstWd2);
-
-            const krOpen2 = kstD2 >= 1 && kstD2 <= 5
-              && (kstH2 > 9 || (kstH2 === 9 && kstM2 >= 0))
-              && (kstH2 < 15 || (kstH2 === 15 && kstM2 <= 30));
-            const nxtOpen2 = kstD2 >= 1 && kstD2 <= 5 && kstH2 >= 18 && kstH2 < 22;
-            const nightFutOpen2 = (() => {
-              if (kstD2 === 0) return false;
-              if (kstD2 >= 1 && kstD2 <= 5 && kstH2 >= 18) return true;
-              if (kstD2 >= 2 && kstD2 <= 6 && kstH2 < 6) return true;
-              return false;
-            })();
-            const etParts2 = new Intl.DateTimeFormat('en-US', {
-              timeZone: 'America/New_York',
-              hour: 'numeric', minute: 'numeric', weekday: 'short', hour12: false,
-            }).formatToParts(now2);
-            const etH2 = parseInt(etParts2.find(p => p.type === 'hour')?.value ?? '0');
-            const etM2 = parseInt(etParts2.find(p => p.type === 'minute')?.value ?? '0');
-            const etWd2 = etParts2.find(p => p.type === 'weekday')?.value ?? '';
-            const etWeekday2 = ['Mon','Tue','Wed','Thu','Fri'].includes(etWd2);
-            const usOpen2 = etWeekday2 && (etH2 > 9 || (etH2 === 9 && etM2 >= 30)) && etH2 < 16;
-
-            const markets2 = [
-              { label: 'KOSPI',    sub: '한국 정규',     open: krOpen2,        color: HUE_FAMILIES.fundamental.base },
-              { label: 'NXT',      sub: '한국 야간주식', open: nxtOpen2,       color: HUE_FAMILIES.fundamental.tones[2] },
-              { label: '야간선물', sub: 'KRX 야간',      open: nightFutOpen2,  color: HUE_FAMILIES.derivatives.base },
-              { label: 'NYSE',     sub: '미국',          open: usOpen2,        color: HUE_FAMILIES.market.base },
-              { label: 'Crypto',   sub: '24/7',          open: true,           color: HUE_FAMILIES.trading.base },
-            ];
-            return markets2.map((m, i, arr) => (
-              <div key={m.label}
-                className="flex items-center gap-2 px-4 py-2.5 border-r shrink-0"
-                style={{ borderColor: i < arr.length - 1 ? T.border : 'transparent' }}>
-                <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{
-                  background: m.open ? '#22c55e' : T.textDimmer,
-                  boxShadow: m.open ? '0 0 6px #22c55e, 0 0 14px #22c55e80' : 'none',
-                }} />
-                <div className="flex flex-col leading-tight">
-                  <span className="mono text-[11px] font-medium" style={{ color: m.open ? (isDark ? '#e8e4dc' : '#22c55e') : T.textMuted }}>{m.label}</span>
-                  <span className="mono text-[9px]" style={{ color: T.textFaint }}>{m.sub}</span>
-                </div>
-                <span className="mono text-[10px] uppercase tracking-[0.12em] ml-1" style={{ color: m.open ? (isDark ? '#e8e4dc' : '#22c55e') : T.textDimmer }}>
-                  {m.open ? '장중' : '장외'}
-                </span>
-              </div>
-            ));
-          })()}
-        </div>
-      </div>
-
-      {/* ── 대시보드 2단 그리드 ── */}
-      <div className="grid md:grid-cols-[1fr_320px] gap-6">
-        {/* 왼쪽: 카테고리 패밀리 맵 + 최근 본 용어 */}
-        <div className="flex flex-col gap-6">
-
-          {/* 9 hue family 맵 */}
-          <div className="border" style={{ borderColor: T.border }}>
-            <div className="px-5 py-3 border-b flex items-center justify-between" style={{ borderColor: T.border }}>
-              <span className="mono text-[11px] uppercase tracking-[0.25em]" style={{ color: T.textFaint }}>§ HUE FAMILIES · 9 Groups</span>
-              <button onClick={() => setActiveTab('glossary')} className="mono text-[11px] uppercase tracking-[0.15em] flex items-center gap-1 transition-opacity hover:opacity-70" style={{ color: T.textDimmer }}>
-                전체 사전 <ArrowUpRight size={11} />
-              </button>
-            </div>
-            <div className="divide-y" style={{ borderColor: T.border }}>
-              {FAMILY_LIST.map((fam, fi) => (
-                <div key={fam.id}
-                  className="flex items-stretch group cursor-pointer transition-colors"
-                  style={{ borderColor: T.border }}
-                  onClick={() => setActiveTab('glossary')}>
-                  {/* 왼쪽 컬러바 */}
-                  <div className="w-[3px] shrink-0 transition-opacity group-hover:opacity-100"
-                    style={{ background: fam.color, opacity: 0.5 }} />
-                  {/* 번호 */}
-                  <div className="px-3 py-3.5 flex items-start shrink-0">
-                    <span className="mono text-[10px] pt-0.5" style={{ color: T.textDimmer }}>
-                      {String(fi + 1).padStart(2, '0')}
-                    </span>
-                  </div>
-                  {/* 이름 영역 */}
-                  <div className="py-3.5 flex flex-col gap-0.5 w-28 shrink-0 justify-start">
-                    <span className="mono text-[9.5px] uppercase tracking-[0.22em]" style={{ color: fam.color }}>
-                      {fam.en}
-                    </span>
-                    <span className="text-[13px] font-medium leading-tight" style={{ color: T.textPrimary }}>{fam.name}</span>
-                    <span className="mono text-[9px] mt-0.5 hidden md:block" style={{ color: T.textDimmer }}>{fam.desc}</span>
-                  </div>
-                  {/* 카테고리 태그 */}
-                  <div className="px-3 py-3.5 flex flex-wrap gap-1.5 items-start flex-1 min-w-0">
-                    {fam.cats.map(cat => (
-                      <span key={cat}
-                        className="mono text-[9.5px] px-2 py-[3px] border transition-all group-hover:border-opacity-60"
-                        style={{ borderColor: `${fam.color}40`, color: T.textMuted, background: `${fam.color}0d` }}>
-                        {cat}
+            { num:'01', c:'val',    name:'가치',  en:'VALUE',  desc:'기업의 내재가치를 수치로 표현하는 도구들. PER부터 DCF까지, 얼마나 싼가 또는 비싼가를 묻는 언어.', tags:['밸류에이션','기업재무','회계심화'] },
+            { num:'02', c:'profit', name:'수익',  en:'PROFIT', desc:'회사가 얼마나 잘 버는지, 주주에게 얼마나 돌려주는지. ROE·ROA·배당수익률이 이 그룹에 속합니다.', tags:['수익성','배당','한국시장'] },
+            { num:'03', c:'risk',   name:'리스크', en:'RISK',   desc:'포트폴리오의 흔들림을 측정하고 최적화하는 언어. 샤프지수, VaR, 켈리 공식이 여기에 있습니다.', tags:['포트폴리오','퀀트통계','재무안정성'] },
+            { num:'04', c:'macro',  name:'거시',  en:'MACRO',  desc:'시장 전체를 움직이는 힘. CPI, 금리, 환율, GDP — 투자 맥락을 읽기 위한 경제학 언어.', tags:['거시경제','미시경제','해외주식ETF'] },
+            { num:'05', c:'trade',  name:'실전',  en:'TRADE',  desc:'매매 현장에서 쓰이는 언어. 선물·옵션·Greeks·기술적 지표까지 실제 체결창에서 마주치는 용어들.', tags:['선물옵션','파생헤지','기술적지표'] },
+          ].map((fam, fi) => {
+            const col = FAM_COLORS[fam.c];
+            const rgb = col.replace('#','');
+            const r = parseInt(rgb.slice(0,2),16), g = parseInt(rgb.slice(2,4),16), b = parseInt(rgb.slice(4,6),16);
+            return (
+              <div key={fi} ref={el => { sceneRefs.current[3+fi] = el; }}
+                style={{ ...sceneStyle(3+fi), flexDirection: 'row', alignItems: 'stretch', padding: 0, position: 'absolute', inset: 0 }}>
+                {/* Left */}
+                <div style={{ width: '55%', padding: 'clamp(48px,5vw,88px)', display: 'flex', flexDirection: 'column', justifyContent: 'center', borderRight: `1px solid ${border}`, position: 'relative', overflow: 'hidden' }}>
+                  <span style={{ position: 'absolute', right: '-5vw', bottom: '-8vh', ...mono, fontSize: 'clamp(120px,22vw,320px)', fontWeight: 400, letterSpacing: '-.05em', opacity: .035, lineHeight: 1, userSelect: 'none', pointerEvents: 'none', color: ink }}>
+                    {fam.num}
+                  </span>
+                  <div style={{ ...mono, fontSize: 10, letterSpacing: '.35em', textTransform: 'uppercase', marginBottom: 14, color: col }}>{fam.num} / {fam.en}</div>
+                  <div style={{ fontSize: 'clamp(48px,7vw,96px)', fontWeight: 200, letterSpacing: '-.04em', lineHeight: .88, marginBottom: 20, color: col }}>{fam.name}</div>
+                  <div style={{ fontSize: 'clamp(13px,1.3vw,16px)', lineHeight: 1.75, color: muted, maxWidth: 420, marginBottom: 28 }}>{fam.desc}</div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                    {fam.tags.map(tag => (
+                      <span key={tag} style={{ ...mono, fontSize: 10, letterSpacing: '.06em', padding: '5px 14px', border: `1px solid rgba(${r},${g},${b},.3)`, background: 'rgba(255,255,255,.02)', color: col, transition: 'background .3s' }}>
+                        {tag}
                       </span>
                     ))}
                   </div>
                 </div>
-              ))}
+                {/* Right: index */}
+                <FamIndex activeIdx={fi} />
+              </div>
+            );
+          })}
+
+          {/* ── S8: GLOSSARY FEATURE ── */}
+          <div ref={el => { sceneRefs.current[8] = el; }}
+            style={{ ...sceneStyle(8), flexDirection: 'row', alignItems: 'stretch', padding: 0, position: 'absolute', inset: 0 }}>
+            {/* Text */}
+            <div style={{ width: '42%', padding: 'clamp(48px,5vw,88px)', display: 'flex', flexDirection: 'column', justifyContent: 'center', borderRight: `1px solid ${border}` }}>
+              <div style={{ ...mono, fontSize: 9, letterSpacing: '.35em', textTransform: 'uppercase', color: faint, marginBottom: 22 }}>01 / 금융 사전 · Glossary</div>
+              <h3 style={{ fontSize: 'clamp(26px,3.5vw,48px)', fontWeight: 200, letterSpacing: '-.025em', lineHeight: 1.05, color: ink, marginBottom: 14 }}>
+                카드 한 장으로<br /><em style={{ fontStyle: 'normal', color: accent }}>개념을 완성</em>합니다.
+              </h3>
+              <p style={{ fontSize: 13.5, lineHeight: 1.78, color: muted, marginBottom: 28, maxWidth: 400 }}>
+                용어 이름, 공식, 계산 예시, 관련 용어가 한 카드에. 스캔만으로 이해가 되도록 설계했습니다.
+              </p>
+              {feat?.glossary !== false && (
+                <button className="hw-ft-link" onClick={() => setActiveTab('glossary')}>
+                  사전 열기 <span className="hw-arr">→</span>
+                </button>
+              )}
+            </div>
+            {/* Visual */}
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 'clamp(32px,4vw,60px)', background: bg1, position: 'relative', overflow: 'hidden' }}>
+              <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', backgroundImage: `radial-gradient(circle,${border2} 1px,transparent 1px)`, backgroundSize: '28px 28px', opacity: .8 }} />
+              {/* Mock Term Card */}
+              <div style={{ border: `1px solid rgba(255,255,255,.06)`, background: 'rgba(14,14,14,.97)', width: '100%', maxWidth: 340, boxShadow: '0 32px 80px rgba(0,0,0,.7),0 0 0 1px rgba(255,255,255,.03)', position: 'relative', zIndex: 1 }}>
+                <div style={{ padding: '10px 14px', borderBottom: `1px solid rgba(255,255,255,.05)`, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ ...mono, fontSize: 10, letterSpacing: '.1em', textTransform: 'uppercase', padding: '2px 9px', background: accent, color: '#000' }}>밸류에이션</span>
+                  <span style={{ ...mono, fontSize: 9.5, padding: '2px 7px', border: `1px solid rgba(255,255,255,.07)`, color: muted }}>심화</span>
+                </div>
+                <div style={{ fontSize: 22, fontWeight: 500, color: ink, padding: '14px 14px 2px', letterSpacing: '-.02em' }}>PER</div>
+                <div style={{ ...mono, fontStyle: 'italic', fontSize: 10.5, color: muted, padding: '0 14px 10px' }}>Price Earnings Ratio</div>
+                <div style={{ ...mono, fontSize: 12, padding: '9px 12px', borderLeft: `3px solid ${accent}`, background: '#050505', color: ink, margin: '0 14px 10px' }}>
+                  <small style={{ fontSize: 8, letterSpacing: '.22em', textTransform: 'uppercase', color: muted, display: 'block', marginBottom: 3 }}>ƒ Formula</small>
+                  PER = 주가 ÷ EPS
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', borderTop: `1px solid rgba(255,255,255,.05)` }}>
+                  {[['주가','50,000'],['EPS','5,000'],['PER','10.0배']].map(([k,v],i) => (
+                    <div key={i} style={{ padding: '9px 11px', borderRight: i<2?`1px solid rgba(255,255,255,.05)`:'none' }}>
+                      <div style={{ ...mono, fontSize: 8.5, letterSpacing: '.2em', textTransform: 'uppercase', color: muted, marginBottom: 3 }}>{k}</div>
+                      <div style={{ ...mono, fontSize: 14, color: i===2?accent:ink }}>{v}</div>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, padding: '9px 14px 12px' }}>
+                  {['EPS ↗','PEG','PBR','DCF','WACC'].map(tag => (
+                    <span key={tag} className="hw-mock-tag" style={{ ...mono, fontSize: 9, padding: '2px 6px', border: `1px solid rgba(255,255,255,.07)`, color: muted, cursor: 'pointer', transition: 'border-color .2s,color .2s' }}>{tag}</span>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* 최근 본 용어 */}
-          {recent?.length > 0 && (
-            <div className="border" style={{ borderColor: T.border }}>
-              <div className="px-5 py-3 border-b flex items-center gap-2" style={{ borderColor: T.border }}>
-                <Clock size={12} style={{ color: T.textFaint }} />
-                <span className="mono text-[11px] uppercase tracking-[0.25em]" style={{ color: T.textFaint }}>최근 본 용어</span>
-              </div>
-              <div className="flex flex-col divide-y" style={{ borderColor: T.border }}>
-                {recent.slice(0, 5).map(t => {
-                  const color = categoryColors?.[t.category];
-                  return (
-                    <button key={t.id}
-                      onClick={() => { setActiveTab('glossary'); setTimeout(() => setSelectedTerm(t), 50); }}
-                      className="flex items-center gap-3 px-5 py-3 text-left hover:opacity-80 transition-opacity">
-                      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: color?.bg }} />
-                      <span className="font-medium text-sm" style={{ color: T.textPrimary }}>{t.name}</span>
-                      <span className="text-xs" style={{ color: T.textFaint }}>{t.fullName}</span>
-                      <span className="ml-auto mono text-[10px] px-1.5 py-0.5" style={{ background: `${color?.bg}20`, color: color?.bg }}>{t.category}</span>
-                    </button>
-                  );
-                })}
+          {/* ── S9: CALCULATOR FEATURE ── */}
+          <div ref={el => { sceneRefs.current[9] = el; }}
+            style={{ ...sceneStyle(9), flexDirection: 'row', alignItems: 'stretch', padding: 0, position: 'absolute', inset: 0 }}>
+            {/* Visual (left, reversed) */}
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 'clamp(32px,4vw,60px)', background: bg1, position: 'relative', overflow: 'hidden', order: 1 }}>
+              <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', backgroundImage: `radial-gradient(circle,${border2} 1px,transparent 1px)`, backgroundSize: '28px 28px', opacity: .8 }} />
+              {/* Mock A/B Calc */}
+              <div style={{ border: `1px solid rgba(255,255,255,.06)`, background: 'rgba(14,14,14,.97)', width: '100%', maxWidth: 390, boxShadow: '0 32px 80px rgba(0,0,0,.7),0 0 0 1px rgba(255,255,255,.03)', position: 'relative', zIndex: 1 }}>
+                <div style={{ padding: '10px 14px', borderBottom: `1px solid rgba(255,255,255,.05)`, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ ...mono, fontSize: 10, letterSpacing: '.22em', textTransform: 'uppercase', color: FAM_COLORS.risk }}>M—01</span>
+                  <span style={{ fontSize: 13, color: ink, flex: 1, fontWeight: 300 }}>PER · EPS</span>
+                  <div style={{ display: 'flex', border: `1px solid rgba(255,255,255,.08)` }}>
+                    <span style={{ padding: '3px 8px', ...mono, fontSize: 9, color: muted }}>단일</span>
+                    <span style={{ padding: '3px 8px', ...mono, fontSize: 9, background: accent, color: '#000' }}>A/B</span>
+                  </div>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 88px 1fr' }}>
+                  {/* Col A */}
+                  <div style={{ padding: 13 }}>
+                    <div style={{ ...mono, fontSize: 8.5, letterSpacing: '.2em', textTransform: 'uppercase', color: muted, marginBottom: 10, display: 'flex', alignItems: 'center', gap: 5 }}>
+                      <span style={{ padding: '2px 5px', fontSize: 9, background: accent, color: '#000' }}>A</span>현재 기준
+                    </div>
+                    {[['Price','50,000'],['EPS','5,000']].map(([k,v]) => (
+                      <div key={k} style={{ marginBottom: 6 }}>
+                        <div style={{ ...mono, fontSize: 8.5, letterSpacing: '.2em', textTransform: 'uppercase', color: faint, marginBottom: 2 }}>{k}</div>
+                        <div style={{ ...mono, fontSize: 13, color: ink }}>{v}</div>
+                      </div>
+                    ))}
+                    <div style={{ marginTop: 9, border: `1px solid rgba(255,255,255,.07)`, padding: 9, background: '#050505' }}>
+                      <div style={{ ...mono, fontSize: 8.5, letterSpacing: '.2em', textTransform: 'uppercase', color: muted, marginBottom: 3 }}>PER</div>
+                      <div style={{ ...mono, fontSize: 22, fontWeight: 500, color: accent }}>10.0<span style={{ fontSize: 10, color: muted, marginLeft: 2 }}>배</span></div>
+                    </div>
+                  </div>
+                  {/* Delta */}
+                  <div style={{ background: '#050505', borderLeft: `1px solid rgba(255,255,255,.05)`, borderRight: `1px solid rgba(255,255,255,.05)`, padding: '13px 8px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+                    <div style={{ ...mono, fontSize: 8, letterSpacing: '.32em', textTransform: 'uppercase', color: muted, paddingBottom: 8, borderBottom: `1px solid rgba(255,255,255,.06)`, width: '100%', textAlign: 'center' }}>§ Δ</div>
+                    <div style={{ ...mono, fontSize: 20, fontWeight: 500, color: ok }}>−2.5</div>
+                    <div style={{ ...mono, fontSize: 9.5, opacity: .7, color: ok }}>▼ 25%</div>
+                    <div style={{ width: '100%', height: 2, background: 'rgba(255,255,255,.06)', overflow: 'hidden', marginTop: 4, borderRadius: 1 }}>
+                      <div ref={dbfRef} className="hw-dbf" style={{ background: ok }} />
+                    </div>
+                  </div>
+                  {/* Col B */}
+                  <div style={{ padding: 13 }}>
+                    <div style={{ ...mono, fontSize: 8.5, letterSpacing: '.2em', textTransform: 'uppercase', color: muted, marginBottom: 10, display: 'flex', alignItems: 'center', gap: 5 }}>
+                      <span style={{ padding: '2px 5px', fontSize: 9, background: ok, color: '#000' }}>B</span>EPS+25%
+                    </div>
+                    {[['Price','52,000'],['EPS','6,875']].map(([k,v]) => (
+                      <div key={k} style={{ marginBottom: 6 }}>
+                        <div style={{ ...mono, fontSize: 8.5, letterSpacing: '.2em', textTransform: 'uppercase', color: faint, marginBottom: 2 }}>{k}</div>
+                        <div style={{ ...mono, fontSize: 13, color: ink }}>{v}</div>
+                      </div>
+                    ))}
+                    <div style={{ marginTop: 9, border: `1px solid rgba(${parseInt(ok.slice(1,3),16)},${parseInt(ok.slice(3,5),16)},${parseInt(ok.slice(5,7),16)},.25)`, padding: 9, background: '#050505' }}>
+                      <div style={{ ...mono, fontSize: 8.5, letterSpacing: '.2em', textTransform: 'uppercase', color: muted, marginBottom: 3 }}>PER</div>
+                      <div style={{ ...mono, fontSize: 22, fontWeight: 500, color: ok }}>7.6<span style={{ fontSize: 10, color: muted, marginLeft: 2 }}>배</span></div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
-          )}
-        </div>
+            {/* Text (right) */}
+            <div style={{ width: '42%', padding: 'clamp(48px,5vw,88px)', display: 'flex', flexDirection: 'column', justifyContent: 'center', borderLeft: `1px solid ${border}`, order: 2 }}>
+              <div style={{ ...mono, fontSize: 9, letterSpacing: '.35em', textTransform: 'uppercase', color: faint, marginBottom: 22 }}>02 / 계산기 · Calculator</div>
+              <h3 style={{ fontSize: 'clamp(26px,3.5vw,48px)', fontWeight: 200, letterSpacing: '-.025em', lineHeight: 1.05, color: ink, marginBottom: 14 }}>
+                두 시나리오를<br /><em style={{ fontStyle: 'normal', color: FAM_COLORS.risk }}>나란히 비교</em>합니다.
+              </h3>
+              <p style={{ fontSize: 13.5, lineHeight: 1.78, color: muted, marginBottom: 28, maxWidth: 400 }}>
+                A/B 모드에서 두 입력을 동시에 계산하고, 중앙 Δ 컬럼이 차이를 즉시 보여줍니다.
+              </p>
+              {feat?.calculator !== false && (
+                <button className="hw-ft-link" onClick={() => setActiveTab('calculator')}>
+                  계산기 열기 <span className="hw-arr">→</span>
+                </button>
+              )}
+            </div>
+          </div>
 
-        {/* 오른쪽: 빠른 계산기 */}
-        <div className="border self-start" style={{ borderColor: T.border }}>
-          <div className="px-5 py-3 border-b flex items-center justify-between" style={{ borderColor: T.border }}>
-            <span className="mono text-[11px] uppercase tracking-[0.25em]" style={{ color: T.textFaint }}>§ 빠른 계산기</span>
-            <button onClick={() => setActiveTab('calculator')} className="mono text-[11px] uppercase tracking-[0.15em] flex items-center gap-1" style={{ color: T.textDimmer }}>
-              전체 <ArrowUpRight size={11} />
-            </button>
-          </div>
-          <div className="flex flex-col divide-y" style={{ borderColor: T.border }}>
-            {QUICK_CALCS.map((c, i) => (
-              <button key={c.id}
-                onClick={() => { setSelectedCalc(c.id); setActiveTab('calculator'); }}
-                className="flex items-center gap-3 px-5 py-3.5 text-left transition-all hover:opacity-80">
-                <span className="mono text-[10px] w-5 shrink-0" style={{ color: T.textDimmer }}>
-                  {String(i + 1).padStart(2,'0')}
-                </span>
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium truncate" style={{ color: T.textPrimary }}>{c.name}</div>
-                  <div className="mono text-[10px]" style={{ color: T.textFaint }}>{c.desc}</div>
+          {/* ── S10: EVENTS FEATURE ── */}
+          <div ref={el => { sceneRefs.current[10] = el; }}
+            style={{ ...sceneStyle(10), flexDirection: 'row', alignItems: 'stretch', padding: 0, position: 'absolute', inset: 0 }}>
+            {/* Text */}
+            <div style={{ width: '42%', padding: 'clamp(48px,5vw,88px)', display: 'flex', flexDirection: 'column', justifyContent: 'center', borderRight: `1px solid ${border}` }}>
+              <div style={{ ...mono, fontSize: 9, letterSpacing: '.35em', textTransform: 'uppercase', color: faint, marginBottom: 22 }}>03 / 이벤트 · Events</div>
+              <h3 style={{ fontSize: 'clamp(26px,3.5vw,48px)', fontWeight: 200, letterSpacing: '-.025em', lineHeight: 1.05, color: ink, marginBottom: 14 }}>
+                시장을 움직이는<br /><em style={{ fontStyle: 'normal', color: FAM_COLORS.macro }}>날짜를 미리</em> 봅니다.
+              </h3>
+              <p style={{ fontSize: 13.5, lineHeight: 1.78, color: muted, marginBottom: 28, maxWidth: 400 }}>
+                FOMC, CPI, 어닝시즌, K200 만기까지 — 5 hue family 색상으로 이벤트 종류를 한눈에 구분합니다.
+              </p>
+              {feat?.events !== false && (
+                <button className="hw-ft-link" onClick={() => setActiveTab('events')}>
+                  캘린더 열기 <span className="hw-arr">→</span>
+                </button>
+              )}
+            </div>
+            {/* Visual */}
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 'clamp(32px,4vw,60px)', background: bg1, position: 'relative', overflow: 'hidden' }}>
+              <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', backgroundImage: `radial-gradient(circle,${border2} 1px,transparent 1px)`, backgroundSize: '28px 28px', opacity: .8 }} />
+              {/* Mock Calendar */}
+              <div style={{ border: `1px solid rgba(255,255,255,.06)`, background: 'rgba(14,14,14,.97)', width: '100%', maxWidth: 344, boxShadow: '0 32px 80px rgba(0,0,0,.7),0 0 0 1px rgba(255,255,255,.03)', position: 'relative', zIndex: 1 }}>
+                <div style={{ padding: '11px 14px', borderBottom: `1px solid rgba(255,255,255,.05)`, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontSize: 15, color: ink, fontWeight: 300 }}>2026.04</span>
+                  <span style={{ ...mono, fontSize: 8.5, letterSpacing: '.18em', textTransform: 'uppercase', color: muted }}>April · KST</span>
+                  <div style={{ marginLeft: 'auto', display: 'flex', gap: 3 }}>
+                    {['‹','›'].map(ch => <span key={ch} style={{ width: 22, height: 22, display: 'flex', alignItems: 'center', justifyContent: 'center', border: `1px solid rgba(255,255,255,.07)`, fontSize: 10, color: muted, cursor: 'pointer' }}>{ch}</span>)}
+                  </div>
                 </div>
-                <ChevronRight size={13} style={{ color: T.textDimmer }} />
-              </button>
-            ))}
-          </div>
-          {/* 이벤트 캘린더 쇼트컷 */}
-          {feat?.events !== false && (
-            <button onClick={() => setActiveTab('events')}
-              className="w-full flex items-center justify-between px-5 py-4 border-t transition-all hover:opacity-80"
-              style={{ borderColor: T.border, background: T.bgSurface }}>
-              <div className="flex items-center gap-3">
-                <CalendarDays size={14} style={{ color: HUE_FAMILIES.macro.base }} />
-                <div>
-                  <div className="text-sm font-medium" style={{ color: T.textPrimary }}>이벤트 캘린더</div>
-                  <div className="mono text-[10px]" style={{ color: T.textFaint }}>FOMC · CPI · 어닝시즌</div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', borderBottom: `1px solid rgba(255,255,255,.05)` }}>
+                  {['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map((d,i) => (
+                    <div key={d} style={{ padding: '5px 2px', ...mono, fontSize: 8, letterSpacing: '.1em', textTransform: 'uppercase', textAlign: 'center', color: i===5?'#3a5a7a':i===6?'#7a3a3a':muted }}>{d}</div>
+                  ))}
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)' }}>
+                  {[
+                    { d:'30', out:true },{ d:'31', out:true },
+                    { d:'01', ev:[{c:'macro',t:'韓 CPI'}] },{ d:'02' },
+                    { d:'03', ev:[{c:'profit',t:'삼성 잠정'}] },{ d:'04' },{ d:'05' },
+                    { d:'06' },{ d:'07', ev:[{c:'macro',t:'美 PPI'}] },
+                    { d:'08', ev:[{c:'trade',t:'옵션 만기'}] },
+                    { d:'09', ev:[{c:'macro',t:'美 CPI ●●●'}] },
+                    { d:'10', ev:[{c:'profit',t:'JPMorgan'}] },{ d:'11' },{ d:'12' },
+                    { d:'13' },{ d:'14' },{ d:'15' },
+                    { d:'16', ev:[{c:'risk',t:'FOMC 의사록'}] },
+                    { d:'17', today:true, ev:[{c:'profit',t:'TSMC 실적'}] },
+                    { d:'18' },{ d:'19' },
+                  ].map((cell,ci) => (
+                    <div key={ci} style={{ minHeight: 44, padding: 4, borderRight: (ci+1)%7!==0?`1px solid rgba(255,255,255,.04)`:'none', borderBottom: `1px solid rgba(255,255,255,.04)`, position: 'relative', background: cell.out?'rgba(0,0,0,.4)':'transparent' }}>
+                      <div style={{ ...mono, fontSize: 9, color: cell.today?accent:cell.out?faint:muted }}>{cell.d}</div>
+                      {cell.today && <div style={{ position: 'absolute', top: 3, right: 3, width: 4, height: 4, background: accent, borderRadius: '50%' }} />}
+                      {(cell as any).ev?.map((e: {c:string,t:string}, ei: number) => (
+                        <div key={ei} style={{ fontSize: 7.5, padding: '1px 3px', borderLeft: `2px solid ${FAM_COLORS[e.c as keyof typeof FAM_COLORS]??'#555'}`, marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: ink, background: 'rgba(255,255,255,.02)' }}>{e.t}</div>
+                      ))}
+                    </div>
+                  ))}
                 </div>
               </div>
-              <ArrowUpRight size={13} style={{ color: T.textDimmer }} />
-            </button>
-          )}
-        </div>
-      </div>
-    </div>
+            </div>
+          </div>
+
+          {/* ── S11: CTA ── */}
+          <div ref={el => { sceneRefs.current[11] = el; }}
+            style={{ ...sceneStyle(11), flexDirection: 'column', textAlign: 'center', padding: '0 6vw', position: 'absolute', inset: 0 }}>
+            <div className="hw-glow" style={{ opacity: .5 }} />
+            <div className="hw-hero-grid" style={{ opacity: .3 }} />
+            <div style={{ textAlign: 'center', padding: '0 6vw', position: 'relative', zIndex: 1 }}>
+              <div style={{ ...mono, fontSize: 9.5, letterSpacing: '.38em', textTransform: 'uppercase', color: muted, marginBottom: 32, display: 'flex', alignItems: 'center', gap: 14, justifyContent: 'center' }}>
+                <span style={{ color: accent }}>§</span>
+                지금 시작하세요
+                <span style={{ width: 32, height: 1, background: border2, display: 'inline-block' }} />
+              </div>
+              <h2 style={{ fontSize: 'clamp(48px,9vw,120px)', fontWeight: 200, letterSpacing: '-.045em', lineHeight: .88, color: ink, marginBottom: 20 }}>
+                책상을<br /><em style={{ fontStyle: 'normal', color: accent }}>펼쳐보세요.</em>
+              </h2>
+              <p style={{ fontSize: 'clamp(14px,1.5vw,17px)', color: muted, marginBottom: 40, fontWeight: 300 }}>
+                설치도, 회원가입도 없습니다. 지금 바로.
+              </p>
+              <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 56 }}>
+                {feat?.glossary !== false && (
+                  <button onClick={() => setActiveTab('glossary')}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '13px 24px', fontSize: 13, cursor: 'pointer', border: `1px solid ${accent}`, fontFamily: 'inherit', background: accent, color: '#000', fontWeight: 500 }}>
+                    금융 사전<span style={{ ...mono, fontSize: 10, border: '1px solid rgba(0,0,0,.3)', padding: '1px 5px', opacity: .55, borderRadius: 2 }}>G</span>
+                  </button>
+                )}
+                {feat?.calculator !== false && (
+                  <button onClick={() => setActiveTab('calculator')}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '13px 24px', fontSize: 13, cursor: 'pointer', border: `1px solid ${border2}`, fontFamily: 'inherit', background: 'transparent', color: muted }}>
+                    계산기 →
+                  </button>
+                )}
+                {feat?.events !== false && (
+                  <button onClick={() => setActiveTab('events')}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '13px 24px', fontSize: 13, cursor: 'pointer', border: `1px solid ${border2}`, fontFamily: 'inherit', background: 'transparent', color: muted }}>
+                    이벤트 →
+                  </button>
+                )}
+              </div>
+              <div style={{ display: 'flex', gap: 28, justifyContent: 'center', flexWrap: 'wrap', borderTop: `1px solid ${border}`, paddingTop: 40 }}>
+                {[['G','금융 사전'],['C','계산기'],['⌘K','빠른 검색'],['← →','용어 탐색'],['ESC','닫기']].map(([k,v]) => (
+                  <div key={k} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: faint }}>
+                    <span style={{ ...mono, fontSize: 10.5, border: `1px solid ${border2}`, padding: '3px 8px', color: muted, letterSpacing: 0 }}>{k}</span>
+                    {v}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+        </div>{/* /stage */}
+      </div>{/* /overlay */}
+    </>
   );
 }
 
