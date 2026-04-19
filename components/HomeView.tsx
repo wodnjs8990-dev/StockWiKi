@@ -106,16 +106,60 @@ export default function HomeView({
       .hw-calc-delta  { width: 100px; }
 
       @media (max-width: 640px) {
+        /* NAV */
         .hw-nav-desktop { display: none !important; }
         .hw-nav-mobile  { display: flex !important; }
-        .hw-fam-grid    { grid-template-columns: 1fr !important; gap: 6px !important; overflow-y: auto; max-height: calc(100vh - 120px); }
-        .hw-fam-grid::-webkit-scrollbar { display: none; }
+
+        /* 우측 dots 숨김 */
         .hw-dots        { display: none !important; }
-        .hw-calc-ab     { grid-template-columns: 1fr !important; }
-        .hw-calc-delta  { display: none !important; }
-        .hw-cal-grid    { font-size: 9px !important; }
-        .hw-cal-cell    { min-height: 44px !important; padding: 4px 5px !important; }
+
+        /* HERO 타이틀 */
         .hw-hero-title  { font-size: clamp(40px, 13vw, 72px) !important; }
+
+        /* S3 FAMILIES 그리드 */
+        .hw-fam-grid {
+          grid-template-columns: 1fr !important;
+          gap: 6px !important;
+          overflow-y: auto;
+          max-height: calc(100vh - 180px);
+        }
+        .hw-fam-grid::-webkit-scrollbar { display: none; }
+
+        /* S4/S5/S6 — 2단 → 1단, padding/gap 축소 */
+        .hw-feat-grid {
+          grid-template-columns: 1fr !important;
+          gap: 20px !important;
+          padding: 0 24px !important;
+          align-items: flex-start !important;
+        }
+        /* S4/S5/S6 우측 목업 패널 모바일에서 완전 숨김 */
+        .hw-feat-mockup { display: none !important; }
+        /* 텍스트 영역 좌측 정렬 유지 */
+        .hw-feat-text { max-width: 100% !important; }
+
+        /* S2 숫자 카운터 — 2×2로 */
+        .hw-numbers-grid {
+          grid-template-columns: 1fr 1fr !important;
+          gap: 28px !important;
+        }
+
+        /* S7 단축키 힌트 숨김 (모바일엔 키보드 없음) */
+        .hw-shortcuts { display: none !important; }
+
+        /* S1 Philosophy padding */
+        .hw-philosophy { padding: 0 24px !important; }
+
+        /* S2 numbers padding 축소 */
+        .hw-numbers-grid { padding: 0 !important; }
+
+        /* S3 families 상단 여백 줄이기 */
+        .hw-fam-title { margin-bottom: 16px !important; }
+        /* S3 씬 자체 paddingTop 축소 */
+        #hs3 { padding-top: 56px !important; }
+
+        /* S4/S5/S6 텍스트 영역 — 모바일 단일 컬럼일 때 중앙 정렬 */
+        .hw-feat-text { text-align: center !important; }
+        .hw-feat-text button { margin: 0 auto !important; }
       }
     `;
     document.head.appendChild(style);
@@ -429,7 +473,7 @@ export default function HomeView({
 
         {/* S1 PHILOSOPHY */}
         <div id="hs1" className="hw-scene" style={sceneBase}>
-          <div style={{ maxWidth: 680, padding: '0 40px' }}>
+          <div className="hw-philosophy" style={{ maxWidth: 680, padding: '0 40px' }}>
             <div style={{ fontSize: 10, letterSpacing: '0.26em', color: accent, marginBottom: 32, fontWeight: 600 }}>PHILOSOPHY</div>
             <blockquote style={{
               fontFamily: 'Georgia, serif', fontStyle: 'italic',
@@ -452,7 +496,7 @@ export default function HomeView({
         <div id="hs2" className="hw-scene" style={sceneBase}>
           <div style={{ width: '100%', maxWidth: 920, padding: '0 40px' }}>
             <div style={{ fontSize: 10, letterSpacing: '0.26em', color: accent, marginBottom: 52, textAlign: 'center', fontWeight: 600 }}>BY THE NUMBERS</div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 44, textAlign: 'center' }}>
+            <div className="hw-numbers-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 44, textAlign: 'center' }}>
               {[
                 { to: totalTerms || 2400, label: '금융 용어', unit: '개', color: accent },
                 { to: 9,   label: '패밀리 카테고리', unit: '개', color: '#8bc87a' },
@@ -475,11 +519,11 @@ export default function HomeView({
         </div>
 
         {/* S3 CATEGORIES */}
-        <div id="hs3" className="hw-scene" style={sceneBase}>
-          <div style={{ width: '100%', maxWidth: 1080, padding: '0 28px' }}>
-            <div style={{ textAlign: 'center', marginBottom: 36 }}>
+        <div id="hs3" className="hw-scene" style={{ ...sceneBase, alignItems: 'flex-start', paddingTop: 64, overflowY: 'auto' }}>
+          <div style={{ width: '100%', maxWidth: 1080, padding: '0 28px 32px' }}>
+            <div className="hw-fam-title" style={{ textAlign: 'center', marginBottom: 36 }}>
               <div style={{ fontSize: 10, letterSpacing: '0.26em', color: accent, marginBottom: 10, fontWeight: 600 }}>9 FAMILIES</div>
-              <div style={{ fontSize: 'clamp(20px, 3vw, 36px)', fontWeight: 200, color: txt, letterSpacing: '-0.03em', fontFamily: 'Inter, sans-serif' }}>
+              <div style={{ fontSize: 'clamp(18px, 3vw, 36px)', fontWeight: 200, color: txt, letterSpacing: '-0.03em', fontFamily: 'Inter, sans-serif' }}>
                 모든 금융 언어는 9개 패밀리로 분류됩니다
               </div>
             </div>
@@ -511,9 +555,9 @@ export default function HomeView({
 
         {/* S4 GLOSSARY — 좌: 타이포+설명, 우: 앱 UI 목업 */}
         <div id="hs4" className="hw-scene" style={sceneBase}>
-          <div style={{ width: '100%', maxWidth: 1060, padding: '0 48px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 64, alignItems: 'center' }}>
+          <div className="hw-feat-grid" style={{ width: '100%', maxWidth: 1060, padding: '0 48px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 64, alignItems: 'center' }}>
             {/* 좌: 텍스트 */}
-            <div>
+            <div className="hw-feat-text">
               <div style={{ fontSize: 10, letterSpacing: '0.26em', color: accent, marginBottom: 24, fontWeight: 600 }}>GLOSSARY</div>
               <div style={{ fontSize: 'clamp(28px, 4vw, 52px)', fontWeight: 200, color: txt, lineHeight: 1.15, letterSpacing: '-0.03em', fontFamily: 'Inter, sans-serif', marginBottom: 24 }}>
                 용어를 알면<br />
@@ -530,7 +574,7 @@ export default function HomeView({
               }}>사전 열기 →</button>
             </div>
             {/* 우: 앱 UI 목업 (축소) */}
-            <div style={{ background: isDark ? '#0d0d0d' : '#fff', border: `1px solid ${border}`, overflow: 'hidden', opacity: 0.9 }}>
+            <div className="hw-feat-mockup" style={{ background: isDark ? '#0d0d0d' : '#fff', border: `1px solid ${border}`, overflow: 'hidden', opacity: 0.9 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 16px', borderBottom: `1px solid ${border}` }}>
                 <span style={{ fontSize: 10, fontWeight: 600, background: accent, color: '#0a0a0a', padding: '2px 8px', letterSpacing: '0.06em' }}>밸류에이션</span>
                 {['개요','심화','공식','예시','연결'].map((t, ti) => (
@@ -564,9 +608,9 @@ export default function HomeView({
 
         {/* S5 CALCULATOR — 좌: 타이포+설명, 우: A/B 목업 */}
         <div id="hs5" className="hw-scene" style={sceneBase}>
-          <div style={{ width: '100%', maxWidth: 1060, padding: '0 48px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 64, alignItems: 'center' }}>
+          <div className="hw-feat-grid" style={{ width: '100%', maxWidth: 1060, padding: '0 48px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 64, alignItems: 'center' }}>
             {/* 좌: 텍스트 */}
-            <div>
+            <div className="hw-feat-text">
               <div style={{ fontSize: 10, letterSpacing: '0.26em', color: accent, marginBottom: 24, fontWeight: 600 }}>CALCULATOR</div>
               <div style={{ fontSize: 'clamp(28px, 4vw, 52px)', fontWeight: 200, color: txt, lineHeight: 1.15, letterSpacing: '-0.03em', fontFamily: 'Inter, sans-serif', marginBottom: 24 }}>
                 숫자로<br />
@@ -583,7 +627,7 @@ export default function HomeView({
               }}>계산기 열기 →</button>
             </div>
             {/* 우: A/B 목업 */}
-            <div style={{ background: isDark ? '#0d0d0d' : '#fff', border: `1px solid ${border}`, overflow: 'hidden', opacity: 0.9 }}>
+            <div className="hw-feat-mockup" style={{ background: isDark ? '#0d0d0d' : '#fff', border: `1px solid ${border}`, overflow: 'hidden', opacity: 0.9 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', borderBottom: `1px solid ${border}` }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <span style={{ fontSize: 10, color: '#6ea8c8', fontFamily: 'monospace', letterSpacing: '0.1em' }}>M—01</span>
@@ -648,9 +692,9 @@ export default function HomeView({
 
         {/* S6 CALENDAR — 좌: 타이포+설명, 우: 캘린더 목업 */}
         <div id="hs6" className="hw-scene" style={sceneBase}>
-          <div style={{ width: '100%', maxWidth: 1060, padding: '0 48px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 64, alignItems: 'center' }}>
+          <div className="hw-feat-grid" style={{ width: '100%', maxWidth: 1060, padding: '0 48px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 64, alignItems: 'center' }}>
             {/* 좌: 텍스트 */}
-            <div>
+            <div className="hw-feat-text">
               <div style={{ fontSize: 10, letterSpacing: '0.26em', color: '#9a7ac8', marginBottom: 24, fontWeight: 600 }}>CALENDAR</div>
               <div style={{ fontSize: 'clamp(28px, 4vw, 52px)', fontWeight: 200, color: txt, lineHeight: 1.15, letterSpacing: '-0.03em', fontFamily: 'Inter, sans-serif', marginBottom: 24 }}>
                 시장을 움직이는<br />
@@ -667,7 +711,7 @@ export default function HomeView({
               }}>캘린더 열기 →</button>
             </div>
             {/* 우: 캘린더 목업 */}
-            <div style={{ background: isDark ? '#0d0d0d' : '#fff', border: `1px solid ${border}`, overflow: 'hidden', opacity: 0.9 }}>
+            <div className="hw-feat-mockup" style={{ background: isDark ? '#0d0d0d' : '#fff', border: `1px solid ${border}`, overflow: 'hidden', opacity: 0.9 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', borderBottom: `1px solid ${border}` }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <span style={{ fontSize: 16, fontWeight: 300, fontFamily: 'monospace', color: txt }}>2026.04</span>
@@ -728,7 +772,7 @@ export default function HomeView({
                 letterSpacing: '0.07em', cursor: 'pointer', borderRadius: 2,
               }}>계산기 보기</button>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'center', gap: 24, flexWrap: 'wrap' }}>
+            <div className="hw-shortcuts" style={{ display: 'flex', justifyContent: 'center', gap: 24, flexWrap: 'wrap' }}>
               {[{ key: '⌘K', desc: '검색' }, { key: 'G', desc: '사전' }, { key: 'C', desc: '계산기' }, { key: '?', desc: '도움말' }].map((sc) => (
                 <div key={sc.key} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                   <kbd style={{ background: bgSurf, border: `1px solid ${border}`, padding: '3px 7px', fontSize: 10, color: txt, fontFamily: 'monospace', borderRadius: 3 }}>{sc.key}</kbd>
@@ -742,7 +786,7 @@ export default function HomeView({
       </div>
 
       {/* ── 우측 DOTS ────────────────────────────── */}
-      <div style={{
+      <div className="hw-dots" style={{
         position: 'fixed', right: 20, top: '50%', transform: 'translateY(-50%)',
         display: 'flex', flexDirection: 'column', gap: 10, zIndex: 200,
       }}>
