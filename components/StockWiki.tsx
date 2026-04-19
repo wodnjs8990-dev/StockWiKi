@@ -6842,12 +6842,15 @@ function HomeView({ T, isDark, feat, totalTerms, recent, favorites, categoryColo
   const isOpen = kstD >= 1 && kstD <= 5 && (kstH > 9 || (kstH === 9 && kstM >= 0)) && (kstH < 15 || (kstH === 15 && kstM <= 30));
 
   const FAMILY_LIST = [
-    { id: 'fundamental', name: '펀더멘털',    en: 'FUNDAMENTAL', color: HUE_FAMILIES.fundamental.base, cats: ['밸류에이션','수익성','기업재무','회계심화','배당','재무안정성'] },
-    { id: 'market',      name: '시장',        en: 'MARKET',      color: HUE_FAMILIES.market.base,      cats: ['한국시장','해외시장·지수','ETF·상장상품','시장거래'] },
-    { id: 'macro',       name: '경제',        en: 'ECON',        color: HUE_FAMILIES.macro.base,       cats: ['통화정책·금리','물가·인플레이션','성장·경기순환','고용·소비·생산','환율·대외수지','금융위기·신용','재정·국가경제','미시경제'] },
-    { id: 'risk',        name: '리스크·퀀트', en: 'RISK',        color: HUE_FAMILIES.risk.base,        cats: ['포트폴리오','퀀트통계'] },
-    { id: 'derivatives', name: '파생',        en: 'DERIV',       color: HUE_FAMILIES.derivatives.base, cats: ['선물옵션','파생헤지'] },
-    { id: 'trading',     name: '매매실전',    en: 'TRADING',     color: HUE_FAMILIES.trading.base,     cats: ['기술적지표','차트패턴·가격행동','투자심리·행동편향'] },
+    { id: 'fundamental', name: '펀더멘털',    en: 'FUNDAMENTAL', color: HUE_FAMILIES.fundamental.base,   cats: ['밸류에이션','밸류에이션 심화','수익성','기업재무','회계·재무제표','회계심화','현금흐름·운전자본','재무안정성','배당'] },
+    { id: 'market',      name: '시장',        en: 'MARKET',      color: HUE_FAMILIES.market.base,        cats: ['한국시장','해외시장·지수','ETF·상장상품','ETF 구조·상품','시장거래','시장미시구조','기업 이벤트·자본시장'] },
+    { id: 'macro',       name: '경제',        en: 'ECON',        color: HUE_FAMILIES.macro.base,         cats: ['통화정책·금리','물가·인플레이션','성장·경기순환','고용·소비·생산','환율·대외수지','금융위기·신용','재정·국가경제','미시경제','채권·금리위험','유동성·자금시장','거시지표 심화'] },
+    { id: 'risk',        name: '리스크·퀀트', en: 'RISK',        color: HUE_FAMILIES.risk.base,          cats: ['포트폴리오','성과·리스크관리','퀀트통계'] },
+    { id: 'derivatives', name: '파생',        en: 'DERIV',       color: HUE_FAMILIES.derivatives.base,   cats: ['선물옵션','옵션·선물 심화','파생헤지'] },
+    { id: 'trading',     name: '매매실전',    en: 'TRADING',     color: HUE_FAMILIES.trading.base,       cats: ['기술적지표','차트패턴·가격행동','투자심리·행동편향','오더플로우·실행관리'] },
+    { id: 'industry',    name: '산업·섹터',   en: 'INDUSTRY',    color: HUE_FAMILIES.industry.base,      cats: ['AI·반도체','SaaS·플랫폼 지표','금융·에너지·바이오'] },
+    { id: 'digital',     name: '디지털자산',  en: 'DIGITAL',     color: HUE_FAMILIES.digital.base,       cats: ['디지털자산·토큰화'] },
+    { id: 'tax',         name: '세금·제도',   en: 'TAX',         color: HUE_FAMILIES.tax.base,           cats: ['세금·계좌·제도'] },
   ];
 
   const QUICK_CALCS = [
@@ -7001,7 +7004,7 @@ function HomeView({ T, isDark, feat, totalTerms, recent, favorites, categoryColo
           {[
             { k: 'TERMS',    v: String(totalTerms).padStart(3,'0'), color: HUE_FAMILIES.fundamental.base },
             { k: 'CALCS',    v: '052',                              color: HUE_FAMILIES.market.base },
-            { k: 'FAMILIES', v: '006',                              color: HUE_FAMILIES.macro.base },
+            { k: 'FAMILIES', v: '009',                              color: HUE_FAMILIES.macro.base },
             { k: 'FAV',      v: String(favorites?.size ?? 0).padStart(3,'0'), color: T.accent },
           ].map((s, i, arr) => (
             <div key={s.k} className="flex flex-col gap-1 px-3 md:px-6 py-4 border-r min-w-0"
