@@ -899,6 +899,9 @@ function GlossaryView({ terms, searchQuery, setSearchQuery, searchRef, categorie
     { id: 'risk',        name: '리스크·퀀트', en: 'RISK'        },
     { id: 'derivatives', name: '파생',        en: 'DERIV'       },
     { id: 'trading',     name: '매매실전',    en: 'TRADING'     },
+    { id: 'industry',    name: '산업·섹터',   en: 'INDUSTRY'    },
+    { id: 'digital',     name: '디지털자산',  en: 'DIGITAL'     },
+    { id: 'tax',         name: '세금·제도',   en: 'TAX'         },
   ];
 
   // family 선택 시 sub-category 초기화
@@ -7024,7 +7027,7 @@ function HomeView({ T, isDark, feat, totalTerms, recent, favorites, categoryColo
           {/* 6 hue family 맵 */}
           <div className="border" style={{ borderColor: T.border }}>
             <div className="px-5 py-3 border-b flex items-center justify-between" style={{ borderColor: T.border }}>
-              <span className="mono text-[11px] uppercase tracking-[0.25em]" style={{ color: T.textFaint }}>§ 카테고리 · 6 Groups</span>
+              <span className="mono text-[11px] uppercase tracking-[0.25em]" style={{ color: T.textFaint }}>§ 카테고리 · 9 Groups</span>
               <button onClick={() => setActiveTab('glossary')} className="mono text-[11px] uppercase tracking-[0.15em] flex items-center gap-1" style={{ color: T.textDimmer }}>
                 전체 사전 <ArrowUpRight size={11} />
               </button>
