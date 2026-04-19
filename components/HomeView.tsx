@@ -151,18 +151,24 @@ export default function HomeView({
         if (finalO > maxO) { maxO = finalO; activeIdx = i; }
       });
 
-      // family index highlight (s3-s7)
+      // family index highlight (s3-s7) — 씬별 독립 패널 제어
       if (activeIdx >= 3 && activeIdx <= 7) {
-        const famIdx = activeIdx - 3;
-        document.querySelectorAll<HTMLElement>('.hw-fam-row').forEach((row, ri) => {
-          if (ri === famIdx) {
-            row.classList.add('on');
-            row.style.opacity = '1';
-          } else {
-            row.classList.remove('on');
-            row.style.opacity = '0.28';
+        const famIdx = activeIdx - 3; // 현재 씬의 family (0~4)
+        // 각 씬(3~7)의 인덱스 패널을 독립적으로 업데이트
+        for (let si = 0; si < 5; si++) {
+          for (let ri = 0; ri < 5; ri++) {
+            const row = document.getElementById(`hw-fr-${si}-${ri}`) as HTMLElement | null;
+            if (!row) continue;
+            const isOn = ri === famIdx;
+            if (isOn) {
+              row.classList.add('on');
+              row.style.opacity = '1';
+            } else {
+              row.classList.remove('on');
+              row.style.opacity = '0.28';
+            }
           }
-        });
+        }
       }
 
       // dot indicator
@@ -394,6 +400,7 @@ export default function HomeView({
                 {FAM.map((f, ri) => (
                   <div
                     key={f.id}
+                    id={`hw-fr-${fi}-${ri}`}
                     className="hw-fam-row"
                     style={{
                       display: 'flex', alignItems: 'center', gap: 12,
