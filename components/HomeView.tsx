@@ -53,9 +53,7 @@ export default function HomeView({
       html::-webkit-scrollbar { display: none; }
 
       /* 모든 씬을 JS 실행 전까지 완전히 숨김 — 겹쳐 보이는 flash 방지 */
-      .hw-scene { opacity: 0 !important; pointer-events: none !important; }
-      /* JS가 hw-ready 붙이면 JS 직접 제어로 전환 */
-      #hw-stage.hw-ready .hw-scene { opacity: unset; pointer-events: unset; }
+      #hw-stage:not(.hw-ready) .hw-scene { opacity: 0 !important; pointer-events: none !important; }
 
       @keyframes hw-grid-drift {
         0%   { background-position: 0 0; }
