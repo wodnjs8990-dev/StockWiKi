@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
 import localFont from 'next/font/local';
-import { JetBrains_Mono } from 'next/font/google';
 import './globals.css';
 import CookieBanner from '@/components/CookieBanner';
 import { Analytics } from '@vercel/analytics/react';
@@ -25,12 +24,15 @@ const notoSansKR = localFont({
   adjustFontFallback: 'Arial',
 });
 
-// JetBrains Mono — OFL 1.1, 상업용 무료 (수치/모노용)
-const jetbrainsMono = JetBrains_Mono({
-  subsets: ['latin'],
-  weight: ['400', '500'],
+// JetBrains Mono — 자체 호스팅 (Google Fonts 요청 완전 제거)
+const jetbrainsMono = localFont({
+  src: [
+    { path: '../public/fonts/jetbrains-mono-latin-400-normal.woff2', weight: '400', style: 'normal' },
+    { path: '../public/fonts/jetbrains-mono-latin-500-normal.woff2', weight: '500', style: 'normal' },
+  ],
   variable: '--font-mono',
   display: 'swap',
+  preload: true,
 });
 
 export const metadata: Metadata = {
