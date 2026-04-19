@@ -1,0 +1,12 @@
+# 최신 브라우저 타겟 — Array.at, flat, flatMap, Object.fromEntries 등 네이티브 지원
+# 불필요한 폴리필 14KiB 제거
+[production]
+chrome >= 91
+firefox >= 90
+safari >= 15
+edge >= 91
+
+[development]
+last 1 chrome version
+last 1 firefox version
+last 1 safari version

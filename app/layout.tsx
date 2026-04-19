@@ -5,14 +5,17 @@ import CookieBanner from '@/components/CookieBanner';
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import { headers } from 'next/headers';
+import Script from 'next/script';
 
 // Noto Sans KR — OFL 1.1, 상업용 무료
 const notoSansKR = Noto_Sans_KR({
   subsets: ['latin'],
   weight: ['400', '500', '700'],
   variable: '--font-sans',
-  display: 'swap',
+  // optional: 폰트 로딩이 LCP/FCP를 차단하지 않음 — 캐시된 경우에만 적용
+  display: 'optional',
   preload: true,
+  adjustFontFallback: true,
 });
 
 // JetBrains Mono — OFL 1.1, 상업용 무료 (수치/모노용)
@@ -65,30 +68,34 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang="ko" className={`${notoSansKR.variable} ${jetbrainsMono.variable}`}>
       <head>
+        {/* Google Fonts 조기 연결 — DNS + TLS 핸드셰이크 선선 */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         {/* FOUC 방지: hydration 전에 테마 클래스 적용 */}
         <script dangerouslySetInnerHTML={{ __html: `(function(){try{var t=localStorage.getItem('stockwiki_theme');if(t==='light')document.documentElement.classList.add('light');}catch(e){}})();` }} />
-        {/* GA — 어드민 경로 제외 */}
-        {!isAdmin && (
-          <>
-            <script async src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`} />
-            <script
-              dangerouslySetInnerHTML={{
-                __html: `
-                  window.dataLayer = window.dataLayer || [];
-                  function gtag(){dataLayer.push(arguments);}
-                  gtag('js', new Date());
-                  gtag('config', '${GA_ID}');
-                `,
-              }}
-            />
-          </>
-        )}
       </head>
       <body>
         {children}
         {!isAdmin && <CookieBanner />}
         {!isAdmin && <Analytics />}
         {!isAdmin && <SpeedInsights />}
+        {/* GA — afterInteractive: 페이지 인터랙티브 후 로딩 → 153KiB 초기 차단 제거 */}
+        {!isAdmin && (
+          <>
+            <Script
+              src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}
+              strategy="afterInteractive"
+            />
+            <Script id="ga-init" strategy="afterInteractive">
+              {`
+                window.dataLayer = window.dataLayer || [];
+                function gtag(){dataLayer.push(arguments);}
+                gtag('js', new Date());
+                gtag('config', '${GA_ID}');
+              `}
+            </Script>
+          </>
+        )}
       </body>
     </html>
   );

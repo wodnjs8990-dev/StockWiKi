@@ -19,6 +19,8 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
   compress: true,
+  // 소스맵 배포 — Lighthouse 진단 개선, 프로덕션 디버깅 용이
+  productionBrowserSourceMaps: true,
   // 번들 최적화
   experimental: {
     optimizePackageImports: ['react', 'react-dom'],

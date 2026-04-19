@@ -438,7 +438,7 @@ export default function StockWiki({ features, customEvents }: { features?: Featu
               )}
             </button>
             <div className="hidden lg:flex items-center gap-4 text-[13px] mono uppercase tracking-wider" style={{ color: T.textFaint }}>
-              <span>{new Date().toLocaleDateString('ko-KR')}</span>
+              <span suppressHydrationWarning>{new Date().toLocaleDateString('ko-KR')}</span>
               <button
                 onClick={() => setShowGuide(true)}
                 className="flex items-center gap-1.5 px-2.5 py-1 border transition-all hover:opacity-80"
@@ -753,7 +753,7 @@ export default function StockWiki({ features, customEvents }: { features?: Featu
               Stock<span style={{ color: T.accent }}>WiKi</span>.kr
             </span>
             <span className="w-px h-3 hidden md:inline-block" style={{ background: T.border }}></span>
-            <span>© {new Date().getFullYear()} · 정보 제공 목적 · 투자 권유 아님</span>
+            <span suppressHydrationWarning>© {new Date().getFullYear()} · 정보 제공 목적 · 투자 권유 아님</span>
           </div>
           <div className="flex items-center gap-2">
             <span>Designed by Ones</span>

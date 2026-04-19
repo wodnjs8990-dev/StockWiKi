@@ -3,10 +3,12 @@
 import { useState, useEffect } from 'react';
 
 export default function CookieBanner() {
+  // SSR에서는 null — hydration 이후에만 마운트
+  const [mounted, setMounted] = useState(false);
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    // 이미 확인한 경우 표시 안 함
+    setMounted(true);
     if (!localStorage.getItem('cookie-consent')) {
       setVisible(true);
     }
@@ -17,7 +19,8 @@ export default function CookieBanner() {
     setVisible(false);
   };
 
-  if (!visible) return null;
+  // SSR / 이미 동의한 경우 DOM에 아예 없음 → LCP 요소로 잡히지 않음
+  if (!mounted || !visible) return null;
 
   return (
     <div
@@ -27,6 +30,8 @@ export default function CookieBanner() {
         borderColor: '#2a2a2a',
         backdropFilter: 'blur(8px)',
       }}
+      aria-live="polite"
+      aria-label="쿠키 동의 배너"
     >
       <p className="text-[11px] mono" style={{ color: '#7a7a7a' }}>
         이 사이트는 방문 통계 수집을 위해 쿠키를 사용합니다.{' '}
