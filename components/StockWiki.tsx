@@ -895,10 +895,10 @@ function GlossaryView({ terms, searchQuery, setSearchQuery, searchRef, categorie
 
   const FAMILY_LIST = [
     { id: 'fundamental', name: '펀더멘털',    en: 'FUNDAMENTAL' },
-    { id: 'market',      name: '시장',        en: 'MARKET'      },
-    { id: 'macro',       name: '경제',        en: 'ECON'        },
+    { id: 'market',      name: '시장·상품',   en: 'MARKET'      },
+    { id: 'macro',       name: '경제·거시',   en: 'ECON'        },
     { id: 'risk',        name: '리스크·퀀트', en: 'RISK'        },
-    { id: 'derivatives', name: '파생',        en: 'DERIV'       },
+    { id: 'derivatives', name: '파생·헤지',   en: 'DERIV'       },
     { id: 'trading',     name: '매매실전',    en: 'TRADING'     },
     { id: 'industry',    name: '산업·섹터',   en: 'INDUSTRY'    },
     { id: 'digital',     name: '디지털자산',  en: 'DIGITAL'     },
@@ -6947,15 +6947,15 @@ function HomeView({ T, isDark, feat, totalTerms, recent, favorites, categoryColo
   const isOpen = kstD >= 1 && kstD <= 5 && (kstH > 9 || (kstH === 9 && kstM >= 0)) && (kstH < 15 || (kstH === 15 && kstM <= 30));
 
   const FAMILY_LIST = [
-    { id: 'fundamental', name: '펀더멘털',    en: 'FUNDAMENTAL', color: HUE_FAMILIES.fundamental.base,   cats: ['밸류에이션','밸류에이션 심화','수익성','기업재무','회계·재무제표','회계심화','현금흐름·운전자본','재무안정성','배당'] },
-    { id: 'market',      name: '시장',        en: 'MARKET',      color: HUE_FAMILIES.market.base,        cats: ['한국시장','해외시장·지수','ETF·상장상품','ETF 구조·상품','시장거래','시장미시구조','기업 이벤트·자본시장'] },
-    { id: 'macro',       name: '경제',        en: 'ECON',        color: HUE_FAMILIES.macro.base,         cats: ['통화정책·금리','물가·인플레이션','성장·경기순환','고용·소비·생산','환율·대외수지','금융위기·신용','재정·국가경제','미시경제','채권·금리위험','유동성·자금시장','거시지표 심화'] },
-    { id: 'risk',        name: '리스크·퀀트', en: 'RISK',        color: HUE_FAMILIES.risk.base,          cats: ['포트폴리오','성과·리스크관리','퀀트통계'] },
-    { id: 'derivatives', name: '파생',        en: 'DERIV',       color: HUE_FAMILIES.derivatives.base,   cats: ['선물옵션','옵션·선물 심화','파생헤지'] },
-    { id: 'trading',     name: '매매실전',    en: 'TRADING',     color: HUE_FAMILIES.trading.base,       cats: ['기술적지표','차트패턴·가격행동','투자심리·행동편향','오더플로우·실행관리'] },
-    { id: 'industry',    name: '산업·섹터',   en: 'INDUSTRY',    color: HUE_FAMILIES.industry.base,      cats: ['AI·반도체','SaaS·플랫폼 지표','금융·에너지·바이오'] },
-    { id: 'digital',     name: '디지털자산',  en: 'DIGITAL',     color: HUE_FAMILIES.digital.base,       cats: ['디지털자산·토큰화'] },
-    { id: 'tax',         name: '세금·제도',   en: 'TAX',         color: HUE_FAMILIES.tax.base,           cats: ['세금·계좌·제도'] },
+    { id: 'fundamental', name: '펀더멘털',    en: 'FUNDAMENTAL', color: HUE_FAMILIES.fundamental.base,   cats: ['밸류에이션','밸류에이션 심화','수익성','기업재무','기업재무·자본시장','재무제표 기본','회계·재무제표','회계·재무제표 심화','회계심화','손익계산서 심화','현금흐름·운전자본','현금흐름 심화','재무안정성','신용·재무안정성 심화','효율성·운전자본','자본배분·주주환원','지배구조·주주권','배당'] },
+    { id: 'market',      name: '시장·상품',   en: 'MARKET',      color: HUE_FAMILIES.market.base,        cats: ['한국시장','해외시장·지수','ETF·상장상품','ETF 구조·상품','ETF·펀드 심화','시장거래','시장거래 기본','시장구조·유동성','시장미시구조','기업 이벤트·자본시장','공시·기업행동 심화','거래제도·주문유형 심화'] },
+    { id: 'macro',       name: '경제·거시',   en: 'ECON',        color: HUE_FAMILIES.macro.base,         cats: ['통화정책·금리','중앙은행·통화정책 심화','물가·인플레이션','성장·경기순환','고용·소비·생산','환율·대외수지','국제금융·환율 심화','금융위기·신용','신용시장·스프레드','재정·국가경제','미시경제','부동산·주택지표','채권·금리위험','국채·수익률곡선 심화','유동성·자금시장','거시지표 심화','경제지표·서베이 심화'] },
+    { id: 'risk',        name: '리스크·퀀트', en: 'RISK',        color: HUE_FAMILIES.risk.base,          cats: ['포트폴리오','포트폴리오 최적화 심화','성과·리스크관리','성과평가·트레이딩 통계','퀀트통계','위험관리 운영','모델리스크·백테스트 검증'] },
+    { id: 'derivatives', name: '파생·헤지',   en: 'DERIV',       color: HUE_FAMILIES.derivatives.base,   cats: ['선물옵션','선물·옵션 기초','옵션·선물 심화','옵션전략 심화','파생헤지','금리·크레딧 파생','변동성·분산 파생','원자재·외환 파생'] },
+    { id: 'trading',     name: '매매실전',    en: 'TRADING',     color: HUE_FAMILIES.trading.base,       cats: ['기술적지표','기술적 지표','차트패턴·가격행동','가격행동·시장국면','투자심리·행동편향','오더플로우·실행관리','실행·오더플로우 심화','매매실전 기본','트레이딩 운영·프로세스'] },
+    { id: 'industry',    name: '산업·섹터',   en: 'INDUSTRY',    color: HUE_FAMILIES.industry.base,      cats: ['AI·반도체','AI 인프라·클라우드','반도체 공급망 심화','SaaS·플랫폼 지표','소프트웨어·인터넷 지표','금융·에너지·바이오','에너지·전력·인프라','은행·보험 심화','헬스케어·바이오 심화','산업재·방산·물류','소비재·리테일·자동차'] },
+    { id: 'digital',     name: '디지털자산',  en: 'DIGITAL',     color: HUE_FAMILIES.digital.base,       cats: ['디지털자산·토큰화','DeFi·시장구조 심화','블록체인 인프라 심화','디지털자산 리스크·규제'] },
+    { id: 'tax',         name: '세금·제도',   en: 'TAX',         color: HUE_FAMILIES.tax.base,           cats: ['세금·계좌·제도','세금·계좌 심화','결제·예탁·권리관리','공시·법률·규제 용어'] },
   ];
 
   const QUICK_CALCS = [
