@@ -301,14 +301,24 @@ export default function HomeView({
     document.getElementById('hw-stage')?.classList.add('hw-ready');
 
     // ── wheel 이벤트 — 한 번 휠 = 한 씬 이동 ──
+    // 맥 트랙패드: deltaY가 momentum으로 수백~수천 연속 발사됨
+    // → 마지막 wheel 이벤트로부터 80ms 조용해지면 쿨다운 해제 (debounce)
     let wheelCooldown = false;
+    let wheelDebounceTimer: ReturnType<typeof setTimeout> | null = null;
     function onWheel(e: WheelEvent) {
       e.preventDefault();
+      // debounce 타이머 리셋 (momentum 중에는 계속 연장)
+      if (wheelDebounceTimer) clearTimeout(wheelDebounceTimer);
+      wheelDebounceTimer = setTimeout(() => {
+        wheelCooldown = false;
+        wheelDebounceTimer = null;
+      }, 650);
       if (wheelCooldown) return;
+      // deltaY 임계값: 트랙패드 미세 스크롤 무시 (3px 미만)
+      if (Math.abs(e.deltaY) < 3) return;
       const delta = e.deltaY > 0 ? 1 : -1;
       goTo(currentIdx + delta);
       wheelCooldown = true;
-      setTimeout(() => { wheelCooldown = false; }, 700);
     }
 
     // ── touch 이벤트 ──
@@ -342,6 +352,7 @@ export default function HomeView({
 
     return () => {
       cancelAnimationFrame(animId);
+      if (wheelDebounceTimer) clearTimeout(wheelDebounceTimer);
       window.removeEventListener('wheel', onWheel);
       window.removeEventListener('touchstart', onTouchStart);
       window.removeEventListener('touchend', onTouchEnd);
@@ -517,8 +528,8 @@ export default function HomeView({
         </div>
 
         {/* S3 CATEGORIES */}
-        <div id="hs3" className="hw-scene" style={{ ...sceneBase, alignItems: 'flex-start', paddingTop: 64, overflowY: 'auto' }}>
-          <div style={{ width: '100%', maxWidth: 1080, padding: '0 28px 32px' }}>
+        <div id="hs3" className="hw-scene" style={{ ...sceneBase, alignItems: 'center', overflowY: 'auto' }}>
+          <div style={{ width: '100%', maxWidth: 1080, padding: '68px 28px 32px' }}>
             <div className="hw-fam-title" style={{ textAlign: 'center', marginBottom: 36 }}>
               <div style={{ fontSize: 10, letterSpacing: '0.26em', color: accent, marginBottom: 10, fontWeight: 600 }}>9 FAMILIES</div>
               <div style={{ fontSize: 'clamp(18px, 3vw, 36px)', fontWeight: 200, color: txt, letterSpacing: '-0.03em', fontFamily: 'Inter, sans-serif' }}>
