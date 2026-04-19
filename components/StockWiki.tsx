@@ -390,8 +390,8 @@ export default function StockWiki({ features, customEvents }: { features?: Featu
         .scroll-hide { -ms-overflow-style: none; scrollbar-width: none; }
       `}</style>
 
-      {/* 헤더 */}
-      <header className="border-b sticky top-0 z-30" style={{ borderColor: T.border, background: T.bgHeader, backdropFilter: 'blur(8px)' }}>
+      {/* 헤더 — 홈 탭일 때 숨김 */}
+      <header className="border-b sticky top-0 z-30" style={{ borderColor: T.border, background: T.bgHeader, backdropFilter: 'blur(8px)', display: activeTab === 'home' ? 'none' : undefined }}>
         <div className="max-w-[1400px] mx-auto px-4 md:px-8 py-4 md:py-5 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 md:gap-4 min-w-0">
             <button
@@ -502,7 +502,7 @@ export default function StockWiki({ features, customEvents }: { features?: Featu
         </div>
       </header>
 
-      <main className="max-w-[1400px] mx-auto px-4 md:px-8 pt-5 md:pt-6 pb-24 md:pb-12 min-h-[calc(100vh-180px)]">
+      <main className={activeTab === 'home' ? '' : 'max-w-[1400px] mx-auto px-4 md:px-8 pt-5 md:pt-6 pb-24 md:pb-12 min-h-[calc(100vh-180px)]'}>
         {activeTab === 'home' && (
           <HomeView
             T={T}
@@ -7223,13 +7223,47 @@ function HomeView({ T, isDark, feat, totalTerms, recent, favorites, categoryColo
     <>
       <style>{css}</style>
       {/* 풀스크린 오버레이 */}
-      <div style={{ position: 'fixed', inset: 0, top: 52, zIndex: 50, background: bg, overflow: 'hidden' }}>
+      <div ref={containerRef} style={{ position: 'fixed', inset: 0, top: 0, zIndex: 50, background: bg, overflowY: 'scroll', overflowX: 'hidden' }} className="scroll-hide">
 
         {/* Top Progress */}
-        <div ref={tprogRef} style={{ position: 'absolute', top: 0, left: 0, height: 1, zIndex: 300, background: `linear-gradient(90deg,${accent},transparent)`, width: 0, transition: 'width .05s linear' }} />
+        <div ref={tprogRef} style={{ position: 'fixed', top: 0, left: 0, height: 1, zIndex: 300, background: `linear-gradient(90deg,${accent},transparent)`, width: 0, transition: 'width .05s linear' }} />
+
+        {/* 내부 Nav */}
+        <nav style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 200, height: 52, display: 'flex', alignItems: 'center', padding: '0 5vw', justifyContent: 'space-between', borderBottom: '1px solid transparent', transition: 'background .5s,border-color .5s' }}
+          id="hw-nav">
+          <button onClick={() => { if (containerRef.current) containerRef.current.scrollTop = 0; }}
+            style={{ fontSize: 16, fontWeight: 300, letterSpacing: '-.02em', color: ink, background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'baseline', gap: 4 }}>
+            Stock<em style={{ fontStyle: 'normal', color: accent, fontWeight: 500 }}>WiKi</em>
+            <span style={{ ...mono, fontSize: 11, color: muted, marginLeft: 1 }}>.kr</span>
+          </button>
+          <div style={{ display: 'flex', gap: 2 }}>
+            {feat?.glossary !== false && (
+              <button onClick={() => setActiveTab('glossary')}
+                style={{ fontSize: 12.5, color: muted, padding: '6px 10px', background: 'transparent', border: '1px solid transparent', cursor: 'pointer', fontFamily: 'inherit', transition: 'color .18s,border-color .18s', whiteSpace: 'nowrap' }}>
+                금융 사전
+              </button>
+            )}
+            {feat?.calculator !== false && (
+              <button onClick={() => setActiveTab('calculator')}
+                style={{ fontSize: 12.5, color: muted, padding: '6px 10px', background: 'transparent', border: '1px solid transparent', cursor: 'pointer', fontFamily: 'inherit', transition: 'color .18s,border-color .18s', whiteSpace: 'nowrap' }}>
+                계산기
+              </button>
+            )}
+            {feat?.events !== false && (
+              <button onClick={() => setActiveTab('events')}
+                style={{ fontSize: 12.5, color: muted, padding: '6px 10px', background: 'transparent', border: '1px solid transparent', cursor: 'pointer', fontFamily: 'inherit', transition: 'color .18s,border-color .18s', whiteSpace: 'nowrap' }}>
+                이벤트
+              </button>
+            )}
+            <button onClick={() => setActiveTab('glossary')}
+              style={{ ...mono, fontSize: 10.5, letterSpacing: '.1em', textTransform: 'uppercase', padding: '6px 14px', border: `1px solid rgba(200,150,80,.4)`, color: accent, background: 'transparent', cursor: 'pointer', fontFamily: 'inherit', transition: 'all .18s', whiteSpace: 'nowrap' }}>
+              시작하기 →
+            </button>
+          </div>
+        </nav>
 
         {/* Side dots */}
-        <div style={{ position: 'absolute', right: 20, top: '50%', transform: 'translateY(-50%)', display: 'flex', flexDirection: 'column', gap: 10, zIndex: 100 }}>
+        <div style={{ position: 'fixed', right: 20, top: '50%', transform: 'translateY(-50%)', display: 'flex', flexDirection: 'column', gap: 10, zIndex: 100 }}>
           {Array.from({ length: N }, (_, i) => (
             <div key={i} ref={el => { dotRefs.current[i] = el; }} className="hw-dot-nav"
               onClick={() => { if (containerRef.current) containerRef.current.scrollTop = i * PX; }} />
@@ -7237,22 +7271,13 @@ function HomeView({ T, isDark, feat, totalTerms, recent, favorites, categoryColo
         </div>
 
         {/* Bottom label */}
-        <div style={{ position: 'absolute', left: '5vw', bottom: 24, zIndex: 100, ...mono, fontSize: 9, letterSpacing: '.3em', textTransform: 'uppercase', color: faint, display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ position: 'fixed', left: '5vw', bottom: 24, zIndex: 100, ...mono, fontSize: 9, letterSpacing: '.3em', textTransform: 'uppercase', color: faint, display: 'flex', alignItems: 'center', gap: 8 }}>
           <b ref={lnumRef} style={{ color: accent, fontWeight: 400 }}>01</b>
           <span ref={ltxtRef}>홈</span>
         </div>
 
-        {/* Scroll container */}
-        <div ref={containerRef}
-          style={{ position: 'absolute', inset: 0, overflowY: 'scroll', overflowX: 'hidden' }}
-          className="scroll-hide">
-
-          {/* tall scroll space */}
-          <div style={{ height: N * PX + window.innerHeight }} />
-        </div>
-
-        {/* Stage (fixed씬들) */}
-        <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none' }}>
+        {/* Stage (씬들) — fixed로 viewport 고정, nav 높이(52px) 제외 */}
+        <div style={{ position: 'fixed', top: 52, left: 0, right: 0, bottom: 0, overflow: 'hidden', pointerEvents: 'none', zIndex: 60 }}>
 
           {/* ── S0: HERO ── */}
           <div ref={el => { sceneRefs.current[0] = el; }} className="hw-scene"
@@ -7622,6 +7647,10 @@ function HomeView({ T, isDark, feat, totalTerms, recent, favorites, categoryColo
           </div>
 
         </div>{/* /stage */}
+
+        {/* tall spacer — 오버레이 자체가 scroll 컨테이너이므로 여기에 높이 확보 */}
+        <div style={{ height: `calc(${N * PX}px + 100vh)`, pointerEvents: 'none' }} />
+
       </div>{/* /overlay */}
     </>
   );
