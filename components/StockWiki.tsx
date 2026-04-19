@@ -7028,15 +7028,15 @@ function HomeView({ T, isDark, feat, totalTerms, recent, favorites, categoryColo
   const isOpen = kstD >= 1 && kstD <= 5 && (kstH > 9 || (kstH === 9 && kstM >= 0)) && (kstH < 15 || (kstH === 15 && kstM <= 30));
 
   const FAMILY_LIST = [
-    { id: 'fundamental', name: '펀더멘털',    en: 'FUNDAMENTAL', color: HUE_FAMILIES.fundamental.base,   cats: ['밸류에이션','밸류에이션 심화','수익성','기업재무','기업재무·자본시장','재무제표 기본','회계·재무제표','회계·재무제표 심화','회계심화','손익계산서 심화','현금흐름·운전자본','현금흐름 심화','재무안정성','신용·재무안정성 심화','효율성·운전자본','자본배분·주주환원','지배구조·주주권','배당'] },
-    { id: 'market',      name: '시장·상품',   en: 'MARKET',      color: HUE_FAMILIES.market.base,        cats: ['한국시장','해외시장·지수','ETF·상장상품','ETF 구조·상품','ETF·펀드 심화','시장거래','시장거래 기본','시장구조·유동성','시장미시구조','기업 이벤트·자본시장','공시·기업행동 심화','거래제도·주문유형 심화'] },
-    { id: 'macro',       name: '경제·거시',   en: 'ECON',        color: HUE_FAMILIES.macro.base,         cats: ['통화정책·금리','중앙은행·통화정책 심화','물가·인플레이션','성장·경기순환','고용·소비·생산','환율·대외수지','국제금융·환율 심화','금융위기·신용','신용시장·스프레드','재정·국가경제','미시경제','부동산·주택지표','채권·금리위험','국채·수익률곡선 심화','유동성·자금시장','거시지표 심화','경제지표·서베이 심화'] },
-    { id: 'risk',        name: '리스크·퀀트', en: 'RISK',        color: HUE_FAMILIES.risk.base,          cats: ['포트폴리오','포트폴리오 최적화 심화','성과·리스크관리','성과평가·트레이딩 통계','퀀트통계','위험관리 운영','모델리스크·백테스트 검증'] },
-    { id: 'derivatives', name: '파생·헤지',   en: 'DERIV',       color: HUE_FAMILIES.derivatives.base,   cats: ['선물옵션','선물·옵션 기초','옵션·선물 심화','옵션전략 심화','파생헤지','금리·크레딧 파생','변동성·분산 파생','원자재·외환 파생'] },
-    { id: 'trading',     name: '매매실전',    en: 'TRADING',     color: HUE_FAMILIES.trading.base,       cats: ['기술적지표','기술적 지표','차트패턴·가격행동','가격행동·시장국면','투자심리·행동편향','오더플로우·실행관리','실행·오더플로우 심화','매매실전 기본','트레이딩 운영·프로세스'] },
-    { id: 'industry',    name: '산업·섹터',   en: 'INDUSTRY',    color: HUE_FAMILIES.industry.base,      cats: ['AI·반도체','AI 인프라·클라우드','반도체 공급망 심화','SaaS·플랫폼 지표','소프트웨어·인터넷 지표','금융·에너지·바이오','에너지·전력·인프라','은행·보험 심화','헬스케어·바이오 심화','산업재·방산·물류','소비재·리테일·자동차'] },
-    { id: 'digital',     name: '디지털자산',  en: 'DIGITAL',     color: HUE_FAMILIES.digital.base,       cats: ['디지털자산·토큰화','DeFi·시장구조 심화','블록체인 인프라 심화','디지털자산 리스크·규제'] },
-    { id: 'tax',         name: '세금·제도',   en: 'TAX',         color: HUE_FAMILIES.tax.base,           cats: ['세금·계좌·제도','세금·계좌 심화','결제·예탁·권리관리','공시·법률·규제 용어'] },
+    { id: 'fundamental', name: '펀더멘털',    en: 'FUNDAMENTAL', color: HUE_FAMILIES.fundamental.base,   desc: '내재가치·재무제표·밸류에이션',   cats: ['밸류에이션','수익성','기업재무','회계·재무제표','현금흐름·운전자본','재무안정성','자본배분·주주환원','배당'] },
+    { id: 'market',      name: '시장·상품',   en: 'MARKET',      color: HUE_FAMILIES.market.base,        desc: '거래·ETF·공모주·시장구조',        cats: ['한국시장','해외시장·지수','ETF·상장상품','시장구조·유동성','시장거래','공시·기업행동 심화'] },
+    { id: 'macro',       name: '경제·거시',   en: 'ECON',        color: HUE_FAMILIES.macro.base,         desc: 'CPI·금리·환율·채권·GDP',          cats: ['통화정책·금리','물가·인플레이션','환율·대외수지','채권·금리위험','성장·경기순환','고용·소비·생산'] },
+    { id: 'risk',        name: '리스크·퀀트', en: 'RISK',        color: HUE_FAMILIES.risk.base,          desc: 'VaR·샤프·켈리·백테스트',          cats: ['포트폴리오','성과·리스크관리','퀀트통계','위험관리 운영','모델리스크·백테스트 검증'] },
+    { id: 'derivatives', name: '파생·헤지',   en: 'DERIV',       color: HUE_FAMILIES.derivatives.base,   desc: '선물·옵션·Greeks·변동성',         cats: ['선물옵션','옵션전략 심화','파생헤지','변동성·분산 파생','금리·크레딧 파생'] },
+    { id: 'trading',     name: '매매실전',    en: 'TRADING',     color: HUE_FAMILIES.trading.base,       desc: '기술적지표·차트패턴·오더플로우',  cats: ['기술적지표','차트패턴·가격행동','투자심리·행동편향','오더플로우·실행관리','트레이딩 운영·프로세스'] },
+    { id: 'industry',    name: '산업·섹터',   en: 'INDUSTRY',    color: HUE_FAMILIES.industry.base,      desc: 'AI·반도체·SaaS·바이오·에너지',    cats: ['AI·반도체','SaaS·플랫폼 지표','에너지·전력·인프라','헬스케어·바이오 심화','은행·보험 심화'] },
+    { id: 'digital',     name: '디지털자산',  en: 'DIGITAL',     color: HUE_FAMILIES.digital.base,       desc: '블록체인·DeFi·토큰화·규제',       cats: ['디지털자산·토큰화','DeFi·시장구조 심화','블록체인 인프라 심화','디지털자산 리스크·규제'] },
+    { id: 'tax',         name: '세금·제도',   en: 'TAX',         color: HUE_FAMILIES.tax.base,           desc: '양도세·ISA·연금계좌·공시',        cats: ['세금·계좌·제도','세금·계좌 심화','결제·예탁·권리관리','공시·법률·규제 용어'] },
   ];
 
   const QUICK_CALCS = [
@@ -7070,12 +7070,13 @@ function HomeView({ T, isDark, feat, totalTerms, recent, favorites, categoryColo
               </div>
               <h1 className="font-light leading-tight tracking-tight mb-4"
                 style={{ fontSize: 'clamp(22px, 2.8vw, 36px)', color: T.textPrimary }}>
-                사전 · 계산기 ·{' '}
-                <span style={{ color: T.accent }}>모든 판단의 시작.</span>
+                주식의 모든 언어를{' '}
+                <span style={{ color: T.accent }}>한 곳에.</span>
               </h1>
               <p className="text-sm leading-relaxed mb-6 max-w-sm" style={{ color: T.textMuted }}>
-                {totalTerms}개 금융 용어와 계산기, 어닝·거시 이벤트 캘린더.<br />
-                전업투자자를 위한 한 벌의 책상.
+                <strong style={{ color: T.textSecondary }}>{totalTerms.toLocaleString()}개</strong> 금융 용어부터{' '}
+                <strong style={{ color: T.textSecondary }}>69개</strong> 실전 계산기,<br />
+                어닝·거시 이벤트 캘린더까지 — 흐름을 끊지 않고.
               </p>
               <div className="flex flex-wrap gap-3">
                 {feat?.glossary !== false && (
@@ -7189,7 +7190,7 @@ function HomeView({ T, isDark, feat, totalTerms, recent, favorites, categoryColo
         <div className="grid border-t" style={{ gridTemplateColumns: 'repeat(4,1fr)', borderColor: T.border }}>
           {[
             { k: 'TERMS',    v: totalTerms,              pad: 4, color: HUE_FAMILIES.fundamental.base },
-            { k: 'CALCS',    v: 52,                      pad: 3, color: HUE_FAMILIES.market.base },
+            { k: 'CALCS',    v: 69,                      pad: 3, color: HUE_FAMILIES.market.base },
             { k: 'FAMILIES', v: 9,                       pad: 3, color: HUE_FAMILIES.macro.base },
             { k: 'FAV',      v: favorites?.size ?? 0,    pad: 3, color: T.accent },
           ].map((s, i, arr) => (
@@ -7267,36 +7268,46 @@ function HomeView({ T, isDark, feat, totalTerms, recent, favorites, categoryColo
         {/* 왼쪽: 카테고리 패밀리 맵 + 최근 본 용어 */}
         <div className="flex flex-col gap-6">
 
-          {/* 6 hue family 맵 */}
+          {/* 9 hue family 맵 */}
           <div className="border" style={{ borderColor: T.border }}>
             <div className="px-5 py-3 border-b flex items-center justify-between" style={{ borderColor: T.border }}>
-              <span className="mono text-[11px] uppercase tracking-[0.25em]" style={{ color: T.textFaint }}>§ 카테고리 · 9 Groups</span>
-              <button onClick={() => setActiveTab('glossary')} className="mono text-[11px] uppercase tracking-[0.15em] flex items-center gap-1" style={{ color: T.textDimmer }}>
+              <span className="mono text-[11px] uppercase tracking-[0.25em]" style={{ color: T.textFaint }}>§ HUE FAMILIES · 9 Groups</span>
+              <button onClick={() => setActiveTab('glossary')} className="mono text-[11px] uppercase tracking-[0.15em] flex items-center gap-1 transition-opacity hover:opacity-70" style={{ color: T.textDimmer }}>
                 전체 사전 <ArrowUpRight size={11} />
               </button>
             </div>
             <div className="divide-y" style={{ borderColor: T.border }}>
-              {FAMILY_LIST.map(fam => (
-                <div key={fam.id} className="flex items-center gap-0 group"
-                  style={{ borderColor: T.border }}>
-                  <div className="w-1 self-stretch shrink-0" style={{ background: fam.color }} />
-                  <div className="px-4 py-3 flex-1 flex items-center gap-4 min-w-0">
-                    <div className="flex flex-col gap-0.5 w-20 shrink-0">
-                      <span className="mono text-[10px] uppercase tracking-[0.2em]" style={{ color: fam.color }}>
-                        {fam.en}
+              {FAMILY_LIST.map((fam, fi) => (
+                <div key={fam.id}
+                  className="flex items-stretch group cursor-pointer transition-colors"
+                  style={{ borderColor: T.border }}
+                  onClick={() => setActiveTab('glossary')}>
+                  {/* 왼쪽 컬러바 */}
+                  <div className="w-[3px] shrink-0 transition-opacity group-hover:opacity-100"
+                    style={{ background: fam.color, opacity: 0.5 }} />
+                  {/* 번호 */}
+                  <div className="px-3 py-3.5 flex items-start shrink-0">
+                    <span className="mono text-[10px] pt-0.5" style={{ color: T.textDimmer }}>
+                      {String(fi + 1).padStart(2, '0')}
+                    </span>
+                  </div>
+                  {/* 이름 영역 */}
+                  <div className="py-3.5 flex flex-col gap-0.5 w-28 shrink-0 justify-start">
+                    <span className="mono text-[9.5px] uppercase tracking-[0.22em]" style={{ color: fam.color }}>
+                      {fam.en}
+                    </span>
+                    <span className="text-[13px] font-medium leading-tight" style={{ color: T.textPrimary }}>{fam.name}</span>
+                    <span className="mono text-[9px] mt-0.5 hidden md:block" style={{ color: T.textDimmer }}>{fam.desc}</span>
+                  </div>
+                  {/* 카테고리 태그 */}
+                  <div className="px-3 py-3.5 flex flex-wrap gap-1.5 items-start flex-1 min-w-0">
+                    {fam.cats.map(cat => (
+                      <span key={cat}
+                        className="mono text-[9.5px] px-2 py-[3px] border transition-all group-hover:border-opacity-60"
+                        style={{ borderColor: `${fam.color}40`, color: T.textMuted, background: `${fam.color}0d` }}>
+                        {cat}
                       </span>
-                      <span className="text-sm font-medium whitespace-nowrap" style={{ color: T.textPrimary }}>{fam.name}</span>
-                    </div>
-                    <div className="flex flex-wrap gap-1.5 min-w-0">
-                      {fam.cats.map(cat => (
-                        <button key={cat}
-                          onClick={() => setActiveTab('glossary')}
-                          className="mono text-[10px] px-2 py-0.5 border transition-all hover:opacity-80"
-                          style={{ borderColor: `${fam.color}50`, color: T.textMuted, background: `${fam.color}10` }}>
-                          {cat}
-                        </button>
-                      ))}
-                    </div>
+                    ))}
                   </div>
                 </div>
               ))}
@@ -7395,7 +7406,7 @@ function MarketPulseRail({ T, totalTerms }: { T: any; totalTerms: number }) {
 
   const stats = [
     { k: 'Terms',  v: String(totalTerms).padStart(3, '0'), u: '개 용어' },
-    { k: 'Calcs',  v: '052',                               u: '개 계산기' },
+    { k: 'Calcs',  v: '069',                               u: '개 계산기' },
     { k: 'Events', v: '008',                               u: '이번달 이벤트' },
   ];
 
