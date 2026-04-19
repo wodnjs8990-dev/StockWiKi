@@ -52,6 +52,11 @@ export default function HomeView({
       html { scrollbar-width: none; }
       html::-webkit-scrollbar { display: none; }
 
+      /* 모든 씬을 JS 실행 전까지 완전히 숨김 — 겹쳐 보이는 flash 방지 */
+      .hw-scene { opacity: 0 !important; pointer-events: none !important; }
+      /* JS가 hw-ready 붙이면 JS 직접 제어로 전환 */
+      #hw-stage.hw-ready .hw-scene { opacity: unset; pointer-events: unset; }
+
       @keyframes hw-grid-drift {
         0%   { background-position: 0 0; }
         100% { background-position: 80px 80px; }
@@ -248,9 +253,10 @@ export default function HomeView({
       animId = requestAnimationFrame(animate);
     }
 
-    // ── 초기 상태 ──
+    // ── 초기 상태 ── applyScenes 직후 hw-ready 부착 → CSS !important 해제
     applyScenes(0, 0, 0);
     updateUI(0);
+    document.getElementById('hw-stage')?.classList.add('hw-ready');
 
     // ── wheel 이벤트 — 한 번 휠 = 한 씬 이동 ──
     let wheelCooldown = false;
@@ -303,6 +309,7 @@ export default function HomeView({
       document.documentElement.style.background = prevHtmlBg;
       document.body.style.overflow = prevOverflow;
       document.body.classList.remove('hw-active');
+      document.getElementById('hw-stage')?.classList.remove('hw-ready');
       document.getElementById('hw-styles')?.remove();
     };
   }, [isDark]);
@@ -370,10 +377,10 @@ export default function HomeView({
       </div>
 
       {/* ── FIXED STAGE ───────────────────────── */}
-      <div ref={stageRef} style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
+      <div id="hw-stage" ref={stageRef} style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
 
         {/* S0 HERO */}
-        <div id="hs0" style={sceneBase}>
+        <div id="hs0" className="hw-scene" style={sceneBase}>
           <div style={{
             position: 'absolute', inset: 0,
             backgroundImage: `linear-gradient(${isDark ? 'rgba(255,255,255,0.028)' : 'rgba(0,0,0,0.038)'} 1px, transparent 1px),
@@ -421,7 +428,7 @@ export default function HomeView({
         </div>
 
         {/* S1 PHILOSOPHY */}
-        <div id="hs1" style={sceneBase}>
+        <div id="hs1" className="hw-scene" style={sceneBase}>
           <div style={{ maxWidth: 680, padding: '0 40px' }}>
             <div style={{ fontSize: 10, letterSpacing: '0.26em', color: accent, marginBottom: 32, fontWeight: 600 }}>PHILOSOPHY</div>
             <blockquote style={{
@@ -442,7 +449,7 @@ export default function HomeView({
         </div>
 
         {/* S2 NUMBERS */}
-        <div id="hs2" style={sceneBase}>
+        <div id="hs2" className="hw-scene" style={sceneBase}>
           <div style={{ width: '100%', maxWidth: 920, padding: '0 40px' }}>
             <div style={{ fontSize: 10, letterSpacing: '0.26em', color: accent, marginBottom: 52, textAlign: 'center', fontWeight: 600 }}>BY THE NUMBERS</div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 44, textAlign: 'center' }}>
@@ -468,7 +475,7 @@ export default function HomeView({
         </div>
 
         {/* S3 CATEGORIES */}
-        <div id="hs3" style={sceneBase}>
+        <div id="hs3" className="hw-scene" style={sceneBase}>
           <div style={{ width: '100%', maxWidth: 1080, padding: '0 28px' }}>
             <div style={{ textAlign: 'center', marginBottom: 36 }}>
               <div style={{ fontSize: 10, letterSpacing: '0.26em', color: accent, marginBottom: 10, fontWeight: 600 }}>9 FAMILIES</div>
@@ -503,7 +510,7 @@ export default function HomeView({
         </div>
 
         {/* S4 GLOSSARY — 좌: 타이포+설명, 우: 앱 UI 목업 */}
-        <div id="hs4" style={sceneBase}>
+        <div id="hs4" className="hw-scene" style={sceneBase}>
           <div style={{ width: '100%', maxWidth: 1060, padding: '0 48px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 64, alignItems: 'center' }}>
             {/* 좌: 텍스트 */}
             <div>
@@ -556,7 +563,7 @@ export default function HomeView({
         </div>
 
         {/* S5 CALCULATOR — 좌: 타이포+설명, 우: A/B 목업 */}
-        <div id="hs5" style={sceneBase}>
+        <div id="hs5" className="hw-scene" style={sceneBase}>
           <div style={{ width: '100%', maxWidth: 1060, padding: '0 48px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 64, alignItems: 'center' }}>
             {/* 좌: 텍스트 */}
             <div>
@@ -640,7 +647,7 @@ export default function HomeView({
         </div>
 
         {/* S6 CALENDAR — 좌: 타이포+설명, 우: 캘린더 목업 */}
-        <div id="hs6" style={sceneBase}>
+        <div id="hs6" className="hw-scene" style={sceneBase}>
           <div style={{ width: '100%', maxWidth: 1060, padding: '0 48px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 64, alignItems: 'center' }}>
             {/* 좌: 텍스트 */}
             <div>
@@ -702,7 +709,7 @@ export default function HomeView({
         </div>
 
         {/* S7 CTA */}
-        <div id="hs7" style={sceneBase}>
+        <div id="hs7" className="hw-scene" style={sceneBase}>
           <div style={{ textAlign: 'center', padding: '0 40px', maxWidth: 640 }}>
             <div style={{ fontSize: 10, letterSpacing: '0.26em', color: accent, marginBottom: 32, fontWeight: 600 }}>GET STARTED</div>
             <div style={{ fontSize: 'clamp(32px, 5.5vw, 72px)', fontWeight: 200, color: txt, lineHeight: 1.1, letterSpacing: '-0.04em', fontFamily: 'Inter, sans-serif', marginBottom: 20 }}>
