@@ -300,25 +300,45 @@ export default function HomeView({
     updateUI(0);
     document.getElementById('hw-stage')?.classList.add('hw-ready');
 
-    // ── wheel 이벤트 — 한 번 휠 = 한 씬 이동 ──
-    // 맥 트랙패드: deltaY가 momentum으로 수백~수천 연속 발사됨
-    // → 마지막 wheel 이벤트로부터 80ms 조용해지면 쿨다운 해제 (debounce)
-    let wheelCooldown = false;
+    // ── wheel 이벤트 — 한 번 휠 = 딱 한 씬 이동 ──
+    // 전략: velocity 기반 — deltaY 절댓값이 직전보다 커지면 "새 제스처 시작"으로 판단
+    // 모멘텀 감속 중(값이 점점 작아지는 중)에는 무시 → 손가락 떼도 안 튀어나감
+    let wheelLocked = false;
+    let lastDeltaAbs = 0;
     let wheelDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+
     function onWheel(e: WheelEvent) {
       e.preventDefault();
-      // debounce 타이머 리셋 (momentum 중에는 계속 연장)
+      const abs = Math.abs(e.deltaY);
+
+      // 너무 작은 값 무시 (노이즈)
+      if (abs < 2) return;
+
+      // 마지막 이벤트 후 200ms 조용하면 완전 리셋 (새 제스처 준비)
       if (wheelDebounceTimer) clearTimeout(wheelDebounceTimer);
       wheelDebounceTimer = setTimeout(() => {
-        wheelCooldown = false;
+        wheelLocked = false;
+        lastDeltaAbs = 0;
         wheelDebounceTimer = null;
-      }, 650);
-      if (wheelCooldown) return;
-      // deltaY 임계값: 트랙패드 미세 스크롤 무시 (3px 미만)
-      if (Math.abs(e.deltaY) < 3) return;
-      const delta = e.deltaY > 0 ? 1 : -1;
-      goTo(currentIdx + delta);
-      wheelCooldown = true;
+      }, 200);
+
+      // 이미 이번 제스처에서 씬 이동했으면 락
+      if (wheelLocked) {
+        lastDeltaAbs = abs;
+        return;
+      }
+
+      // deltaY가 직전보다 작거나 같으면 모멘텀 감속 중 → 무시
+      // (첫 이벤트는 lastDeltaAbs=0이므로 무조건 통과)
+      if (abs <= lastDeltaAbs && lastDeltaAbs > 0) {
+        lastDeltaAbs = abs;
+        return;
+      }
+
+      lastDeltaAbs = abs;
+      const dir = e.deltaY > 0 ? 1 : -1;
+      goTo(currentIdx + dir);
+      wheelLocked = true;
     }
 
     // ── touch 이벤트 ──
@@ -353,6 +373,7 @@ export default function HomeView({
     return () => {
       cancelAnimationFrame(animId);
       if (wheelDebounceTimer) clearTimeout(wheelDebounceTimer);
+      wheelLocked = false;
       window.removeEventListener('wheel', onWheel);
       window.removeEventListener('touchstart', onTouchStart);
       window.removeEventListener('touchend', onTouchEnd);
