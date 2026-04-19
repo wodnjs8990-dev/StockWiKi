@@ -6930,6 +6930,66 @@ function HighDivTaxCalc() {
 }
 
 // ─────────────────────────────────────────────
+// SlotNumber — 슬롯머신 카운트업 숫자
+// ─────────────────────────────────────────────
+function SlotNumber({ target, pad = 3, color, delay = 0 }: { target: number; pad?: number; color: string; delay?: number }) {
+  const [display, setDisplay] = React.useState('0'.repeat(pad));
+  const started = React.useRef(false);
+  const ref = React.useRef<HTMLSpanElement>(null);
+
+  React.useEffect(() => {
+    if (started.current) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry.isIntersecting) return;
+        observer.disconnect();
+        started.current = true;
+
+        const DURATION = 1100; // 전체 애니메이션 시간 ms
+        const SLOT_TICKS = 18; // 슬롯머신 틱 수
+        const targetStr = String(target).padStart(pad, '0');
+        const digits = targetStr.length;
+
+        // 각 자릿수별로 타이머
+        for (let d = 0; d < digits; d++) {
+          const digitDelay = delay + d * 60; // 왼쪽 자릿수부터 순서대로
+          const finalDigit = targetStr[d];
+
+          let tick = 0;
+          const interval = setInterval(() => {
+            tick++;
+            const rand = String(Math.floor(Math.random() * 10));
+            setDisplay(prev => {
+              const arr = prev.split('');
+              arr[d] = tick < SLOT_TICKS ? rand : finalDigit;
+              return arr.join('');
+            });
+            if (tick >= SLOT_TICKS) clearInterval(interval);
+          }, (DURATION / SLOT_TICKS) + digitDelay / digits);
+        }
+      },
+      { threshold: 0.3 }
+    );
+    if (ref.current) observer.observe(ref.current);
+    return () => observer.disconnect();
+  }, [target, pad, delay]);
+
+  // target 바뀌면 (FAV 등) 즉시 반영
+  React.useEffect(() => {
+    if (started.current) {
+      setDisplay(String(target).padStart(pad, '0'));
+    }
+  }, [target, pad]);
+
+  return (
+    <span ref={ref} className="mono font-medium whitespace-nowrap"
+      style={{ fontSize: 'clamp(20px,4vw,28px)', color, letterSpacing: '-0.02em' }}>
+      {display}
+    </span>
+  );
+}
+
+// ─────────────────────────────────────────────
 // Home View — 대시보드 탭
 // ─────────────────────────────────────────────
 function HomeView({ T, isDark, feat, totalTerms, recent, favorites, categoryColors, setActiveTab, setSelectedTerm, setSelectedCalc, setSearchQuery, searchRef }: any) {
@@ -7107,15 +7167,15 @@ function HomeView({ T, isDark, feat, totalTerms, recent, favorites, categoryColo
         {/* stats rail */}
         <div className="grid border-t" style={{ gridTemplateColumns: 'repeat(4,1fr)', borderColor: T.border }}>
           {[
-            { k: 'TERMS',    v: String(totalTerms).padStart(3,'0'), color: HUE_FAMILIES.fundamental.base },
-            { k: 'CALCS',    v: '052',                              color: HUE_FAMILIES.market.base },
-            { k: 'FAMILIES', v: '009',                              color: HUE_FAMILIES.macro.base },
-            { k: 'FAV',      v: String(favorites?.size ?? 0).padStart(3,'0'), color: T.accent },
+            { k: 'TERMS',    v: totalTerms,              pad: 4, color: HUE_FAMILIES.fundamental.base },
+            { k: 'CALCS',    v: 52,                      pad: 3, color: HUE_FAMILIES.market.base },
+            { k: 'FAMILIES', v: 9,                       pad: 3, color: HUE_FAMILIES.macro.base },
+            { k: 'FAV',      v: favorites?.size ?? 0,    pad: 3, color: T.accent },
           ].map((s, i, arr) => (
             <div key={s.k} className="flex flex-col gap-1 px-3 md:px-6 py-4 border-r min-w-0"
               style={{ borderColor: i < arr.length - 1 ? T.border : 'transparent' }}>
               <span className="mono text-[10px] tracking-[0.2em] uppercase" style={{ color: T.textFaint }}>{s.k}</span>
-              <span className="mono font-medium whitespace-nowrap" style={{ fontSize: 'clamp(20px,4vw,28px)', color: s.color, letterSpacing: '-0.02em' }}>{s.v}</span>
+              <SlotNumber target={s.v} pad={s.pad} color={s.color} delay={i * 120} />
             </div>
           ))}
         </div>
