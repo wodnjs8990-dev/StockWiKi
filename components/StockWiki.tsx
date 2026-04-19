@@ -928,11 +928,39 @@ function GlossaryView({ terms, searchQuery, setSearchQuery, searchRef, categorie
     );
   }, [selectedFamily, categories]);
 
-  // 최종 표시 terms
+  // 최종 표시 terms (전체 목록)
   const displayTerms = React.useMemo(() => {
     if (selectedCategory === '전체' || selectedCategory === '★ 즐겨찾기') return familyFilteredTerms;
     return familyFilteredTerms.filter(t => t.category === selectedCategory);
   }, [familyFilteredTerms, selectedCategory]);
+
+  // 무한스크롤: 처음엔 50개, 스크롤하면 50개씩 추가
+  const PAGE_SIZE = 50;
+  const [visibleCount, setVisibleCount] = React.useState(PAGE_SIZE);
+  const loaderRef = React.useRef<HTMLDivElement>(null);
+
+  // 카테고리/검색 바뀌면 visibleCount 리셋
+  React.useEffect(() => {
+    setVisibleCount(PAGE_SIZE);
+  }, [displayTerms]);
+
+  // IntersectionObserver로 무한스크롤
+  React.useEffect(() => {
+    const el = loaderRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setVisibleCount(prev => Math.min(prev + PAGE_SIZE, displayTerms.length));
+        }
+      },
+      { rootMargin: '200px' }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [displayTerms.length]);
+
+  const visibleTerms = displayTerms.slice(0, visibleCount);
 
   return (
     <div>
@@ -1180,7 +1208,7 @@ function GlossaryView({ terms, searchQuery, setSearchQuery, searchRef, categorie
 
       {/* 용어 그리드 */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 border-t border-l" style={{ borderColor: T.borderSoft }}>
-        {displayTerms.map((term) => {
+        {visibleTerms.map((term) => {
           const color = categoryColors[term.category];
           const isFav = favorites.has(term.id);
           return (
@@ -1266,6 +1294,15 @@ function GlossaryView({ terms, searchQuery, setSearchQuery, searchRef, categorie
           );
         })}
       </div>
+
+      {/* 무한스크롤 로더 */}
+      {visibleCount < displayTerms.length && (
+        <div ref={loaderRef} className="flex items-center justify-center py-8 border-x border-b" style={{ borderColor: T.borderSoft }}>
+          <span className="mono text-[11px] uppercase tracking-widest animate-pulse" style={{ color: T.textFaint }}>
+            Loading {Math.min(PAGE_SIZE, displayTerms.length - visibleCount)} more / {displayTerms.length - visibleCount} remaining
+          </span>
+        </div>
+      )}
 
       {terms.length === 0 && (
         <div className="text-center py-16 md:py-20 border-x border-b" style={{ borderColor: T.borderSoft }}>
