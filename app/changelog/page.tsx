@@ -119,14 +119,14 @@ export default function ChangelogPage() {
                   </span>
                 </div>
 
-                {/* 패치 타이틀 */}
+                {/* 패치 타이틀 — 사용자용 */}
                 <div style={{ fontSize: 16, fontWeight: 600, color: '#d4d0c4', marginBottom: 14 }}>
-                  {entry.title}
+                  {entry.titlePublic}
                 </div>
 
-                {/* 항목 리스트 */}
+                {/* 항목 리스트 — 사용자용 */}
                 <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {entry.items.map((item, i) => (
+                  {entry.itemsPublic.map((item, i) => (
                     <li key={i} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
                       <span style={{ color: type.color, fontSize: 10, marginTop: 4, flexShrink: 0 }}>▸</span>
                       <span style={{ fontSize: 13, color: '#a8a49a', lineHeight: 1.7 }}>{item}</span>
