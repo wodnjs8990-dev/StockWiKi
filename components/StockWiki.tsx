@@ -32,6 +32,7 @@ async function fetchTermById(id: string): Promise<Term | null> {
 }
 import EventsView from '@/components/EventsView';
 import HomeView from '@/components/HomeView';
+import DashboardHome from '@/components/DashboardHome';
 
 // sessionStorage와 연동하는 useState 헬퍼
 // CalcPrefixContext가 있으면 key에 prefix를 붙여 A/B 시나리오 독립 state 보장
@@ -422,8 +423,8 @@ export default function StockWiki({ features, customEvents }: { features?: Featu
         .scroll-hide { -ms-overflow-style: none; scrollbar-width: none; }
       `}</style>
 
-      {/* 헤더 — 홈 탭일 때 숨김 */}
-      <header className="border-b sticky top-0 z-30" style={{ borderColor: T.border, background: T.bgHeader, backdropFilter: 'blur(8px)', display: activeTab === 'home' ? 'none' : undefined }}>
+      {/* 헤더 */}
+      <header className="border-b sticky top-0 z-30" style={{ borderColor: T.border, background: T.bgHeader, backdropFilter: 'blur(8px)' }}>
         <div className="max-w-[1400px] mx-auto px-4 md:px-8 py-4 md:py-5 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 md:gap-4 min-w-0">
             <button
@@ -511,6 +512,7 @@ export default function StockWiki({ features, customEvents }: { features?: Featu
             { id: 'glossary',   label: '금융 사전', icon: BookOpen,        idx: '01', count: termsTotal || null },
             { id: 'calculator', label: '계산기',    icon: Calculator,      idx: '02', count: CALC_CATEGORIES.reduce((s, c) => s + c.calcs.length, 0) },
             { id: 'events',     label: '이벤트',    icon: CalendarDays,    idx: '03', count: null },
+            { id: 'about',      label: 'About',    icon: Info,            idx: '04', count: null },
           ].filter(tab => tab.id === 'home' || feat[tab.id as keyof Features] !== false).map(tab => {
             const active = activeTab === tab.id;
             const Icon = tab.icon;
@@ -534,8 +536,8 @@ export default function StockWiki({ features, customEvents }: { features?: Featu
         </div>
       </header>
 
-      <main className={activeTab === 'home' ? '' : 'max-w-[1400px] mx-auto px-4 md:px-8 pt-5 md:pt-6 pb-24 md:pb-12 min-h-[calc(100vh-180px)]'}>
-        {activeTab === 'home' && (
+      <main className={(activeTab === 'home' || activeTab === 'about') ? '' : 'max-w-[1400px] mx-auto px-4 md:px-8 pt-5 md:pt-6 pb-24 md:pb-12 min-h-[calc(100vh-180px)]'}>
+        {activeTab === 'about' && (
           <HomeView
             T={T}
             isDark={isDark}
@@ -549,6 +551,18 @@ export default function StockWiki({ features, customEvents }: { features?: Featu
             setSelectedCalc={setSelectedCalc}
             setSearchQuery={setSearchQuery}
             searchRef={searchRef}
+          />
+        )}
+        {activeTab === 'home' && (
+          <DashboardHome
+            T={T}
+            isDark={isDark}
+            totalTerms={termsTotal}
+            recent={recent}
+            favorites={favorites}
+            setActiveTab={setActiveTab}
+            setSelectedCalc={setSelectedCalc}
+            setSelectedTerm={setSelectedTerm}
           />
         )}
         {activeTab === 'glossary' && feat.glossary && (
@@ -804,7 +818,13 @@ export default function StockWiki({ features, customEvents }: { features?: Featu
             <span className="w-px h-3 hidden md:inline-block" style={{ background: T.border }}></span>
             <span suppressHydrationWarning>© {new Date().getFullYear()} · 정보 제공 목적 · 투자 권유 아님</span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
+            <a href="/changelog" style={{ color: T.textFooter, textDecoration: 'none' }}
+              onMouseEnter={e => (e.currentTarget.style.color = T.accent)}
+              onMouseLeave={e => (e.currentTarget.style.color = T.textFooter)}>
+              Changelog
+            </a>
+            <span className="w-px h-3" style={{ background: T.border }}></span>
             <span>Designed by Ones</span>
           </div>
         </div>
@@ -1756,19 +1776,19 @@ function TermModal({ term, termList, termsMap, onClose, categoryColors, favorite
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-3">
                 {Object.entries(term.relations).map(([key, value]) => {
                   // termsMap에서 이름 매칭 시도 (API 캐시 범위 내)
-                  const matchTerm = termsMap ? Array.from(termsMap.values()).find((t: any) =>
+                  const matchTerm = termsMap ? (Array.from(termsMap.values()) as any[]).find((t: any) =>
                     t.name === key ||
                     t.fullName === key ||
                     key.includes(t.name) ||
                     (t.en && key.toLowerCase().includes(t.en.toLowerCase()))
                   ) : null;
-                  const matchColor = matchTerm ? categoryColors[matchTerm.category] : null;
+                  const matchColor = matchTerm ? categoryColors[(matchTerm as any).category] : null;
                   return (
                     <div
                       key={key}
                       className={`border p-4 transition-all ${matchTerm ? 'cursor-pointer hover:bg-white/5' : ''}`}
                       style={{ borderColor: T.border, background: T.bgCard }}
-                      onClick={matchTerm ? () => onNavigate(matchTerm.id) : undefined}
+                      onClick={matchTerm ? () => onNavigate((matchTerm as any).id) : undefined}
                     >
                       <div className="flex items-center justify-between gap-2 mb-2">
                         <div className="flex items-center gap-2">

@@ -7,8 +7,9 @@ import {
   RefreshCw, Sun, Moon, Activity, ToggleLeft, BarChart2, Settings,
   Megaphone, Trash2, Plus, Clock, Shield, Rocket, Database, Bell,
   TrendingUp, Users, Eye, Zap, Globe, Monitor, Smartphone, Tablet,
-  ChevronRight, Check, X, CalendarDays,
+  ChevronRight, Check, X, CalendarDays, ScrollText,
 } from 'lucide-react';
+import { CHANGELOG, CURRENT_VERSION } from '@/data/changelog';
 
 // ── 타입
 type SiteConfig = {
@@ -84,6 +85,7 @@ const SECTIONS = [
   { id: 'deploy',    label: 'Deploy',     icon: Rocket },
   { id: 'security',  label: 'Security',   icon: Shield },
   { id: 'stats',     label: 'Stats',      icon: Database },
+  { id: 'changelog', label: 'Changelog',  icon: ScrollText },
 ] as const;
 type SectionId = typeof SECTIONS[number]['id'];
 
@@ -995,6 +997,75 @@ export default function AdminDashboard({ initialConfig, stats }: { initialConfig
 
             <div className="text-center py-4">
               <div className="text-[13px] mono uppercase tracking-[0.3em]" style={{ color: T.textDimmer }}>Restricted Area · Designed by Ones</div>
+            </div>
+          </div>
+        )}
+
+        {activeSection === 'changelog' && (
+          <div className="space-y-5">
+            {/* 버전 요약 카드 */}
+            <div className="border" style={{ borderColor: T.border, background: T.bgCard }}>
+              <SectionHeader title="Version" T={T} action={
+                <a href="/changelog" target="_blank" rel="noreferrer"
+                  className="text-[11px] mono uppercase tracking-[0.15em] px-3 py-1 border"
+                  style={{ color: T.textMuted, borderColor: T.border }}>
+                  Public Page ↗
+                </a>
+              } />
+              <div className="grid grid-cols-3 divide-x" style={{ borderColor: T.borderSoft }}>
+                <div className="p-5">
+                  <div className="text-[11px] mono uppercase tracking-[0.2em] mb-2" style={{ color: T.textFaint }}>Current</div>
+                  <div className="text-3xl font-light mono tracking-tight" style={{ color: T.accent }}>v{CURRENT_VERSION}</div>
+                </div>
+                <div className="p-5">
+                  <div className="text-[11px] mono uppercase tracking-[0.2em] mb-2" style={{ color: T.textFaint }}>Total Releases</div>
+                  <div className="text-3xl font-light mono tracking-tight" style={{ color: T.text }}>{CHANGELOG.length}</div>
+                </div>
+                <div className="p-5">
+                  <div className="text-[11px] mono uppercase tracking-[0.2em] mb-2" style={{ color: T.textFaint }}>Latest Date</div>
+                  <div className="text-xl font-light mono" style={{ color: T.text }}>{CHANGELOG[0].date}</div>
+                </div>
+              </div>
+            </div>
+
+            {/* 패치 히스토리 */}
+            <div className="border" style={{ borderColor: T.border, background: T.bgCard }}>
+              <SectionHeader title="Patch History" T={T} />
+              <div className="divide-y" style={{ borderColor: T.borderSoft }}>
+                {CHANGELOG.map((entry, idx) => {
+                  const TYPE_COLOR: Record<string, string> = {
+                    major: T.accent, feature: '#6ea8c8', fix: '#8bc87a', perf: '#c87a8b',
+                  };
+                  const col = TYPE_COLOR[entry.type] || T.textMuted;
+                  return (
+                    <div key={entry.version} className="px-5 py-4">
+                      <div className="flex items-center gap-3 mb-2 flex-wrap">
+                        <span className="mono text-[15px] font-semibold" style={{ color: idx === 0 ? T.accent : T.textPrimary }}>
+                          v{entry.version}
+                        </span>
+                        {idx === 0 && (
+                          <span className="text-[9px] mono tracking-[0.15em] px-2 py-0.5 font-bold"
+                            style={{ background: T.accent, color: '#0a0a0a' }}>LATEST</span>
+                        )}
+                        <span className="text-[9px] mono tracking-[0.15em] px-2 py-0.5 border uppercase"
+                          style={{ color: col, borderColor: `${col}44`, background: `${col}18` }}>
+                          {entry.type}
+                        </span>
+                        <span className="text-[11px] mono ml-auto" style={{ color: T.textDimmer }}>{entry.date}</span>
+                      </div>
+                      <div className="text-[13px] mb-2" style={{ color: T.textMuted }}>{entry.title}</div>
+                      <ul className="space-y-1">
+                        {entry.items.map((item, i) => (
+                          <li key={i} className="flex gap-2 text-[12px]" style={{ color: T.textFaint }}>
+                            <span style={{ color: col, flexShrink: 0 }}>▸</span>
+                            <span>{item}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
         )}

@@ -97,7 +97,7 @@ export default function HomeView({
       /* 모바일 전용 */
       .hw-nav-desktop { display: flex; }
       .hw-nav-mobile  { display: none; }
-      .hw-fam-grid    { display: grid; grid-template-columns: repeat(auto-fill, minmax(188px, 1fr)); gap: 8px; }
+      .hw-fam-grid    { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 8px; }
       .hw-dots        { display: flex; }
       /* S4~S6 mock 패널 — 모바일에서 가로 레이아웃 스케일 다운 */
       .hw-calc-ab     { display: grid; grid-template-columns: 1fr auto 1fr; }
@@ -114,14 +114,16 @@ export default function HomeView({
         /* HERO 타이틀 */
         .hw-hero-title  { font-size: clamp(40px, 13vw, 72px) !important; }
 
-        /* S3 FAMILIES 그리드 */
+        /* S3 FAMILIES 그리드 — 3×3, 스크롤 없음 */
         .hw-fam-grid {
-          grid-template-columns: 1fr !important;
-          gap: 6px !important;
-          overflow-y: auto;
-          max-height: calc(100vh - 180px);
+          grid-template-columns: repeat(3, 1fr) !important;
+          gap: 5px !important;
+          overflow: hidden !important;
         }
-        .hw-fam-grid::-webkit-scrollbar { display: none; }
+        /* 모바일 카드 — 간결하게 */
+        .hw-fam-card { padding: 10px 10px !important; }
+        .hw-fam-card-desc { display: none !important; }
+        .hw-fam-card-bar { margin-bottom: 6px !important; }
 
         /* S4/S5/S6 — 2단 → 1단, padding/gap 축소 */
         .hw-feat-grid {
@@ -150,10 +152,11 @@ export default function HomeView({
         /* S2 numbers padding 축소 */
         .hw-numbers-grid { padding: 0 !important; }
 
-        /* S3 families 상단 여백 줄이기 */
-        .hw-fam-title { margin-bottom: 16px !important; }
-        /* S3 씬 자체 paddingTop 축소 */
-        #hs3 { padding-top: 56px !important; }
+        /* S3 타이틀 여백 최소화 */
+        .hw-fam-title { margin-bottom: 10px !important; }
+        /* S3 씬 — 모바일 전용 꽉 채움, 스크롤 없음 */
+        #hs3 { overflow: hidden !important; }
+        #hs3 > div { padding: 52px 16px 16px !important; height: 100%; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; }
 
         /* S4/S5/S6 텍스트 영역 — 모바일 단일 컬럼일 때 중앙 정렬 */
         .hw-feat-text { text-align: center !important; }
@@ -573,14 +576,10 @@ export default function HomeView({
                     borderRadius: 2, opacity: 0.82, width: '100%',
                   }}
                 >
-                  <div style={{ width: 24, height: 2.5, background: fam.color, marginBottom: 10, borderRadius: 2 }} />
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <div>
-                      <div style={{ fontSize: 10, letterSpacing: '0.14em', color: fam.color, fontWeight: 600, marginBottom: 3 }}>{fam.en}</div>
-                      <div style={{ fontSize: 14, color: txt, fontWeight: 600 }}>{fam.label}</div>
-                    </div>
-                    <div style={{ marginLeft: 'auto', fontSize: 11, color: muted, lineHeight: 1.6, textAlign: 'right', maxWidth: 240 }}>{fam.desc}</div>
-                  </div>
+                  <div className="hw-fam-card-bar" style={{ width: 20, height: 2, background: fam.color, marginBottom: 8, borderRadius: 2 }} />
+                  <div style={{ fontSize: 9, letterSpacing: '0.12em', color: fam.color, fontWeight: 600, marginBottom: 3 }}>{fam.en}</div>
+                  <div style={{ fontSize: 13, color: txt, fontWeight: 600, whiteSpace: 'nowrap', marginBottom: 5 }}>{fam.label}</div>
+                  <div className="hw-fam-card-desc" style={{ fontSize: 11, color: muted, lineHeight: 1.6 }}>{fam.desc}</div>
                 </button>
               ))}
             </div>
