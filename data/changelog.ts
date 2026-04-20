@@ -10,6 +10,48 @@ export type PatchEntry = {
 
 export const CHANGELOG: PatchEntry[] = [
   {
+    version: '1.70.2',
+    date: '2026-04-20',
+    title: 'Dashboard 9 Hue Family 전체 반영 / terms-industry-a 3분할 빌드 최적화',
+    titlePublic: '카테고리 지도 개편 & 성능 개선',
+    type: 'perf',
+    items: [
+      'DashboardHome FAMILIES: 5개(잘못된 매핑) → 9개(colors.ts 기준 fundamental/market/macro/risk/derivatives/trading/industry/digital/tax) 전체 반영',
+      '각 family 실제 카테고리명 + +N 잔여 수 표기',
+      'Family 지도 그리드: 5열 → 3×3(repeat(3,1fr)) 레이아웃',
+      'terms-industry-a.ts(4.1MB, 16,985줄) → a1(소비재·리테일·자동차 1,539개) / a2(AI·반도체 1,327개) / a3(SW·클라우드·SaaS 1,379개) 3분할',
+      'data/terms/index.ts TERMS_INDUSTRY_A → A1/A2/A3 import 교체',
+      'Vercel 빌드 타임 ~10분 → ~6분대 복귀 예상 (TS 컴파일 병렬화)',
+      '/app/changelog/page.tsx → /patch-notes redirect 처리',
+      'StockWiki.tsx CURRENT_VERSION import from @/data/changelog 추가',
+    ],
+    itemsPublic: [
+      '카테고리 지도가 실제 9개 그룹(기업가치·시장·거시경제·리스크·파생·실전매매·산업군·디지털자산·세금법률)으로 정확하게 개편됐어요',
+      '사이트 로딩 및 빌드 속도가 개선됐습니다',
+    ],
+  },
+  {
+    version: '1.70.1',
+    date: '2026-04-20',
+    title: 'DashboardHome UX 개선 — KST 시계 이동 / 모바일 오버플로우 / 계산기·사전 수 수정',
+    titlePublic: '홈 화면 UX 개선',
+    type: 'fix',
+    items: [
+      'DashboardHome W1 위젯: 장외·CLOSED 뱃지 제거 (Market Strip과 중복) → KST 시계를 날짜 위젯으로 이동',
+      'Market Strip 우측 시계 제거',
+      'DashboardHome wrapper overflowX: hidden + Market Strip overflow: hidden → 모바일 좌우 스크롤 방지',
+      '모바일 breakpoint 600px 추가 (widgets/feats 1열, fam 3열), 480px에서 fam 1열',
+      'Feature Cards 계산기 "30 calcs" → "69 calcs" 수정 (실제 calcs.ts 기준)',
+      'Feature Cards 금융사전 설명 "9,632개" → "12,136개, 91개 카테고리" 수정',
+      'changelog.ts v1.64.0 어드민 items 기술 상세 내용 대폭 보강',
+    ],
+    itemsPublic: [
+      '홈 화면 날짜 위젯에 KST 실시간 시계가 표시됩니다',
+      '모바일에서 좌우로 밀리는 현상이 수정됐어요',
+      '계산기 69개, 금융 용어 12,136개로 정보가 정확하게 표시됩니다',
+    ],
+  },
+  {
     version: '1.70.0',
     date: '2026-04-20',
     title: '금융 사전 12,136개 산업군 초대규모 확장',

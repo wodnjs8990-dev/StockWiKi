@@ -27,13 +27,17 @@ const CAT_COLORS: Record<string, string> = {
   '시장거래': '#8A8A8A', '차트심리': '#4f4f4f',
 };
 
-// ── 5 Hue Families
+// ── 9 Hue Families (colors.ts 기준)
 const FAMILIES = [
-  { id: 'value',  color: '#C89650', en: 'VALUE',  ko: '가치',  cats: ['밸류에이션', '기업재무', '회계심화'] },
-  { id: 'profit', color: '#A63D33', en: 'PROFIT', ko: '수익',  cats: ['수익성', '배당', '한국시장'] },
-  { id: 'risk',   color: '#4F7E7C', en: 'RISK',   ko: '리스크', cats: ['포트폴리오', '퀀트통계', '재무안정성'] },
-  { id: 'macro',  color: '#7C6A9B', en: 'MACRO',  ko: '거시',  cats: ['거시경제', '미시경제', '해외주식ETF'] },
-  { id: 'trade',  color: '#6B6B6B', en: 'TRADE',  ko: '실전',  cats: ['선물옵션', '파생헤지', '기술적지표'] },
+  { id: 'fundamental', color: '#c8a96e', en: 'FUNDAMENTAL', ko: '기업가치', cats: ['밸류에이션', '기업재무', '수익성', '재무안정성', '회계심화', '+13'] },
+  { id: 'market',      color: '#6ea8c8', en: 'MARKET',      ko: '시장',    cats: ['시장거래', '한국시장', 'ETF·상장상품', '시장구조·유동성', '+8'] },
+  { id: 'macro',       color: '#8bc87a', en: 'MACRO',       ko: '거시경제', cats: ['통화정책·금리', '물가·인플레이션', '거시지표 심화', '미시경제', '+13'] },
+  { id: 'risk',        color: '#c87a8b', en: 'RISK',        ko: '리스크',  cats: ['포트폴리오', '퀀트통계', '성과·리스크관리', '+4'] },
+  { id: 'derivatives', color: '#9a7ac8', en: 'DERIVATIVES', ko: '파생',    cats: ['선물옵션', '파생헤지', '옵션전략 심화', '+5'] },
+  { id: 'trading',     color: '#c8b47a', en: 'TRADING',     ko: '실전매매', cats: ['기술적지표', '투자심리·행동편향', '차트패턴·가격행동', '+6'] },
+  { id: 'industry',    color: '#7ac8c0', en: 'INDUSTRY',    ko: '산업군',  cats: ['AI·반도체', '소비재·리테일·자동차', '에너지·전력·인프라', '+8'] },
+  { id: 'digital',     color: '#c87ab4', en: 'DIGITAL',     ko: '디지털자산', cats: ['디지털자산·토큰화', 'DeFi·시장구조 심화', '+2'] },
+  { id: 'tax',         color: '#a8c87a', en: 'TAX·LEGAL',   ko: '세금·법률', cats: ['세금·계좌·제도', '공시·법률·규제 용어', '+2'] },
 ];
 
 // ── 빠른 계산기
@@ -430,7 +434,7 @@ export default function DashboardHome({ T, isDark, totalTerms, recent, favorites
               5 Hue Families · 카테고리 지도
             </div>
             <div style={{
-              display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)',
+              display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)',
               gap: 1, background: BORDERSOFT,
             }}
               className="dashboard-fam"
@@ -521,10 +525,10 @@ export default function DashboardHome({ T, isDark, totalTerms, recent, favorites
         @media(max-width:600px){
           .dashboard-widgets { grid-template-columns: 1fr !important; }
           .dashboard-feats   { grid-template-columns: 1fr !important; }
-          .dashboard-fam     { grid-template-columns: repeat(2,1fr) !important; }
+          .dashboard-fam     { grid-template-columns: repeat(3,1fr) !important; }
           .dashboard-page-body { padding: 16px 12px 60px !important; }
         }
-        @media(max-width:400px){
+        @media(max-width:480px){
           .dashboard-fam     { grid-template-columns: 1fr !important; }
         }
       `}</style>
