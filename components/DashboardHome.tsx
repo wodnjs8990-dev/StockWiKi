@@ -138,8 +138,8 @@ export default function DashboardHome({ T, isDark, totalTerms, recent, favorites
   const favCount = favArr.length;
 
   const FEAT_CARDS = [
-    { id: 'glossary',  num: '01', icon: '📖', title: '금융 사전',     desc: '주식·선물·옵션·거시경제·회계·퀀트까지 18개 카테고리, 9,632개 용어. 공식·예시·관련 용어가 한 카드에.', count: `${totalTerms.toLocaleString()} terms`, color: '#C89650' },
-    { id: 'calculator',num: '02', icon: '🧮', title: '실전 계산기',    desc: 'PER·DCF·Black-Scholes·Kelly·VaR·양도세까지 30개 계산기. A/B 시나리오 비교, 게이지 판정.', count: '30 calcs', color: '#4F7E7C' },
+    { id: 'glossary',  num: '01', icon: '📖', title: '금융 사전',     desc: '주식·선물·옵션·거시경제·회계·퀀트·산업군 특화까지 91개 카테고리, 12,136개 용어. 공식·예시·관련 용어가 한 카드에.', count: `${totalTerms.toLocaleString()} terms`, color: '#C89650' },
+    { id: 'calculator',num: '02', icon: '🧮', title: '실전 계산기',    desc: 'PER·DCF·Black-Scholes·Kelly·VaR·양도세까지 69개 계산기. A/B 시나리오 비교, 게이지 판정.', count: '69 calcs', color: '#4F7E7C' },
     { id: 'events',    num: '03', icon: '📅', title: '이벤트 캘린더',  desc: 'FOMC·CPI·어닝시즌·K200 만기·국채 입찰까지. 연간 일정을 5 family 색상으로 분류.', count: '연간 200+ 이벤트', color: '#7C6A9B' },
     { id: 'favorites', num: '04', icon: '⭐', title: '즐겨찾기',       desc: '자주 보는 용어를 즐겨찾기로 모아두고, 개인 메모와 함께 관리. 로컬에 저장되어 계속 유지.', count: `${favCount} saved`, color: '#C89650' },
   ];
@@ -175,7 +175,7 @@ export default function DashboardHome({ T, isDark, totalTerms, recent, favorites
   const BORDERSOFT = isDark ? '#252525' : '#e0ddd4';
 
   return (
-    <div style={{ background: T.bgPage || T.bg, minHeight: '100vh', color: T.text }}>
+    <div style={{ background: T.bgPage || T.bg, minHeight: '100vh', color: T.text, overflowX: 'hidden' }}>
 
       {/* ── Market Strip ── */}
       <div style={{
@@ -187,10 +187,12 @@ export default function DashboardHome({ T, isDark, totalTerms, recent, favorites
         position: 'sticky',
         top: 52,
         zIndex: 29,
+        overflow: 'hidden',
       }}>
         <div style={{
           maxWidth: 1360, margin: '0 auto', padding: '0 24px',
           display: 'flex', alignItems: 'stretch', width: '100%',
+          overflow: 'hidden',
         }}>
           {/* KOSPI */}
           <MktCell name="KOSPI" borderColor={BORDERSOFT}>
@@ -210,21 +212,12 @@ export default function DashboardHome({ T, isDark, totalTerms, recent, favorites
           <MktCell name="NDX" borderColor={BORDERSOFT}>
             <MktSession dotColor={dot(mkt.ndx)} label={lbl(mkt.ndx, false, '장중', '', '장외')} live={mkt.ndx} />
           </MktCell>
-          {/* 시계 */}
-          <div style={{
-            marginLeft: 'auto', paddingLeft: 20,
-            display: 'flex', alignItems: 'center',
-            fontFamily: 'var(--font-mono), monospace', fontSize: 10.5,
-            letterSpacing: '0.08em', color: isDark ? '#5a5a5a' : '#aaa8a4',
-            whiteSpace: 'nowrap',
-          }}>
-            {kstTime} KST
-          </div>
+          {/* 시계 — Market Strip 우측 (삭제됨, 날짜 위젯으로 이동) */}
         </div>
       </div>
 
       {/* ── Page Body ── */}
-      <div style={{ maxWidth: 1360, margin: '0 auto', padding: '28px 24px 60px' }}>
+      <div className="dashboard-page-body" style={{ maxWidth: 1360, margin: '0 auto', padding: '28px 24px 60px' }}>
 
         {/* ── 위젯 Row ── */}
         {secLabel('오늘의 현황 · Dashboard')}
@@ -236,28 +229,23 @@ export default function DashboardHome({ T, isDark, totalTerms, recent, favorites
         }}
           className="dashboard-widgets"
         >
-          {/* W1: 날짜·장상태 */}
+          {/* W1: 날짜·시계 */}
           <div style={{ background: BGSURFACE, padding: '18px 20px' }}>
             {wLabel('날짜 · 장상태', T.accent)}
             <div style={{ fontFamily: 'var(--font-mono), monospace', fontSize: 28, fontWeight: 500, letterSpacing: '-0.01em', color: T.textPrimary, lineHeight: 1.1, marginBottom: 4 }}>
               {kstDate}
             </div>
-            <div style={{ fontFamily: 'var(--font-mono), monospace', fontSize: 11, color: isDark ? '#7a7a7a' : '#888380', letterSpacing: '0.08em' }}>
+            <div style={{ fontFamily: 'var(--font-mono), monospace', fontSize: 11, color: isDark ? '#7a7a7a' : '#888380', letterSpacing: '0.08em', marginBottom: 10 }}>
               {kstDay}
             </div>
+            {/* KST 시계 */}
             <div style={{
-              display: 'inline-flex', alignItems: 'center', gap: 6,
-              marginTop: 12, padding: '5px 10px',
-              border: `1px solid ${kospiColor}`,
-              fontFamily: 'var(--font-mono), monospace', fontSize: 10,
-              letterSpacing: '0.12em', textTransform: 'uppercase' as const,
-              color: kospiColor,
+              fontFamily: 'var(--font-mono), monospace', fontSize: 18, fontWeight: 400,
+              letterSpacing: '0.08em', color: isDark ? '#5a5a5a' : '#aaa8a4',
+              marginBottom: 2,
             }}>
-              <span style={{
-                width: 6, height: 6, borderRadius: '50%', background: kospiColor,
-                ...(mkt.kospi ? { animation: 'mktpulse 2.4s ease-in-out infinite' } : {}),
-              }} />
-              {kospiText}
+              {kstTime}
+              <span style={{ fontSize: 10, marginLeft: 6, letterSpacing: '0.18em' }}>KST</span>
             </div>
           </div>
 
@@ -530,9 +518,13 @@ export default function DashboardHome({ T, isDark, totalTerms, recent, favorites
           .dashboard-feats   { grid-template-columns: repeat(2,1fr) !important; }
           .dashboard-bottom  { grid-template-columns: 1fr !important; }
         }
-        @media(max-width:560px){
+        @media(max-width:600px){
           .dashboard-widgets { grid-template-columns: 1fr !important; }
           .dashboard-feats   { grid-template-columns: 1fr !important; }
+          .dashboard-fam     { grid-template-columns: repeat(2,1fr) !important; }
+          .dashboard-page-body { padding: 16px 12px 60px !important; }
+        }
+        @media(max-width:400px){
           .dashboard-fam     { grid-template-columns: 1fr !important; }
         }
       `}</style>

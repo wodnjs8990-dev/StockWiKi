@@ -10,8 +10,9 @@ import Link from 'next/link';
 import { CATEGORIES, CATEGORY_COLORS, HUE_FAMILIES, CATEGORY_FAMILY } from '@/data/terms';
 import type { Term } from '@/data/terms';
 import { CALC_CATEGORIES } from '@/data/calcs';
+import { CURRENT_VERSION } from '@/data/changelog';
 
-const TERMS_TOTAL = 9632; // 전체 용어 수 (빌드 시점 기준)
+const TERMS_TOTAL = 12136; // 전체 용어 수 (빌드 시점 기준)
 
 // API fetch 헬퍼
 async function fetchTerms(q: string, cat: string, favs: string[], page: number, family?: string): Promise<{ items: Term[]; total: number; hasMore: boolean }> {
@@ -738,6 +739,19 @@ export default function StockWiki({ features, customEvents }: { features?: Featu
               </button>
             </div>
 
+            {/* 패치노트 */}
+            <div className="px-4 py-3 border-b" style={{ borderColor: T.border }}>
+              <a
+                href="/patch-notes"
+                className="w-full flex items-center gap-3 px-3 py-2.5 border text-sm"
+                style={{ borderColor: T.border, color: T.textFaint, textDecoration: 'none', display: 'flex' }}
+              >
+                <Info size={14} />
+                <span>패치노트</span>
+                <span className="ml-auto text-[10px] mono" style={{ color: T.accent }}>v{CURRENT_VERSION}</span>
+              </a>
+            </div>
+
             {/* 테마 토글 */}
             <div className="mt-auto px-4 py-4 border-t" style={{ borderColor: T.border }}>
               <button
@@ -819,10 +833,10 @@ export default function StockWiki({ features, customEvents }: { features?: Featu
             <span suppressHydrationWarning>© {new Date().getFullYear()} · 정보 제공 목적 · 투자 권유 아님</span>
           </div>
           <div className="flex items-center gap-3">
-            <a href="/changelog" style={{ color: T.textFooter, textDecoration: 'none' }}
+            <a href="/patch-notes" style={{ color: T.textFooter, textDecoration: 'none' }}
               onMouseEnter={e => (e.currentTarget.style.color = T.accent)}
               onMouseLeave={e => (e.currentTarget.style.color = T.textFooter)}>
-              Changelog
+              패치노트
             </a>
             <span className="w-px h-3" style={{ background: T.border }}></span>
             <span>Designed by Ones</span>
