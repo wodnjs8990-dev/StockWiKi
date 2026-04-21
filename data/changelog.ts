@@ -10,6 +10,28 @@ export type PatchEntry = {
 
 export const CHANGELOG: PatchEntry[] = [
   {
+    version: '1.70.3',
+    date: '2026-04-21',
+    title: '모바일 Market Strip 표시 / 하단 탭바 콘텐츠 가림 수정',
+    titlePublic: '모바일 UX 수정',
+    type: 'fix',
+    items: [
+      'Market Strip을 DashboardHome에서 완전히 분리 → StockWiki.tsx 헤더(sticky top-0) 안 탭바 아래로 이동 — sticky 위치 계산 문제 근본 해결',
+      'Market Strip: 모든 탭에서 항상 표시, PC/모바일 동일하게 헤더에 딱 붙음, gap 0',
+      'Market Strip: overflowX:auto + scrollbarWidth:none + minWidth:max-content — 모바일 좌우 스크롤 가능, 스크롤바 숨김',
+      'StockWiki에 mkt 상태/useEffect 추가 (10초 interval), DashboardHome mkt 관련 코드 전체 제거',
+      'DashboardHome padding-bottom 60px → 80px — 하단 탭바 가림 방지',
+      'footer mb-[60px] 추가 — 모바일에서 패치노트·Designed by Ones 탭바에 가리는 문제 수정',
+      '전역 토스트 bottom-[76px] md:bottom-6 — 모바일 하단 탭바 위에 표시',
+    ],
+    itemsPublic: [
+      '장 상태 바(KOSPI·NXT·K200F·NDX)가 모든 페이지에서 헤더에 항상 표시됩니다',
+      '탭바와 장 상태 바 사이의 빈 공간이 사라졌어요',
+      '모바일에서 장 상태 바를 좌우 스크롤로 전체 확인할 수 있어요',
+      '하단 탭바가 패치노트 등 하단 컨텐츠를 가리던 문제가 수정됐어요',
+    ],
+  },
+  {
     version: '1.70.2',
     date: '2026-04-20',
     title: 'Dashboard 9 Hue Family 전체 반영 / terms-industry-a 3분할 빌드 최적화',

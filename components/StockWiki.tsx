@@ -148,6 +148,29 @@ export default function StockWiki({ features, customEvents }: { features?: Featu
   const lastFocusRef = useRef<HTMLElement | null>(null);
   const sidebarPanelRef = useRef<HTMLDivElement | null>(null);
 
+  // ── Market Strip 상태
+  const [mkt, setMkt] = useState({ kospi: false, kospiPre: false, nxt: false, k200Day: false, k200Night: false, ndx: false });
+  useEffect(() => {
+    const tick = () => {
+      const now = new Date();
+      const kst = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Seoul' }));
+      const h = kst.getHours(), m = kst.getMinutes(), dow = kst.getDay();
+      const hm = h * 60 + m;
+      const isWeekday = dow >= 1 && dow <= 5;
+      setMkt({
+        kospi:      isWeekday && hm >= 9*60 && hm < 15*60+30,
+        kospiPre:   isWeekday && hm >= 8*60 && hm < 9*60,
+        nxt:        isWeekday && ((hm >= 8*60 && hm < 8*60+30) || (hm >= 16*60 && hm < 20*60)),
+        k200Day:    isWeekday && hm >= 9*60 && hm < 15*60+45,
+        k200Night:  dow !== 6 && (hm >= 18*60 || hm < 6*60) && !(dow === 0 && hm < 18*60),
+        ndx:        (isWeekday || dow === 0) && (hm >= 23*60+30 || hm < 6*60),
+      });
+    };
+    tick();
+    const id = setInterval(tick, 10000);
+    return () => clearInterval(id);
+  }, []);
+
   const showToast = (msg: string, type: 'success'|'info' = 'success') => {
     const id = Date.now();
     setToasts(prev => [...prev, { id, msg, type }]);
@@ -535,7 +558,77 @@ export default function StockWiki({ features, customEvents }: { features?: Featu
             );
           })}
         </div>
+
+        {/* ── Market Strip — 헤더 안 탭바 아래 (항상 표시) ── */}
+        {(() => {
+          const ON  = T.green  || '#4A7045';
+          const PRE = T.accent || '#C89650';
+          const OFF = isDark ? '#4a4a4a' : '#aaa8a4';
+          const dot = (on: boolean, pre = false) => on ? ON : pre ? PRE : OFF;
+          const lbl = (on: boolean, pre: boolean, onT: string, preT: string, offT: string) => on ? onT : pre ? preT : offT;
+          const BSOFT = isDark ? '#252525' : '#e0ddd4';
+
+          const MktDot = ({ color, live }: { color: string; live: boolean }) => (
+            <span style={{
+              display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: color, flexShrink: 0,
+              ...(live ? { animation: 'mktpulse 2.4s ease-in-out infinite' } : {}),
+            }} />
+          );
+          const MktLabel = ({ color, text }: { color: string; text: string }) => (
+            <span style={{ fontFamily: 'var(--font-mono),monospace', fontSize: 9.5, letterSpacing: '0.08em', textTransform: 'uppercase', color, whiteSpace: 'nowrap' }}>{text}</span>
+          );
+          const Sep = () => <span style={{ width: 1, height: 10, background: BSOFT, flexShrink: 0, margin: '0 2px' }} />;
+
+          return (
+            <div style={{
+              borderTop: `1px solid ${isDark ? '#1e1e1e' : '#e8e5dc'}`,
+              background: isDark ? '#111111' : '#f8f5ee',
+              height: 30,
+              overflowX: 'auto', overflowY: 'hidden',
+              scrollbarWidth: 'none',
+            }} className="mkt-strip-scrollhide">
+              <div style={{
+                maxWidth: 1400, margin: '0 auto', padding: '0 16px',
+                display: 'flex', alignItems: 'center', height: '100%',
+                gap: 0, minWidth: 'max-content',
+              }}>
+                {/* KOSPI */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '0 16px 0 0', borderRight: `1px solid ${BSOFT}`, marginRight: 16 }}>
+                  <span style={{ fontFamily: 'var(--font-mono),monospace', fontSize: 9, letterSpacing: '0.2em', color: isDark ? '#4a4a4a' : '#aaa8a4', textTransform: 'uppercase' }}>KOSPI</span>
+                  <MktDot color={dot(mkt.kospi, mkt.kospiPre)} live={mkt.kospi} />
+                  <MktLabel color={dot(mkt.kospi, mkt.kospiPre)} text={lbl(mkt.kospi, mkt.kospiPre, '장중', '프리', '장외')} />
+                </div>
+                {/* NXT */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '0 16px 0 0', borderRight: `1px solid ${BSOFT}`, marginRight: 16 }}>
+                  <span style={{ fontFamily: 'var(--font-mono),monospace', fontSize: 9, letterSpacing: '0.2em', color: isDark ? '#4a4a4a' : '#aaa8a4', textTransform: 'uppercase' }}>NXT</span>
+                  <MktDot color={dot(mkt.nxt)} live={mkt.nxt} />
+                  <MktLabel color={dot(mkt.nxt)} text={lbl(mkt.nxt, false, '장중', '', '장외')} />
+                </div>
+                {/* K200F */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '0 16px 0 0', borderRight: `1px solid ${BSOFT}`, marginRight: 16 }}>
+                  <span style={{ fontFamily: 'var(--font-mono),monospace', fontSize: 9, letterSpacing: '0.2em', color: isDark ? '#4a4a4a' : '#aaa8a4', textTransform: 'uppercase' }}>K200F</span>
+                  <MktDot color={dot(mkt.k200Day)} live={mkt.k200Day} />
+                  <MktLabel color={dot(mkt.k200Day)} text={mkt.k200Day ? '주간' : '주간 ○'} />
+                  <Sep />
+                  <MktDot color={dot(mkt.k200Night)} live={mkt.k200Night} />
+                  <MktLabel color={dot(mkt.k200Night)} text={mkt.k200Night ? '야간' : '야간 ○'} />
+                </div>
+                {/* NDX */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ fontFamily: 'var(--font-mono),monospace', fontSize: 9, letterSpacing: '0.2em', color: isDark ? '#4a4a4a' : '#aaa8a4', textTransform: 'uppercase' }}>NDX</span>
+                  <MktDot color={dot(mkt.ndx)} live={mkt.ndx} />
+                  <MktLabel color={dot(mkt.ndx)} text={lbl(mkt.ndx, false, '장중', '', '장외')} />
+                </div>
+              </div>
+            </div>
+          );
+        })()}
       </header>
+
+      <style>{`
+        @keyframes mktpulse { 0%,100%{opacity:1} 50%{opacity:.25} }
+        .mkt-strip-scrollhide::-webkit-scrollbar { display: none; }
+      `}</style>
 
       <main className={(activeTab === 'home' || activeTab === 'about') ? '' : 'max-w-[1400px] mx-auto px-4 md:px-8 pt-5 md:pt-6 pb-24 md:pb-12 min-h-[calc(100vh-180px)]'}>
         {activeTab === 'about' && (
@@ -823,7 +916,7 @@ export default function StockWiki({ features, customEvents }: { features?: Featu
         />
       )}
 
-      <footer className="border-t" style={{ borderColor: T.border, background: T.bgSurface }}>
+      <footer className="border-t md:mb-0 mb-[60px]" style={{ borderColor: T.border, background: T.bgSurface }}>
         <div className="max-w-[1400px] mx-auto px-4 md:px-8 py-6 flex flex-col md:flex-row md:justify-between md:items-center gap-3 text-[13px] mono uppercase tracking-wider" style={{ color: T.textFooter }}>
           <div className="flex items-center gap-4 flex-wrap">
             <span style={{ color: T.textMuted }}>
@@ -845,7 +938,7 @@ export default function StockWiki({ features, customEvents }: { features?: Featu
       </footer>
 
       {/* 전역 토스트 */}
-      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] flex flex-col gap-2 items-center pointer-events-none">
+      <div className="fixed bottom-[76px] md:bottom-6 left-1/2 -translate-x-1/2 z-[100] flex flex-col gap-2 items-center pointer-events-none">
         {toasts.map(toast => (
           <div
             key={toast.id}

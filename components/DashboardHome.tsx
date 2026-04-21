@@ -51,19 +51,6 @@ const QUICK_CALCS = [
   { id: 'var',   num: 'M31', name: 'VaR 추정' },
 ];
 
-// ── 거래시간 로직 (KST 기준)
-function getMarketStatus(h: number, m: number, dow: number) {
-  const hm = h * 60 + m;
-  const isWeekday = dow >= 1 && dow <= 5;
-  return {
-    kospi:      isWeekday && hm >= 9*60 && hm < 15*60+30,
-    kospiPre:   isWeekday && hm >= 8*60 && hm < 9*60,
-    nxt:        isWeekday && ((hm >= 8*60 && hm < 8*60+30) || (hm >= 16*60 && hm < 20*60)),
-    k200Day:    isWeekday && hm >= 9*60 && hm < 15*60+45,
-    k200Night:  dow !== 6 && (hm >= 18*60 || hm < 6*60) && !(dow === 0 && hm < 18*60),
-    ndx:        (isWeekday || dow === 0) && (hm >= 23*60+30 || hm < 6*60),
-  };
-}
 
 const DAY_KO = ['일요일 · Sun', '월요일 · Mon', '화요일 · Tue', '수요일 · Wed', '목요일 · Thu', '금요일 · Fri', '토요일 · Sat'];
 const pad = (n: number) => String(n).padStart(2, '0');
@@ -77,21 +64,19 @@ export default function DashboardHome({ T, isDark, totalTerms, recent, favorites
   const [kstTime, setKstTime] = useState('--:--:--');
   const [kstDate, setKstDate] = useState('');
   const [kstDay, setKstDay] = useState('');
-  const [mkt, setMkt] = useState({ kospi: false, kospiPre: false, nxt: false, k200Day: false, k200Night: false, ndx: false });
   const [recentTerms, setRecentTerms] = useState<RecentTerm[]>([]);
   const [calcHist, setCalcHist] = useState<CalcHistEntry[]>([]);
   const [hoveredFam, setHoveredFam] = useState<string | null>(null);
   const [hoveredQC, setHoveredQC] = useState<string | null>(null);
   const [hoveredFeat, setHoveredFeat] = useState<string | null>(null);
 
-  // 시계 + 장상태
+  // 시계
   useEffect(() => {
     const tick = () => {
       const now = new Date();
       const kst = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Seoul' }));
       const h = kst.getHours(), m = kst.getMinutes(), s = kst.getSeconds(), dow = kst.getDay();
       setKstTime(`${pad(h)}:${pad(m)}:${pad(s)}`);
-      setMkt(getMarketStatus(h, m, dow));
       if (!kstDate) {
         const y = kst.getFullYear(), mo = pad(kst.getMonth() + 1), d = pad(kst.getDate());
         setKstDate(`${y}.${mo}.${d}`);
@@ -127,16 +112,6 @@ export default function DashboardHome({ T, isDark, totalTerms, recent, favorites
     // 계산 기록
     setCalcHist(getLS<CalcHistEntry[]>('stockwiki_calc_history', []).slice(0, 5));
   }, [recent]);
-
-  const ON  = T.green  || '#4A7045';
-  const PRE = T.accent || '#C89650';
-  const OFF = isDark ? '#5a5a5a' : '#aaa8a4';
-
-  const kospiColor = mkt.kospi ? ON : mkt.kospiPre ? PRE : OFF;
-  const kospiText  = mkt.kospi ? '장중 · OPEN' : mkt.kospiPre ? '프리마켓' : '장외 · CLOSED';
-
-  const dot = (on: boolean, pre = false) => on ? ON : pre ? PRE : OFF;
-  const lbl = (on: boolean, pre: boolean, onT: string, preT: string, offT: string) => on ? onT : pre ? preT : offT;
 
   const favArr = Array.from(favorites);
   const favCount = favArr.length;
@@ -181,47 +156,8 @@ export default function DashboardHome({ T, isDark, totalTerms, recent, favorites
   return (
     <div style={{ background: T.bgPage || T.bg, minHeight: '100vh', color: T.text, overflowX: 'hidden' }}>
 
-      {/* ── Market Strip ── */}
-      <div style={{
-        background: BGSURFACE,
-        borderBottom: `1px solid ${BORDER}`,
-        height: 34,
-        display: 'flex',
-        alignItems: 'stretch',
-        position: 'sticky',
-        top: 52,
-        zIndex: 29,
-        overflow: 'hidden',
-      }}>
-        <div style={{
-          maxWidth: 1360, margin: '0 auto', padding: '0 24px',
-          display: 'flex', alignItems: 'stretch', width: '100%',
-          overflow: 'hidden',
-        }}>
-          {/* KOSPI */}
-          <MktCell name="KOSPI" borderColor={BORDERSOFT}>
-            <MktSession dotColor={dot(mkt.kospi, mkt.kospiPre)} label={lbl(mkt.kospi, mkt.kospiPre, '장중', '프리', '장외')} live={mkt.kospi} />
-          </MktCell>
-          {/* NXT */}
-          <MktCell name="NXT" borderColor={BORDERSOFT}>
-            <MktSession dotColor={dot(mkt.nxt)} label={lbl(mkt.nxt, false, '장중', '', '장외')} live={mkt.nxt} />
-          </MktCell>
-          {/* K200F */}
-          <MktCell name="K200F" borderColor={BORDERSOFT}>
-            <MktSession dotColor={dot(mkt.k200Day)} label={mkt.k200Day ? '주간 ●' : '주간 ○'} live={mkt.k200Day} />
-            <span style={{ width: 1, height: 12, background: isDark ? '#3a3a3a' : '#c8c4b8', margin: '0 4px' }} />
-            <MktSession dotColor={dot(mkt.k200Night)} label={mkt.k200Night ? '야간 ●' : '야간 ○'} live={mkt.k200Night} />
-          </MktCell>
-          {/* NDX */}
-          <MktCell name="NDX" borderColor={BORDERSOFT}>
-            <MktSession dotColor={dot(mkt.ndx)} label={lbl(mkt.ndx, false, '장중', '', '장외')} live={mkt.ndx} />
-          </MktCell>
-          {/* 시계 — Market Strip 우측 (삭제됨, 날짜 위젯으로 이동) */}
-        </div>
-      </div>
-
       {/* ── Page Body ── */}
-      <div className="dashboard-page-body" style={{ maxWidth: 1360, margin: '0 auto', padding: '28px 24px 60px' }}>
+      <div className="dashboard-page-body" style={{ maxWidth: 1360, margin: '0 auto', padding: '28px 24px 80px' }}>
 
         {/* ── 위젯 Row ── */}
         {secLabel('오늘의 현황 · Dashboard')}
@@ -516,7 +452,6 @@ export default function DashboardHome({ T, isDark, totalTerms, recent, favorites
 
       {/* pulse 애니메이션 */}
       <style>{`
-        @keyframes mktpulse { 0%,100%{opacity:1} 50%{opacity:.25} }
         @media(max-width:900px){
           .dashboard-widgets { grid-template-columns: repeat(2,1fr) !important; }
           .dashboard-feats   { grid-template-columns: repeat(2,1fr) !important; }
@@ -526,7 +461,7 @@ export default function DashboardHome({ T, isDark, totalTerms, recent, favorites
           .dashboard-widgets { grid-template-columns: 1fr !important; }
           .dashboard-feats   { grid-template-columns: 1fr !important; }
           .dashboard-fam     { grid-template-columns: repeat(3,1fr) !important; }
-          .dashboard-page-body { padding: 16px 12px 60px !important; }
+          .dashboard-page-body { padding: 16px 12px 80px !important; }
         }
         @media(max-width:480px){
           .dashboard-fam     { grid-template-columns: 1fr !important; }
@@ -536,36 +471,3 @@ export default function DashboardHome({ T, isDark, totalTerms, recent, favorites
   );
 }
 
-// ── 서브 컴포넌트
-function MktCell({ name, borderColor, children }: { name: string; borderColor: string; children: React.ReactNode }) {
-  return (
-    <div style={{
-      display: 'flex', alignItems: 'center', gap: 10,
-      padding: '0 20px',
-      borderRight: `1px solid ${borderColor}`,
-    }}>
-      <span style={{
-        fontFamily: 'var(--font-mono), monospace', fontSize: 10,
-        letterSpacing: '0.18em', textTransform: 'uppercase' as const,
-        color: '#5a5a5a', whiteSpace: 'nowrap', flexShrink: 0,
-      }}>{name}</span>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>{children}</div>
-    </div>
-  );
-}
-
-function MktSession({ dotColor, label, live }: { dotColor: string; label: string; live: boolean }) {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-      <span style={{
-        width: 6, height: 6, borderRadius: '50%', background: dotColor,
-        ...(live ? { animation: 'mktpulse 2.4s ease-in-out infinite' } : {}),
-      }} />
-      <span style={{
-        fontFamily: 'var(--font-mono), monospace', fontSize: 9.5,
-        letterSpacing: '0.08em', textTransform: 'uppercase' as const,
-        color: dotColor, whiteSpace: 'nowrap',
-      }}>{label}</span>
-    </div>
-  );
-}
