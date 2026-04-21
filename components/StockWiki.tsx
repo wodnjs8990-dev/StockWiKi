@@ -608,10 +608,10 @@ export default function StockWiki({ features, customEvents }: { features?: Featu
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '0 16px 0 0', borderRight: `1px solid ${BSOFT}`, marginRight: 16 }}>
                   <span style={{ fontFamily: 'var(--font-mono),monospace', fontSize: 9, letterSpacing: '0.2em', color: isDark ? '#4a4a4a' : '#aaa8a4', textTransform: 'uppercase' }}>K200F</span>
                   <MktDot color={dot(mkt.k200Day)} live={mkt.k200Day} />
-                  <MktLabel color={dot(mkt.k200Day)} text={mkt.k200Day ? '주간' : '주간 ○'} />
+                  <MktLabel color={dot(mkt.k200Day)} text="주간" />
                   <Sep />
                   <MktDot color={dot(mkt.k200Night)} live={mkt.k200Night} />
-                  <MktLabel color={dot(mkt.k200Night)} text={mkt.k200Night ? '야간' : '야간 ○'} />
+                  <MktLabel color={dot(mkt.k200Night)} text="야간" />
                 </div>
                 {/* NDX */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
