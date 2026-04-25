@@ -1,4 +1,5 @@
 /** @type {import('next').NextConfig} */
+const { version } = require('./package.json');
 
 // CSP 정책 — Google Fonts / Analytics / Vercel Insights 허용
 const ContentSecurityPolicy = `
@@ -14,6 +15,9 @@ const ContentSecurityPolicy = `
 `.replace(/\n/g, ' ').trim();
 
 const nextConfig = {
+  env: {
+    NEXT_PUBLIC_APP_VERSION: version,
+  },
   reactStrictMode: true,
   typescript: {
     ignoreBuildErrors: true,
