@@ -10,6 +10,27 @@ export type PatchEntry = {
 
 export const CHANGELOG: PatchEntry[] = [
   {
+    version: '1.71.0',
+    date: '2026-04-25',
+    title: '금융사전 13,323개 — 1,187개 대규모 신규 추가 / T.green 타입 오류 수정',
+    titlePublic: '금융사전 13,323개로 대폭 확장',
+    type: 'feature',
+    items: [
+      'terms-trading.ts: 205 → 896개 (+691) — 기술적지표 심화 568개, 차트패턴·가격행동 심화 62개, 오더플로우·호가창 심화 61개',
+      'terms-deriv.ts: 1,366 → 1,813개 (+447) — 옵션그릭스·민감도 182개, 옵션전략·포지션관리 224개, 옵션 변동성·스큐 18개, 선물·옵션 실행·증거금 23개',
+      'terms-risk.ts: 212 → 261개 (+49) — 리스크·포지션관리 심화 49개',
+      'data/terms/index.ts CATEGORIES 배열에 신규 카테고리 8개 추가: 기술적지표 심화, 옵션전략·포지션관리, 옵션그릭스·민감도, 옵션 변동성·스큐, 선물·옵션 실행·증거금, 오더플로우·호가창 심화, 차트패턴·가격행동 심화, 리스크·포지션관리 심화',
+      'StockWiki.tsx Market Strip: T.green → T.accentGreen 타입 오류(TS2339) 수정',
+      '참고 출처: Cboe Options Institute, OIC, StockCharts ChartSchool, CME Group Glossary',
+    ],
+    itemsPublic: [
+      '금융사전이 12,136개 → 13,323개로 늘었어요 (+1,187개)',
+      '옵션 그릭스(델타·감마·세타·베가·로 등) 및 고급 옵션 전략 용어가 대폭 추가됐어요',
+      '이동평균·RSI·MACD 등 기술적 지표 심화 용어 568개가 추가됐어요',
+      '오더플로우·호가창 분석 관련 용어와 리스크·포지션관리 심화 용어도 추가됐어요',
+    ],
+  },
+  {
     version: '1.70.3',
     date: '2026-04-21',
     title: '모바일 Market Strip 표시 / 하단 탭바 콘텐츠 가림 수정',
