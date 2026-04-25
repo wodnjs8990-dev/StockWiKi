@@ -561,7 +561,7 @@ export default function StockWiki({ features, customEvents }: { features?: Featu
 
         {/* ── Market Strip — 헤더 안 탭바 아래 (항상 표시) ── */}
         {(() => {
-          const ON  = T.green  || '#4A7045';
+          const ON  = T.accentGreen || '#4A7045';
           const PRE = T.accent || '#C89650';
           const OFF = isDark ? '#4a4a4a' : '#aaa8a4';
           const dot = (on: boolean, pre = false) => on ? ON : pre ? PRE : OFF;
