@@ -117,7 +117,7 @@ export default function DashboardHome({ T, isDark, totalTerms, recent, favorites
   const favCount = favArr.length;
 
   const FEAT_CARDS = [
-    { id: 'glossary',  num: '01', icon: '📖', title: '금융 사전',     desc: '주식·선물·옵션·거시경제·회계·퀀트·산업군 특화까지 91개 카테고리, 12,136개 용어. 공식·예시·관련 용어가 한 카드에.', count: `${totalTerms.toLocaleString()} terms`, color: '#C89650' },
+    { id: 'glossary',  num: '01', icon: '📖', title: '금융 사전',     desc: '주식·선물·옵션·거시경제·회계·퀀트·산업군 특화까지 108개 카테고리, 16,323개 용어. 공식·예시·관련 용어가 한 카드에.', count: `${totalTerms.toLocaleString()} terms`, color: '#C89650' },
     { id: 'calculator',num: '02', icon: '🧮', title: '실전 계산기',    desc: 'PER·DCF·Black-Scholes·Kelly·VaR·양도세까지 69개 계산기. A/B 시나리오 비교, 게이지 판정.', count: '69 calcs', color: '#4F7E7C' },
     { id: 'events',    num: '03', icon: '📅', title: '이벤트 캘린더',  desc: 'FOMC·CPI·어닝시즌·K200 만기·국채 입찰까지. 연간 일정을 5 family 색상으로 분류.', count: '연간 200+ 이벤트', color: '#7C6A9B' },
     { id: 'favorites', num: '04', icon: '⭐', title: '즐겨찾기',       desc: '자주 보는 용어를 즐겨찾기로 모아두고, 개인 메모와 함께 관리. 로컬에 저장되어 계속 유지.', count: `${favCount} saved`, color: '#C89650' },

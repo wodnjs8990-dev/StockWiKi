@@ -7,12 +7,12 @@ const CalcPrefixContext = createContext<string>('');
 import { Search, Calculator, BookOpen, ChevronRight, ChevronLeft, X, ArrowUpRight, Star, Clock, Menu, Link as LinkIcon, Copy, Check, Share2, CalendarDays, Info, Keyboard, LayoutDashboard, TrendingUp } from 'lucide-react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { CATEGORIES, CATEGORY_COLORS, HUE_FAMILIES, CATEGORY_FAMILY } from '@/data/terms';
+import { TERMS, CATEGORIES, CATEGORY_COLORS, HUE_FAMILIES, CATEGORY_FAMILY } from '@/data/terms';
 import type { Term } from '@/data/terms';
 import { CALC_CATEGORIES } from '@/data/calcs';
 import { CURRENT_VERSION } from '@/data/changelog';
 
-const TERMS_TOTAL = 12136; // 전체 용어 수 (빌드 시점 기준)
+const TERMS_TOTAL = TERMS.length; // 자동 계산 — 용어 추가 시 별도 수정 불필요
 
 // API fetch 헬퍼
 async function fetchTerms(q: string, cat: string, favs: string[], page: number, family?: string): Promise<{ items: Term[]; total: number; hasMore: boolean }> {
