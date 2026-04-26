@@ -117,22 +117,26 @@ export default function DashboardHome({ T, isDark, totalTerms, recent, favorites
   const favCount = favArr.length;
 
   const FEAT_CARDS = [
-    { id: 'glossary',  num: '01', icon: '📖', title: '금융 사전',     desc: '주식·선물·옵션·거시경제·회계·퀀트·산업군 특화까지 108개 카테고리, 16,323개 용어. 공식·예시·관련 용어가 한 카드에.', count: `${totalTerms.toLocaleString()} terms`, color: '#C89650' },
-    { id: 'calculator',num: '02', icon: '🧮', title: '실전 계산기',    desc: 'PER·DCF·Black-Scholes·Kelly·VaR·양도세까지 69개 계산기. A/B 시나리오 비교, 게이지 판정.', count: '69 calcs', color: '#4F7E7C' },
-    { id: 'events',    num: '03', icon: '📅', title: '이벤트 캘린더',  desc: 'FOMC·CPI·어닝시즌·K200 만기·국채 입찰까지. 연간 일정을 5 family 색상으로 분류.', count: '연간 200+ 이벤트', color: '#7C6A9B' },
-    { id: 'favorites', num: '04', icon: '⭐', title: '즐겨찾기',       desc: '자주 보는 용어를 즐겨찾기로 모아두고, 개인 메모와 함께 관리. 로컬에 저장되어 계속 유지.', count: `${favCount} saved`, color: '#C89650' },
+    { id: 'glossary',  num: '01', icon: 'glossary', title: '금융 사전',     desc: '주식·선물·옵션·거시경제·회계·퀀트·산업군 특화까지 108개 카테고리, 16,323개 용어. 공식·예시·관련 용어가 한 카드에.', count: `${totalTerms.toLocaleString()} terms`, color: '#C89650' },
+    { id: 'calculator',num: '02', icon: 'calculator', title: '실전 계산기',    desc: 'PER·DCF·Black-Scholes·Kelly·VaR·양도세까지 69개 계산기. A/B 시나리오 비교, 게이지 판정.', count: '69 calcs', color: '#4F7E7C' },
+    { id: 'events',    num: '03', icon: 'events', title: '이벤트 캘린더',  desc: 'FOMC·CPI·어닝시즌·K200 만기·국채 입찰까지. 연간 일정을 5 family 색상으로 분류.', count: '연간 200+ 이벤트', color: '#7C6A9B' },
+    { id: 'favorites', num: '04', icon: 'favorites', title: '즐겨찾기',       desc: '자주 보는 용어를 즐겨찾기로 모아두고, 개인 메모와 함께 관리. 로컬에 저장되어 계속 유지.', count: `${favCount} saved`, color: '#C89650' },
   ];
 
-  const secLabel = (text: string) => (
+  const secLabel = (text: string, count?: string) => (
     <div style={{
-      display: 'flex', alignItems: 'center', gap: 10,
-      fontFamily: 'var(--font-mono), monospace', fontSize: 10,
-      letterSpacing: '0.28em', textTransform: 'uppercase', color: isDark ? '#5a5a5a' : '#aaa8a4',
-      marginBottom: 14,
+      display: 'flex', alignItems: 'baseline', justifyContent: 'space-between',
+      paddingBottom: 10, marginBottom: 14,
+      borderBottom: `1px solid ${isDark ? '#222' : '#e0ddd4'}`,
     }}>
-      <span style={{ color: T.accent }}>§</span>
-      {text}
-      <span style={{ flex: 1, height: 1, background: isDark ? '#252525' : '#e0ddd4' }} />
+      <span style={{
+        fontSize: 12, fontWeight: 500, letterSpacing: '0.05em', textTransform: 'uppercase',
+        color: isDark ? '#7a7670' : '#5a5550',
+      }}>{text}</span>
+      {count && <span style={{
+        fontFamily: 'var(--font-mono), monospace', fontSize: 10,
+        color: isDark ? '#484440' : '#aaa8a4', letterSpacing: '0.05em',
+      }}>{count}</span>}
     </div>
   );
 
@@ -160,7 +164,7 @@ export default function DashboardHome({ T, isDark, totalTerms, recent, favorites
       <div className="dashboard-page-body" style={{ maxWidth: 1360, margin: '0 auto', padding: '28px 24px 80px' }}>
 
         {/* ── 위젯 Row ── */}
-        {secLabel('오늘의 현황 · Dashboard')}
+        {secLabel('오늘의 현황', '대시보드')}
         <div style={{
           display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)',
           gap: 1, background: BORDERSOFT,
@@ -290,7 +294,7 @@ export default function DashboardHome({ T, isDark, totalTerms, recent, favorites
         </div>
 
         {/* ── Feature Cards ── */}
-        {secLabel('기능 바로가기 · Features')}
+        {secLabel('기능 바로가기', '4 features')}
         <div style={{
           display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)',
           gap: 1, background: BORDERSOFT,
@@ -330,9 +334,14 @@ export default function DashboardHome({ T, isDark, totalTerms, recent, favorites
                 <div style={{
                   width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center',
                   border: `1px solid ${hovered ? fc.color : BORDER}`,
-                  marginBottom: 16, fontSize: 16,
+                  marginBottom: 16,
                   transition: 'border-color 0.2s',
-                }}>{fc.icon}</div>
+                }}>
+                  {fc.icon === 'glossary' && <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={fc.color} strokeWidth="1.5" strokeLinecap="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>}
+                  {fc.icon === 'calculator' && <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={fc.color} strokeWidth="1.5" strokeLinecap="round"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="14" y2="14"/></svg>}
+                  {fc.icon === 'events' && <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={fc.color} strokeWidth="1.5" strokeLinecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>}
+                  {fc.icon === 'favorites' && <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={fc.color} strokeWidth="1.5" strokeLinecap="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>}
+                </div>
                 <div style={{ fontSize: 18, fontWeight: 400, letterSpacing: '-0.01em', color: T.textPrimary, marginBottom: 8, lineHeight: 1.2 }}>{fc.title}</div>
                 <div style={{ fontSize: 12.5, lineHeight: 1.6, color: T.textMuted, flex: 1, marginBottom: 20 }}>{fc.desc}</div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -361,13 +370,14 @@ export default function DashboardHome({ T, isDark, totalTerms, recent, favorites
           {/* 5 Hue Family 지도 */}
           <div style={{ background: BGSURFACE, padding: 20 }}>
             <div style={{
-              fontFamily: 'var(--font-mono), monospace', fontSize: 9.5,
-              letterSpacing: '0.28em', textTransform: 'uppercase' as const,
-              color: isDark ? '#5a5a5a' : '#aaa8a4', marginBottom: 14,
-              display: 'flex', alignItems: 'center', gap: 8,
+              fontSize: 12, fontWeight: 500, letterSpacing: '0.05em', textTransform: 'uppercase' as const,
+              color: isDark ? '#7a7670' : '#5a5550',
+              paddingBottom: 10, marginBottom: 14,
+              borderBottom: `1px solid ${BORDERSOFT}`,
+              display: 'flex', alignItems: 'baseline', justifyContent: 'space-between',
             }}>
-              <span style={{ color: T.accent }}>§</span>
-              5 Hue Families · 카테고리 지도
+              <span>카테고리 지도</span>
+              <span style={{ fontFamily: 'var(--font-mono), monospace', fontSize: 10, color: isDark ? '#484440' : '#aaa8a4' }}>9 families</span>
             </div>
             <div style={{
               display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)',
@@ -412,8 +422,8 @@ export default function DashboardHome({ T, isDark, totalTerms, recent, favorites
               color: isDark ? '#5a5a5a' : '#aaa8a4', marginBottom: 14,
               display: 'flex', alignItems: 'center', gap: 8,
             }}>
-              <span style={{ color: T.accent }}>§</span>
-              빠른 계산기 · Quick Access
+              <span style={{ color: T.accent }}>→</span>
+              빠른 계산기
             </div>
             <div>
               {QUICK_CALCS.map((qc, i) => {

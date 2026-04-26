@@ -532,11 +532,10 @@ export default function StockWiki({ features, customEvents }: { features?: Featu
 
         <div className="max-w-[1400px] mx-auto px-4 md:px-8 hidden md:flex border-t overflow-x-auto scroll-hide" style={{ borderColor: T.border }}>
           {[
-            { id: 'home',       label: '홈',       icon: LayoutDashboard, idx: '00', count: null },
-            { id: 'glossary',   label: '금융 사전', icon: BookOpen,        idx: '01', count: TERMS_TOTAL || null },
-            { id: 'calculator', label: '계산기',    icon: Calculator,      idx: '02', count: CALC_CATEGORIES.reduce((s, c) => s + c.calcs.length, 0) },
-            { id: 'events',     label: '이벤트',    icon: CalendarDays,    idx: '03', count: null },
-            { id: 'about',      label: 'About',    icon: Info,            idx: '04', count: null },
+            { id: 'home',       label: '홈',        icon: LayoutDashboard },
+            { id: 'glossary',   label: '금융 사전',  icon: BookOpen        },
+            { id: 'calculator', label: '계산기',     icon: Calculator      },
+            { id: 'events',     label: '이벤트',     icon: CalendarDays    },
           ].filter(tab => tab.id === 'home' || feat[tab.id as keyof Features] !== false).map(tab => {
             const active = activeTab === tab.id;
             const Icon = tab.icon;
@@ -544,81 +543,69 @@ export default function StockWiki({ features, customEvents }: { features?: Featu
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className="flex items-center gap-2 md:gap-3 px-4 md:px-6 py-3 md:py-4 text-sm transition-all whitespace-nowrap"
+                className="flex items-center gap-2 px-5 text-[13px] transition-all whitespace-nowrap h-full border-b-2"
                 style={{
-                  background: active ? T.bgTabActive : 'transparent',
-                  color: active ? T.textTabActive : T.textMuted,
+                  background: 'transparent',
+                  color: active ? T.textPrimary : T.textMuted,
+                  borderBottomColor: active ? T.accent : 'transparent',
+                  fontWeight: active ? 500 : 400,
                 }}
               >
-                <span className="text-[12px] mono opacity-60">{tab.idx}</span>
-                <Icon size={14} />
-                <span className="font-medium">{tab.label}</span>
-                {tab.count !== null && <span className="text-[12px] mono opacity-50">{tab.count}</span>}
+                <Icon size={13} style={{ opacity: active ? 1 : 0.55 }} />
+                <span>{tab.label}</span>
               </button>
             );
           })}
         </div>
 
-        {/* ── Market Strip — 헤더 안 탭바 아래 (항상 표시) ── */}
+        {/* ── Market Strip — 통합 레이블, 22px ── */}
         {(() => {
           const ON  = T.accentGreen || '#4A7045';
           const PRE = T.accent || '#C89650';
-          const OFF = isDark ? '#4a4a4a' : '#aaa8a4';
-          const dot = (on: boolean, pre = false) => on ? ON : pre ? PRE : OFF;
-          const lbl = (on: boolean, pre: boolean, onT: string, preT: string, offT: string) => on ? onT : pre ? preT : offT;
-          const BSOFT = isDark ? '#252525' : '#e0ddd4';
+          const OFF = isDark ? '#383838' : '#aaa8a4';
+          const BSOFT = isDark ? '#1e1e1e' : '#e0ddd4';
+          const BG = isDark ? '#0a0a0a' : '#f8f5ee';
 
-          const MktDot = ({ color, live }: { color: string; live: boolean }) => (
-            <span style={{
-              display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: color, flexShrink: 0,
-              ...(live ? { animation: 'mktpulse 2.4s ease-in-out infinite' } : {}),
-            }} />
-          );
-          const MktLabel = ({ color, text }: { color: string; text: string }) => (
-            <span style={{ fontFamily: 'var(--font-mono),monospace', fontSize: 9.5, letterSpacing: '0.08em', textTransform: 'uppercase', color, whiteSpace: 'nowrap' }}>{text}</span>
-          );
-          const Sep = () => <span style={{ width: 1, height: 10, background: BSOFT, flexShrink: 0, margin: '0 2px' }} />;
+          const items = [
+            { label: 'KOSPI', color: mkt.kospi ? ON : mkt.kospiPre ? PRE : OFF, live: mkt.kospi, status: mkt.kospi ? '장중' : mkt.kospiPre ? '프리' : '장외' },
+            { label: 'NXT',   color: mkt.nxt  ? ON : OFF, live: mkt.nxt,   status: mkt.nxt   ? '장중' : '장외' },
+            { label: 'K200F 주간', color: mkt.k200Day   ? ON : OFF, live: mkt.k200Day,   status: mkt.k200Day   ? '장중' : '장외' },
+            { label: 'K200F 야간', color: mkt.k200Night ? ON : OFF, live: mkt.k200Night, status: mkt.k200Night ? '장중' : '장외' },
+            { label: 'NDX',   color: mkt.ndx  ? ON : OFF, live: mkt.ndx,   status: mkt.ndx   ? '장중' : '장외' },
+          ];
 
           return (
             <div style={{
-              borderTop: `1px solid ${isDark ? '#1e1e1e' : '#e8e5dc'}`,
-              background: isDark ? '#111111' : '#f8f5ee',
-              height: 30,
+              borderTop: `1px solid ${BSOFT}`,
+              background: BG,
+              height: 22,
               overflowX: 'auto', overflowY: 'hidden',
               scrollbarWidth: 'none',
             }} className="mkt-strip-scrollhide">
               <div style={{
-                maxWidth: 1400, margin: '0 auto', padding: '0 16px',
+                maxWidth: 1400, margin: '0 auto', padding: '0 24px',
                 display: 'flex', alignItems: 'center', height: '100%',
                 gap: 0, minWidth: 'max-content',
               }}>
-                {/* KOSPI */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '0 16px 0 0', borderRight: `1px solid ${BSOFT}`, marginRight: 16 }}>
-                  <span style={{ fontFamily: 'var(--font-mono),monospace', fontSize: 9, letterSpacing: '0.2em', color: isDark ? '#4a4a4a' : '#aaa8a4', textTransform: 'uppercase' }}>KOSPI</span>
-                  <MktDot color={dot(mkt.kospi, mkt.kospiPre)} live={mkt.kospi} />
-                  <MktLabel color={dot(mkt.kospi, mkt.kospiPre)} text={lbl(mkt.kospi, mkt.kospiPre, '장중', '프리', '장외')} />
-                </div>
-                {/* NXT */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '0 16px 0 0', borderRight: `1px solid ${BSOFT}`, marginRight: 16 }}>
-                  <span style={{ fontFamily: 'var(--font-mono),monospace', fontSize: 9, letterSpacing: '0.2em', color: isDark ? '#4a4a4a' : '#aaa8a4', textTransform: 'uppercase' }}>NXT</span>
-                  <MktDot color={dot(mkt.nxt)} live={mkt.nxt} />
-                  <MktLabel color={dot(mkt.nxt)} text={lbl(mkt.nxt, false, '장중', '', '장외')} />
-                </div>
-                {/* K200F */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '0 16px 0 0', borderRight: `1px solid ${BSOFT}`, marginRight: 16 }}>
-                  <span style={{ fontFamily: 'var(--font-mono),monospace', fontSize: 9, letterSpacing: '0.2em', color: isDark ? '#4a4a4a' : '#aaa8a4', textTransform: 'uppercase' }}>K200F</span>
-                  <MktDot color={dot(mkt.k200Day)} live={mkt.k200Day} />
-                  <MktLabel color={dot(mkt.k200Day)} text="주간" />
-                  <Sep />
-                  <MktDot color={dot(mkt.k200Night)} live={mkt.k200Night} />
-                  <MktLabel color={dot(mkt.k200Night)} text="야간" />
-                </div>
-                {/* NDX */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span style={{ fontFamily: 'var(--font-mono),monospace', fontSize: 9, letterSpacing: '0.2em', color: isDark ? '#4a4a4a' : '#aaa8a4', textTransform: 'uppercase' }}>NDX</span>
-                  <MktDot color={dot(mkt.ndx)} live={mkt.ndx} />
-                  <MktLabel color={dot(mkt.ndx)} text={lbl(mkt.ndx, false, '장중', '', '장외')} />
-                </div>
+                {items.map((item, i) => (
+                  <div key={item.label} style={{
+                    display: 'flex', alignItems: 'center', gap: 5,
+                    paddingRight: 14, borderRight: i < items.length - 1 ? `1px solid ${BSOFT}` : 'none',
+                    marginRight: i < items.length - 1 ? 14 : 0,
+                  }}>
+                    <span style={{
+                      display: 'inline-block', width: 5, height: 5, borderRadius: '50%',
+                      background: item.color, flexShrink: 0,
+                      ...(item.live ? { animation: 'mktpulse 2.4s ease-in-out infinite' } : {}),
+                    }} />
+                    <span style={{
+                      fontFamily: 'var(--font-mono),monospace', fontSize: 9.5,
+                      letterSpacing: '0.1em', color: item.color, whiteSpace: 'nowrap',
+                    }}>
+                      {item.label} {item.status}
+                    </span>
+                  </div>
+                ))}
               </div>
             </div>
           );
@@ -878,10 +865,11 @@ export default function StockWiki({ features, customEvents }: { features?: Featu
         style={{ background: T.bgHeader, borderColor: T.border, backdropFilter: 'blur(12px)' }}
       >
         {[
-          { id: 'glossary', label: '금융 사전', icon: BookOpen },
-          { id: 'calculator', label: '계산기', icon: Calculator },
-          { id: 'events', label: '이벤트', icon: CalendarDays },
-        ].filter(tab => feat[tab.id as keyof Features] !== false).map(tab => {
+          { id: 'home',       label: '홈',        icon: LayoutDashboard },
+          { id: 'glossary',   label: '사전',       icon: BookOpen        },
+          { id: 'calculator', label: '계산기',     icon: Calculator      },
+          { id: 'events',     label: '이벤트',     icon: CalendarDays    },
+        ].filter(tab => tab.id === 'home' || feat[tab.id as keyof Features] !== false).map(tab => {
           const active = activeTab === tab.id;
           const Icon = tab.icon;
           return (

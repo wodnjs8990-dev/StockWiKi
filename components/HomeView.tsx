@@ -794,7 +794,7 @@ export default function HomeView({
               언어를 이해하면<br />
               <span style={{ color: accent }}>시장이 보입니다.</span>
             </div>
-            <p style={{ color: muted, fontSize: 15, lineHeight: 1.8, marginBottom: 44 }}>지금 바로 9,632개 금융 용어의 세계로 들어오세요.</p>
+            <p style={{ color: muted, fontSize: 15, lineHeight: 1.8, marginBottom: 44 }}>지금 바로 {(totalTerms || 16323).toLocaleString()}개 금융 용어의 세계로 들어오세요.</p>
             <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 48 }}>
               <button onClick={() => setActiveTab?.('glossary')} style={{
                 background: accent, color: '#fff', border: 'none',
