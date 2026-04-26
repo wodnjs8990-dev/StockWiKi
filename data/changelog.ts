@@ -10,6 +10,35 @@ export type PatchEntry = {
 
 export const CHANGELOG: PatchEntry[] = [
   {
+    version: '1.75.0',
+    date: '2026-04-26',
+    title: '홈 화면 전면 재설계(Hero+StatTicker+9Families+QuickCalcs) / 계산기 헤더 X 버튼 위치 수정',
+    titlePublic: '홈 화면이 완전히 새로워졌습니다',
+    type: 'major',
+    items: [
+      'DashboardHome.tsx 전면 재작성 — 클로드 디자이너 레퍼런스 HTML 100% 반영',
+      'Hero 섹션: 풀뷰포트 높이, 배경 64px 그리드 드리프트 애니메이션, radial glow orb, scanLine, 우측 ghost number(총 용어수)',
+      'Hero 우측 Clock Panel: KST 실시간 시계(44px mono) + KOSPI·NXT·K200F주간야간·NDX 마켓 상태 패널 (온라인 dot 애니메이션)',
+      'Stat Ticker Bar: 4셀 전폭 그리드 — 금융용어(골드)·계산기(틸)·이벤트(퍼플)·패밀리(그린), 카운트업 애니메이션, hover topbar 언더라인',
+      'Dashboard Widgets: 3단 전폭 — 최근 본 용어·즐겨찾기·최근 계산 기록, 3자리 카운터, 빈 상태 이탤릭 안내',
+      '9 Families 섹션: 9열 전폭 컬럼 그리드, 컬럼별 top 2px 컬러 bar, hover 화살표 슬라이드 인 애니메이션',
+      'Quick Calcs 섹션: 7열 전폭 — PER/PBR/DCF/ROE/BS/Kelly/VaR, hover 하단 틸 언더라인 scaleX',
+      'Footer: 전폭, "정보 제공 목적 · 투자 권유 아님" + "Designed by Ones"',
+      '계산기 패널 헤더: X 닫기 버튼 ml-auto 제거 → 저장 버튼 바로 옆으로 이동',
+      'useCountUp hook 내장 — 페이지 마운트 시 숫자가 0에서 올라오는 애니메이션',
+      'getMktState() DashboardHome 내장 — StockWiki props 의존 없이 독립 계산',
+    ],
+    itemsPublic: [
+      '홈 화면이 완전히 새롭게 태어났어요 — 전업투자자를 위한 금융 책상 콘셉트로 전면 재설계했습니다',
+      '풀스크린 히어로 화면에 KOSPI·NXT·K200F·NDX 실시간 장 상태를 시계와 함께 우측 패널에서 한눈에 확인할 수 있어요',
+      '하단 숫자 바에서 금융 용어 16,323개 · 계산기 69종 · 이벤트 200+ · 카테고리 9패밀리를 한 번에 파악하세요',
+      '최근 본 용어, 즐겨찾기, 계산 기록을 홈에서 바로 확인할 수 있어요',
+      '9개 카테고리 패밀리(기업가치·시장·거시경제·리스크·파생·실전매매·산업군·디지털자산·세금법률)를 전폭 컬럼으로 한눈에 탐색하세요',
+      '자주 쓰는 계산기 7종(PER·DCF·블랙숄즈·켈리·VaR 등)에 홈에서 바로 진입할 수 있어요',
+      '계산기 닫기(×) 버튼이 저장 버튼 바로 옆으로 이동해 더 빠르게 접근할 수 있어요',
+    ],
+  },
+  {
     version: '1.71.1',
     date: '2026-04-25',
     title: '금융사전 16,323개 — 3,000개 2차 대규모 추가 / 신규 그룹 MACRO·INFRA·CRYPTO 반영',

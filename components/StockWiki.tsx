@@ -2588,7 +2588,7 @@ function CalculatorView({ selectedCalc, setSelectedCalc, T, isDark }) {
                 </button>
                 <button
                   onClick={() => setSelectedCalc('')}
-                  className="ml-auto p-1 hover:bg-white/5 transition-colors"
+                  className="p-1 hover:bg-white/5 transition-colors"
                   style={{ color: T.textDimmer }}
                   title="닫기"
                 >
