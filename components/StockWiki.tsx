@@ -533,7 +533,7 @@ export default function StockWiki({ features, customEvents }: { features?: Featu
         <div className="max-w-[1400px] mx-auto px-4 md:px-8 hidden md:flex border-t overflow-x-auto scroll-hide" style={{ borderColor: T.border }}>
           {[
             { id: 'home',       label: '홈',       icon: LayoutDashboard, idx: '00', count: null },
-            { id: 'glossary',   label: '금융 사전', icon: BookOpen,        idx: '01', count: termsTotal || null },
+            { id: 'glossary',   label: '금융 사전', icon: BookOpen,        idx: '01', count: TERMS_TOTAL || null },
             { id: 'calculator', label: '계산기',    icon: Calculator,      idx: '02', count: CALC_CATEGORIES.reduce((s, c) => s + c.calcs.length, 0) },
             { id: 'events',     label: '이벤트',    icon: CalendarDays,    idx: '03', count: null },
             { id: 'about',      label: 'About',    icon: Info,            idx: '04', count: null },
@@ -689,7 +689,7 @@ export default function StockWiki({ features, customEvents }: { features?: Featu
             selectedTerm={selectedTerm}
             setSelectedTerm={openTerm}
             closeTerm={closeTerm}
-            totalCount={termsTotal}
+            totalCount={TERMS_TOTAL}
             categoryColors={CATEGORY_COLORS}
             favorites={favorites}
             toggleFav={toggleFav}
@@ -2559,13 +2559,18 @@ function CalculatorView({ selectedCalc, setSelectedCalc, T, isDark }) {
                 {/* 시나리오 비교 버튼 */}
                 <button
                   onClick={() => { setCompareCalcMode(m => !m); setCompareCalcId(selectedCalc); }}
-                  className="flex items-center gap-1 text-[12px] mono px-2 py-1 border transition-all hover:bg-white/5"
+                  className="flex items-center gap-1.5 text-[11px] mono px-3 py-1.5 border transition-all"
                   style={{
+                    marginLeft: 'auto',
                     borderColor: compareCalcMode ? T.accent : T.border,
-                    color: compareCalcMode ? T.accent : T.textFaint,
+                    color: compareCalcMode ? '#0f0f0f' : T.textSecondary,
+                    background: compareCalcMode ? T.accent : 'transparent',
+                    fontWeight: compareCalcMode ? 700 : 400,
+                    letterSpacing: '0.08em',
                   }}
                   title="A/B 시나리오 비교"
                 >
+                  <span style={{ fontSize: 10 }}>⇄</span>
                   <span>A/B 비교</span>
                 </button>
                 {/* 결과 저장 버튼 */}
@@ -2586,8 +2591,8 @@ function CalculatorView({ selectedCalc, setSelectedCalc, T, isDark }) {
                       setShowHistory(true);
                     }
                   }}
-                  className="flex items-center gap-1 text-[12px] mono px-2 py-1 border transition-all hover:bg-white/5"
-                  style={{ borderColor: T.border, color: T.textFaint }}
+                  className="flex items-center gap-1 text-[11px] mono px-3 py-1.5 border transition-all hover:bg-white/5"
+                  style={{ borderColor: T.border, color: T.textSecondary, letterSpacing: '0.08em' }}
                   title="현재 결과를 히스토리에 저장"
                 >
                   <Clock size={10} />

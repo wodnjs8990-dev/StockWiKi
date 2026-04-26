@@ -50,14 +50,21 @@ export default function PatchNotesPage() {
           fontSize: 15, fontWeight: 700, color: '#e8e4d6',
           letterSpacing: '-0.02em', textDecoration: 'none',
         }}>
-          Stock<span style={{ color: '#C89650' }}>Wi</span>Ki
-          <span style={{ color: '#5a5a5a', fontWeight: 300, fontSize: 12, marginLeft: 3 }}>.kr</span>
+          Stock<span style={{ color: '#C89650' }}>Wi</span>Ki<span style={{ color: '#5a5a5a', fontWeight: 300, fontSize: 12, marginLeft: 3 }}>.kr</span>
         </Link>
-        <div style={{
-          fontSize: 10, color: '#5a5a5a',
-          letterSpacing: '0.2em', fontFamily: 'var(--font-mono), monospace',
-        }}>
-          v{CURRENT_VERSION}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <Link href="/" style={{
+            fontSize: 11, color: '#5a5a5a', textDecoration: 'none',
+            letterSpacing: '0.1em', fontFamily: 'var(--font-mono), monospace',
+            border: '1px solid #2a2a2a', padding: '4px 12px',
+            transition: 'color 0.2s, border-color 0.2s',
+          }}>← 사이트로</Link>
+          <div style={{
+            fontSize: 10, color: '#5a5a5a',
+            letterSpacing: '0.2em', fontFamily: 'var(--font-mono), monospace',
+          }}>
+            v{CURRENT_VERSION}
+          </div>
         </div>
       </div>
 

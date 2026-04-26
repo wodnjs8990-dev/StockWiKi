@@ -485,7 +485,7 @@ export default function HomeView({
               </div>
             </div>
             <p style={{ color: muted, fontSize: 'clamp(13px, 1.5vw, 15px)', marginTop: 28, marginBottom: 44, letterSpacing: '0.01em' }}>
-              {(totalTerms || 9632).toLocaleString()}개 금융 용어 &middot; 9개 패밀리 &middot; 30종 계산기 &middot; 이벤트 캘린더
+              {(totalTerms || 16323).toLocaleString()}개 금융 용어 &middot; 9개 패밀리 &middot; 69종 계산기 &middot; 이벤트 캘린더
             </p>
             <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
               <button onClick={() => setActiveTab?.('glossary')} style={{
@@ -535,7 +535,7 @@ export default function HomeView({
               {[
                 { to: totalTerms || 2400, label: '금융 용어', unit: '개', color: accent },
                 { to: 9,   label: '패밀리 카테고리', unit: '개', color: '#8bc87a' },
-                { to: 30,  label: '계산기 도구',     unit: '종', color: '#c87a8b' },
+                { to: 69,  label: '계산기 도구',     unit: '종', color: '#c87a8b' },
                 { to: 365, label: '이벤트 캘린더',   unit: '일', color: '#9a7ac8' },
               ].map((s, i) => (
                 <div key={i}>
@@ -560,7 +560,7 @@ export default function HomeView({
               <div style={{ fontSize: 10, letterSpacing: '0.26em', color: accent, marginBottom: 10, fontWeight: 600 }}>9 FAMILIES</div>
               <div style={{ fontSize: 'clamp(16px, 2.4vw, 30px)', fontWeight: 200, color: txt, letterSpacing: '-0.02em', fontFamily: 'Inter, sans-serif' }}>
                 <span style={{ fontWeight: 600, color: accent }}>9</span>개의 패밀리,{' '}
-                <span style={{ fontWeight: 600, color: txt }}>{(totalTerms || 9632).toLocaleString()}</span>개의 용어.{' '}
+                <span style={{ fontWeight: 600, color: txt }}>{(totalTerms || 16323).toLocaleString()}</span>개의 용어.{' '}
                 <span style={{ opacity: 0.6 }}>당신의 투자 지도를 완성하세요.</span>
               </div>
             </div>
