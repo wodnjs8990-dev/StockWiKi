@@ -50,14 +50,28 @@ function getMktState() {
   const kst = getKST();
   const h = kst.getHours(), m = kst.getMinutes(), dow = kst.getDay();
   const hm = h * 60 + m;
+  // 월(1)~금(5) 판별
   const isWeekday = dow >= 1 && dow <= 5;
+  // K200F 야간: 월~금 17:30(1050) ~ 익일 05:00(300)
+  //   → 당일 17:30 이후(isWeekday) OR 익일 새벽 05:00 이전(전날이 평일 = 월요일 새벽~토요일 새벽)
+  //   토요일 새벽(dow=6, hm<300): 금요일 야간 연장 → 허용
+  //   일요일(dow=0): 토요일은 선물 없으므로 → 차단
+  const k200NightPrev = dow === 6 && hm < 300; // 토요일 새벽 (금 야간 연장)
+  const k200NightCur  = isWeekday && hm >= 1050; // 평일 17:30 이후
+  const k200NightNext = isWeekday && hm < 300;   // 평일 새벽 05:00 이전 (전날 개장)
+  // NDX: 월~금 23:30(1410) ~ 익일 06:00(360)
+  //   토요일 새벽(dow=6, hm<360): 금요일 야간 연장 → 허용
+  //   일요일(dow=0): 차단
+  const ndxPrev = dow === 6 && hm < 360;
+  const ndxCur  = isWeekday && hm >= 1410;
+  const ndxNext = isWeekday && hm < 360;
   return {
-    kospiPre:   isWeekday && hm >= 480 && hm < 540,
-    kospi:      isWeekday && hm >= 540 && hm < 930,
-    nxt:        isWeekday && ((hm >= 480 && hm < 510) || (hm >= 540 && hm < 930)),
-    k200Day:    isWeekday && hm >= 540 && hm < 945,
-    k200Night:  isWeekday && (hm >= 1050 || hm < 360),
-    ndx:        isWeekday && (hm >= 1410 || hm < 360),
+    kospiPre:  isWeekday && hm >= 480 && hm < 540,
+    kospi:     isWeekday && hm >= 540 && hm < 930,
+    nxt:       isWeekday && ((hm >= 480 && hm < 510) || (hm >= 540 && hm < 930)),
+    k200Day:   isWeekday && hm >= 540 && hm < 945,
+    k200Night: k200NightPrev || k200NightCur || k200NightNext,
+    ndx:       ndxPrev || ndxCur || ndxNext,
   };
 }
 
