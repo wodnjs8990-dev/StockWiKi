@@ -941,21 +941,87 @@ function MiniSparkGlos({ color = '#C89650', seed = 1, h = 26 }: { color?: string
   );
 }
 
+// 엑셀 group 값 → display name/color 매핑 (12개 대분류)
+const GROUP_META: Record<string, { name: string; en: string; color: string; family: string }> = {
+  FUNDAMENTAL: { name: '펀더멘털',    en: 'FUNDAMENTAL', color: '#6b9e5c', family: 'fundamental' },
+  MARKET:      { name: '시장·상품',   en: 'MARKET',      color: '#5a8fbc', family: 'market'      },
+  ECON:        { name: '경제·거시',   en: 'ECON',        color: '#c89650', family: 'macro'       },
+  RISK:        { name: '리스크·퀀트', en: 'RISK',        color: '#c45555', family: 'risk'        },
+  DERIV:       { name: '파생·헤지',   en: 'DERIV',       color: '#9b6ba8', family: 'derivatives' },
+  TRADING:     { name: '매매실전',    en: 'TRADING',     color: '#4a8f6f', family: 'trading'     },
+  INDUSTRY:    { name: '산업·섹터',   en: 'INDUSTRY',    color: '#a67d4f', family: 'industry'    },
+  DIGITAL:     { name: '디지털자산',  en: 'DIGITAL',     color: '#689db0', family: 'digital'     },
+  TAX:         { name: '세금·제도',   en: 'TAX',         color: '#6b8a6f', family: 'tax'         },
+  CRYPTO:      { name: '암호화폐',    en: 'CRYPTO',      color: '#7aa8c8', family: 'digital'     },
+  INFRA:       { name: '데이터인프라', en: 'INFRA',       color: '#6b9ea8', family: 'digital'     },
+  MACRO:       { name: '매크로트레이딩', en: 'MACRO',    color: '#b89a50', family: 'trading'     },
+};
+
+// 대분류 순서 (표시 순서)
+const GROUP_ORDER = ['FUNDAMENTAL','MARKET','ECON','RISK','DERIV','TRADING','INDUSTRY','DIGITAL','TAX','CRYPTO','INFRA','MACRO'];
+
+// 중분류 → group 매핑 (CATEGORY_FAMILY 기반 역방향)
+// terms 파일의 group 필드를 직접 사용하므로 별도 매핑 불필요
+// fetchTerms 결과에서 term.group으로 접근
+
 function GlossaryView({ terms, termsHasMore, termsLoading, onLoadMore, searchQuery, setSearchQuery, searchRef, categories, selectedCategory, setSelectedCategory, selectedTerm, setSelectedTerm, closeTerm, totalCount, categoryColors, favorites, toggleFav, favMemos, updateFavMemo, recent, T, isDark, showToast, setActiveTab, selectedFamily, setSelectedFamily: setSelectedFamilyProp, termsMap }: any) {
-  const FAMILY_LIST = [
-    { id: 'fundamental', name: '펀더멘털',    en: 'FUNDAMENTAL', color: '#6b9e5c', count: 381 },
-    { id: 'market',      name: '시장·상품',   en: 'MARKET',      color: '#5a8fbc', count: 1369 },
-    { id: 'macro',       name: '경제·거시',   en: 'ECON',        color: '#c89650', count: 796 },
-    { id: 'risk',        name: '리스크·퀀트', en: 'RISK',        color: '#c45555', count: 621 },
-    { id: 'derivatives', name: '파생·헤지',   en: 'DERIV',       color: '#9b6ba8', count: 2653 },
-    { id: 'trading',     name: '매매실전',    en: 'TRADING',     color: '#4a8f6f', count: 1868 },
-    { id: 'industry',    name: '산업·섹터',   en: 'INDUSTRY',    color: '#a67d4f', count: 7917 },
-    { id: 'digital',     name: '디지털자산',  en: 'DIGITAL',     color: '#689db0', count: 459 },
-    { id: 'tax',         name: '세금·제도',   en: 'TAX',         color: '#6b8a6f', count: 259 },
-  ];
+  // 대분류 선택 상태 (group 코드 — 'FUNDAMENTAL' 등)
+  const [selectedGroup, setSelectedGroup] = React.useState<string | null>(null);
+  // 중분류 선택 상태 (category 문자열)
+  const [selectedSubCat, setSelectedSubCat] = React.useState<string | null>(null);
+
+  // 현재 terms에서 대분류별 카운트 & 중분류 목록 계산
+  const groupStats = React.useMemo(() => {
+    const map: Record<string, { count: number; cats: Set<string> }> = {};
+    // 전체 terms가 아닌 현재 필터된 terms 기준
+    // 단, 대분류 사이드바는 전체 기준이어야 하므로 _SEARCH_IDX 기준으로 별도 계산
+    GROUP_ORDER.forEach(g => { map[g] = { count: 0, cats: new Set() }; });
+    terms.forEach((t: any) => {
+      const g = t.group || '';
+      if (map[g]) {
+        map[g].count++;
+        if (t.category) map[g].cats.add(t.category);
+      }
+    });
+    return map;
+  }, [terms]);
+
+  // 선택된 대분류의 중분류 목록
+  const subCatList = React.useMemo(() => {
+    if (!selectedGroup) return [];
+    return Array.from(groupStats[selectedGroup]?.cats || []).sort();
+  }, [selectedGroup, groupStats]);
+
+  // 대분류/중분류 선택 시 카드 필터링은 부모의 selectedCategory 사용
+  // 대분류 클릭 → selectedFamily 변경 (기존 로직 유지) + selectedGroup 업데이트
+  const handleGroupClick = (g: string | null) => {
+    setSelectedGroup(g);
+    setSelectedSubCat(null);
+    const meta = g ? GROUP_META[g] : null;
+    setSelectedFamilyProp(meta?.family ?? null);
+    // 카테고리도 리셋
+    setSelectedCategory('전체');
+  };
+
+  // 중분류 클릭 → category 필터
+  const handleSubCatClick = (cat: string | null) => {
+    setSelectedSubCat(cat);
+    setSelectedCategory(cat ?? '전체');
+  };
+
+  const FAMILY_LIST = GROUP_ORDER.map(g => ({
+    id: GROUP_META[g].family,
+    groupId: g,
+    name: GROUP_META[g].name,
+    en: GROUP_META[g].en,
+    color: GROUP_META[g].color,
+  }));
 
   const handleFamilyClick = (fid: string | null) => {
     setSelectedFamilyProp(fid);
+    setSelectedGroup(null);
+    setSelectedSubCat(null);
+    setSelectedCategory('전체');
   };
 
   const loaderRef = React.useRef<HTMLDivElement>(null);
@@ -975,99 +1041,120 @@ function GlossaryView({ terms, termsHasMore, termsLoading, onLoadMore, searchQue
     return () => observer.disconnect();
   }, [termsHasMore, termsLoading, onLoadMore]);
 
-  const activeFam = FAMILY_LIST.find(f => f.id === selectedFamily);
+  const activeGroupMeta = selectedGroup ? GROUP_META[selectedGroup] : null;
 
   return (
     <div style={{ display: 'flex', overflow: 'hidden', flex: 1, height: '100%' }} className="glos-split">
-      
-      {/* ── LEFT FAMILY SIDEBAR ── */}
+
+      {/* ── LEFT SIDEBAR: 대분류 + 중분류 ── */}
       <div className="hide-mobile sc" style={{
-        width: 195,
+        width: 200,
         flexShrink: 0,
-        background: 'rgba(0,0,0,.55)',
+        background: 'rgba(0,0,0,.6)',
         borderRight: '1px solid rgba(255,255,255,.05)',
-        padding: '10px 6px'
+        padding: '10px 0',
+        display: 'flex',
+        flexDirection: 'column',
       }}>
         <div style={{
           fontFamily: 'var(--mono)',
-          fontSize: '7.5px',
+          fontSize: '7px',
           letterSpacing: '.26em',
           textTransform: 'uppercase',
-          color: 'var(--t3)',
-          padding: '4px 10px 10px'
-        }}>FAMILY · {FAMILY_LIST.length}개</div>
-        
+          color: 'var(--t4)',
+          padding: '4px 14px 8px'
+        }}>FAMILY · {GROUP_ORDER.length}개</div>
+
         {/* 전체 */}
         <div
-          className={`fam-item${!selectedFamily ? ' active' : ''}`}
-          onClick={() => handleFamilyClick(null)}
-          style={{
-            background: !selectedFamily ? 'rgba(255,255,255,.07)' : 'transparent'
-          }}
+          className={`fam-item${!selectedGroup ? ' active' : ''}`}
+          onClick={() => handleGroupClick(null)}
+          style={{ background: !selectedGroup ? 'rgba(255,255,255,.06)' : 'transparent' }}
         >
           <span style={{
-            width: 3,
-            height: 14,
-            borderRadius: 2,
-            background: !selectedFamily ? 'var(--gold)' : 'rgba(255,255,255,.1)',
-            flexShrink: 0,
+            width: 3, height: 14, borderRadius: 2, flexShrink: 0,
+            background: !selectedGroup ? 'var(--gold)' : 'rgba(255,255,255,.08)',
             transition: 'background .15s'
           }} />
-          <span style={{
-            fontSize: 12,
-            color: !selectedFamily ? '#fff' : 'var(--t2)',
-            flex: 1,
-            fontWeight: !selectedFamily ? 500 : 400
-          }}>전체</span>
-          <span style={{
-            fontFamily: 'var(--mono)',
-            fontSize: '8.5px',
-            color: 'var(--t3)'
-          }}>{totalCount}</span>
+          <span style={{ fontSize: 12, color: !selectedGroup ? '#fff' : 'var(--t2)', flex: 1, fontWeight: !selectedGroup ? 500 : 400 }}>전체</span>
+          <span style={{ fontFamily: 'var(--mono)', fontSize: '8px', color: 'var(--t4)' }}>{totalCount.toLocaleString()}</span>
         </div>
 
-        {/* Family items */}
-        {FAMILY_LIST.map(fam => {
-          const active = selectedFamily === fam.id;
+        {/* 대분류 목록 — 클릭 시 중분류 펼침 */}
+        {GROUP_ORDER.map(g => {
+          const meta = GROUP_META[g];
+          const isActive = selectedGroup === g;
+          const cnt = groupStats[g]?.count || 0;
+          const subCats = Array.from(groupStats[g]?.cats || []).sort();
+
           return (
-            <div
-              key={fam.id}
-              className={`fam-item${active ? ' active' : ''}`}
-              onClick={() => handleFamilyClick(active ? null : fam.id)}
-              style={{
-                background: active ? 'rgba(255,255,255,.07)' : 'transparent'
-              }}
-            >
-              <span style={{
-                width: 3,
-                height: 14,
-                borderRadius: 2,
-                background: active ? fam.color : 'rgba(255,255,255,.08)',
-                flexShrink: 0,
-                transition: 'background .15s',
-                boxShadow: active ? `0 0 8px ${fam.color}99` : undefined
-              }} />
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{
-                  fontSize: '11.5px',
-                  color: active ? fam.color : 'var(--t2)',
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  fontWeight: active ? 500 : 400
-                }}>{fam.name}</div>
-                <div style={{
-                  fontFamily: 'var(--mono)',
-                  fontSize: '8px',
-                  color: 'var(--t3)'
-                }}>{fam.en.slice(0, 8)}</div>
+            <div key={g}>
+              {/* 대분류 row */}
+              <div
+                className={`fam-item${isActive ? ' active' : ''}`}
+                onClick={() => handleGroupClick(isActive ? null : g)}
+                style={{ background: isActive ? `${meta.color}0f` : 'transparent' }}
+              >
+                <span style={{
+                  width: 3, height: 14, borderRadius: 2, flexShrink: 0,
+                  background: isActive ? meta.color : 'rgba(255,255,255,.08)',
+                  boxShadow: isActive ? `0 0 6px ${meta.color}88` : undefined,
+                  transition: 'all .15s'
+                }} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{
+                    fontSize: '11.5px',
+                    color: isActive ? meta.color : 'var(--t2)',
+                    fontWeight: isActive ? 500 : 400,
+                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'
+                  }}>{meta.name}</div>
+                  <div style={{ fontFamily: 'var(--mono)', fontSize: '7.5px', color: 'var(--t4)' }}>{meta.en}</div>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 1 }}>
+                  <span style={{ fontFamily: 'var(--mono)', fontSize: '8px', color: 'var(--t4)' }}>{cnt.toLocaleString()}</span>
+                  <span style={{ fontSize: '8px', color: isActive ? meta.color : 'var(--t4)', transition: 'transform .15s', display: 'inline-block', transform: isActive ? 'rotate(90deg)' : 'rotate(0)' }}>›</span>
+                </div>
               </div>
-              <span style={{
-                fontFamily: 'var(--mono)',
-                fontSize: '8.5px',
-                color: 'var(--t3)',
-                flexShrink: 0
-              }}>{fam.count.toLocaleString()}</span>
+
+              {/* 중분류 목록 — 대분류 선택 시 펼침 */}
+              {isActive && subCats.length > 0 && (
+                <div style={{ paddingLeft: 18, paddingBottom: 4 }}>
+                  {subCats.map(cat => {
+                    const isSub = selectedSubCat === cat;
+                    return (
+                      <div
+                        key={cat}
+                        onClick={() => handleSubCatClick(isSub ? null : cat)}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 7,
+                          padding: '5px 10px 5px 8px',
+                          borderRadius: 6,
+                          cursor: 'pointer',
+                          background: isSub ? `${meta.color}18` : 'transparent',
+                          border: isSub ? `1px solid ${meta.color}30` : '1px solid transparent',
+                          marginBottom: 1,
+                          transition: 'all .12s',
+                        }}
+                      >
+                        <span style={{
+                          width: 4, height: 4, borderRadius: '50%', flexShrink: 0,
+                          background: isSub ? meta.color : 'rgba(255,255,255,.15)',
+                          boxShadow: isSub ? `0 0 4px ${meta.color}` : undefined,
+                        }} />
+                        <span style={{
+                          fontSize: '10.5px',
+                          color: isSub ? meta.color : 'var(--t3)',
+                          flex: 1,
+                          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                          fontWeight: isSub ? 500 : 400,
+                        }}>{cat}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           );
         })}
@@ -1104,46 +1191,41 @@ function GlossaryView({ terms, termsHasMore, termsLoading, onLoadMore, searchQue
           }} />
           
           <div style={{ position: 'relative' }}>
-            <div style={{
-              display: 'flex',
-              alignItems: 'baseline',
-              gap: 10,
-              marginBottom: 6
-            }}>
-              <div style={{
-                fontSize: 24,
-                fontWeight: 300,
-                color: '#fff',
-                letterSpacing: '-.03em'
-              }}>
-                {activeFam ? <span style={{ color: activeFam.color }}>{activeFam.name}</span> : '금융 용어 사전'}
+            {/* 헤더 타이틀 + 카운트 — 현재 결과 / 전체 분리 */}
+            <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 4 }}>
+              <div style={{ fontSize: 22, fontWeight: 300, color: '#fff', letterSpacing: '-.03em' }}>
+                {selectedSubCat
+                  ? <span style={{ color: activeGroupMeta?.color || 'var(--gold)' }}>{selectedSubCat}</span>
+                  : selectedGroup
+                    ? <span style={{ color: activeGroupMeta?.color || 'var(--gold)' }}>{activeGroupMeta?.name}</span>
+                    : '금융 용어 사전'}
               </div>
-              <div style={{
-                fontFamily: 'var(--mono)',
-                fontSize: '10px',
-                color: 'var(--t3)'
-              }}>{terms.length.toLocaleString()}개 · {totalCount.toLocaleString()} TOTAL</div>
+              {/* 전체 TOTAL — 보조 정보 */}
+              <div style={{ fontFamily: 'var(--mono)', fontSize: '9px', color: 'var(--t4)', letterSpacing: '.08em', paddingBottom: 4 }}>
+                {totalCount.toLocaleString()} TOTAL
+              </div>
             </div>
-            <div style={{
-              fontFamily: 'var(--mono)',
-              fontSize: '10px',
-              color: 'var(--t3)',
-              marginBottom: 18,
-              letterSpacing: '.06em'
-            }}>
-              {activeFam ? `${activeFam.en} · ${terms.filter(t => categoryColors[t.category]?.family === selectedFamily).length}개 용어` : '9 FAMILIES · 108 CATEGORIES · 전업투자자를 위한 금융 책상'}
+
+            {/* 현재 결과 수 — 메인 정보 */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+              <span style={{ fontFamily: 'var(--mono)', fontSize: '13px', fontWeight: 600, color: activeGroupMeta?.color || 'var(--gold)', letterSpacing: '-.01em' }}>
+                {terms.length.toLocaleString()}
+              </span>
+              <span style={{ fontFamily: 'var(--mono)', fontSize: '9px', color: 'var(--t3)', letterSpacing: '.06em' }}>
+                {selectedSubCat ? '중분류 결과' : selectedGroup ? `${activeGroupMeta?.en} 결과` : '개 용어 표시 중'}
+              </span>
+              {(selectedGroup || selectedSubCat) && (
+                <button
+                  onClick={() => { handleGroupClick(null); }}
+                  style={{ fontFamily: 'var(--mono)', fontSize: '8px', color: 'var(--t3)', background: 'rgba(255,255,255,.05)', border: '1px solid rgba(255,255,255,.08)', borderRadius: 4, padding: '2px 7px', cursor: 'pointer' }}
+                >× 초기화</button>
+              )}
             </div>
 
             {/* Search input */}
             <div style={{ position: 'relative' }}>
-              <svg style={{
-                position: 'absolute',
-                left: 18,
-                top: '50%',
-                transform: 'translateY(-50%)',
-                pointerEvents: 'none',
-                zIndex: 2
-              }} viewBox="0 0 18 18" width="15" height="15" fill="none">
+              <svg style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', zIndex: 2 }}
+                viewBox="0 0 18 18" width="14" height="14" fill="none">
                 <circle cx="7.5" cy="7.5" r="5.5" stroke="rgba(200,150,80,.5)" strokeWidth="1.3"/>
                 <line x1="11.5" y1="11.5" x2="15.5" y2="15.5" stroke="rgba(200,150,80,.5)" strokeWidth="1.3" strokeLinecap="round"/>
               </svg>
@@ -1154,92 +1236,84 @@ function GlossaryView({ terms, termsHasMore, termsLoading, onLoadMore, searchQue
                 onChange={e => setSearchQuery(e.target.value)}
                 placeholder="용어 검색 — PER, VaR, 블랙-숄즈, DCF..."
                 className="inp inp-search"
-                style={{
-                  paddingLeft: 46,
-                  paddingTop: 14,
-                  paddingBottom: 14,
-                  fontSize: 14,
-                  borderRadius: 14,
-                  background: 'rgba(0,0,0,.4)',
-                  border: '1px solid rgba(255,255,255,.1)',
-                  backdropFilter: 'blur(10px)'
-                }}
+                style={{ paddingLeft: 42, paddingTop: 13, paddingBottom: 13, fontSize: 13, borderRadius: 12, background: 'rgba(0,0,0,.4)', border: '1px solid rgba(255,255,255,.08)', backdropFilter: 'blur(10px)' }}
               />
               {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery('')}
-                  style={{
-                    position: 'absolute',
-                    right: 14,
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    background: 'none',
-                    border: 'none',
-                    color: 'var(--t3)',
-                    cursor: 'pointer',
-                    fontSize: 16
-                  }}
-                >×</button>
+                <button onClick={() => setSearchQuery('')} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--t3)', cursor: 'pointer', fontSize: 16 }}>×</button>
               )}
             </div>
           </div>
 
-          {/* Family filter pills */}
-          <div className="scx" style={{
-            display: 'flex',
-            gap: 6,
-            marginTop: 16,
-            paddingBottom: 2
-          }}>
+          {/* 대분류 pill 필터 — 수평 스크롤, 중분류와 명확히 분리 */}
+          <div className="scx" style={{ display: 'flex', gap: 5, marginTop: 14, paddingBottom: 2, flexWrap: 'wrap' }}>
+            {/* 전체 pill */}
             <div
-              onClick={() => handleFamilyClick(null)}
+              onClick={() => handleGroupClick(null)}
               style={{
-                padding: '6px 14px',
-                borderRadius: 20,
-                fontFamily: 'var(--mono)',
-                fontSize: '10px',
-                cursor: 'pointer',
-                transition: 'all .15s',
-                flexShrink: 0,
-                background: !selectedFamily ? 'rgba(200,150,80,.15)' : 'rgba(255,255,255,.04)',
-                border: !selectedFamily ? '1px solid rgba(200,150,80,.35)' : '1px solid rgba(255,255,255,.07)',
-                color: !selectedFamily ? 'var(--gold)' : 'var(--t2)'
+                padding: '5px 12px', borderRadius: 20,
+                fontFamily: 'var(--mono)', fontSize: '9.5px',
+                cursor: 'pointer', transition: 'all .15s', flexShrink: 0,
+                background: !selectedGroup ? 'rgba(200,150,80,.15)' : 'rgba(255,255,255,.04)',
+                border: !selectedGroup ? '1px solid rgba(200,150,80,.35)' : '1px solid rgba(255,255,255,.07)',
+                color: !selectedGroup ? 'var(--gold)' : 'var(--t2)',
               }}
-            >
-              전체 {terms.length}
-            </div>
-            {FAMILY_LIST.map(f => (
-              <div
-                key={f.id}
-                onClick={() => handleFamilyClick(selectedFamily === f.id ? null : f.id)}
-                style={{
-                  padding: '6px 14px',
-                  borderRadius: 20,
-                  fontFamily: 'var(--mono)',
-                  fontSize: '10px',
-                  cursor: 'pointer',
-                  transition: 'all .15s',
-                  flexShrink: 0,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  background: selectedFamily === f.id ? `${f.color}14` : 'rgba(255,255,255,.04)',
-                  border: selectedFamily === f.id ? `1px solid ${f.color}40` : '1px solid rgba(255,255,255,.07)',
-                  color: selectedFamily === f.id ? f.color : 'var(--t2)'
-                }}
-              >
-                <span style={{
-                  width: 5,
-                  height: 5,
-                  borderRadius: '50%',
-                  background: f.color,
-                  display: 'inline-block',
-                  boxShadow: selectedFamily === f.id ? `0 0 5px ${f.color}` : undefined
-                }} />
-                {f.name}
-              </div>
-            ))}
+            >전체</div>
+
+            {/* 대분류 pills */}
+            {GROUP_ORDER.map(g => {
+              const meta = GROUP_META[g];
+              const isActive = selectedGroup === g;
+              const cnt = groupStats[g]?.count || 0;
+              return (
+                <div
+                  key={g}
+                  onClick={() => handleGroupClick(isActive ? null : g)}
+                  style={{
+                    padding: '5px 12px', borderRadius: 20,
+                    fontFamily: 'var(--mono)', fontSize: '9.5px',
+                    cursor: 'pointer', transition: 'all .15s', flexShrink: 0,
+                    display: 'flex', alignItems: 'center', gap: 5,
+                    background: isActive ? `${meta.color}18` : 'rgba(255,255,255,.04)',
+                    border: isActive ? `1px solid ${meta.color}45` : '1px solid rgba(255,255,255,.07)',
+                    color: isActive ? meta.color : 'var(--t2)',
+                  }}
+                >
+                  <span style={{ width: 5, height: 5, borderRadius: '50%', background: meta.color, display: 'inline-block', boxShadow: isActive ? `0 0 4px ${meta.color}` : undefined }} />
+                  {meta.name}
+                  {/* 카운트 — 대분류 보유 수, 작게 구분 */}
+                  <span style={{ color: isActive ? `${meta.color}99` : 'var(--t4)', fontSize: '8px', marginLeft: 1 }}>{cnt > 0 ? cnt.toLocaleString() : ''}</span>
+                </div>
+              );
+            })}
           </div>
+
+          {/* 중분류 pill 필터 — 대분류 선택 시에만 표시 */}
+          {selectedGroup && subCatList.length > 0 && (
+            <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+              <div style={{ width: '100%', fontFamily: 'var(--mono)', fontSize: '7px', letterSpacing: '.18em', color: 'var(--t4)', marginBottom: 4, textTransform: 'uppercase' }}>
+                {activeGroupMeta?.name} · 중분류 {subCatList.length}개
+              </div>
+              {subCatList.map(cat => {
+                const isSub = selectedSubCat === cat;
+                return (
+                  <div
+                    key={cat}
+                    onClick={() => handleSubCatClick(isSub ? null : cat)}
+                    style={{
+                      padding: '4px 10px', borderRadius: 6,
+                      fontFamily: 'var(--mono)', fontSize: '9px',
+                      cursor: 'pointer', transition: 'all .12s', flexShrink: 0,
+                      background: isSub ? `${activeGroupMeta!.color}20` : 'rgba(255,255,255,.03)',
+                      border: isSub ? `1px solid ${activeGroupMeta!.color}50` : '1px solid rgba(255,255,255,.07)',
+                      color: isSub ? activeGroupMeta!.color : 'var(--t3)',
+                      fontWeight: isSub ? 600 : 400,
+                      boxShadow: isSub ? `0 0 8px ${activeGroupMeta!.color}20` : undefined,
+                    }}
+                  >{cat}</div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* ── TERM GRID ── */}
