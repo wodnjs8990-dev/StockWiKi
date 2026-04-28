@@ -18,6 +18,10 @@ const nextConfig = {
   env: {
     NEXT_PUBLIC_APP_VERSION: version,
   },
+  // Force fresh build ID to bypass Vercel's stale CSS cache
+  generateBuildId: async () => {
+    return `build-v2-${Date.now()}`;
+  },
   reactStrictMode: true,
   typescript: {
     ignoreBuildErrors: true,
