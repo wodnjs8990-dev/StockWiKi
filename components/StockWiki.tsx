@@ -1304,7 +1304,8 @@ function GlossaryView({ terms, termsHasMore, termsLoading, onLoadMore, searchQue
                     borderRadius: '14px 14px 0 0',
                     opacity: isSel ? 1 : 0.3,
                     transition: 'opacity .2s',
-                    boxShadow: isSel ? `0 0 10px ${famColor}88` : undefined
+                    boxShadow: isSel ? `0 0 10px ${famColor}88` : undefined,
+                    zIndex: 0,
                   }} />
 
                   {/* 대분류·중분류 badge */}
