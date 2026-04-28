@@ -1279,134 +1279,142 @@ function GlossaryView({ terms, termsHasMore, termsLoading, onLoadMore, searchQue
               const color = categoryColors[term.category];
               const isFav = favorites.has(term.id);
               const isSel = selectedTerm?.id === term.id;
-              // 각 카드의 family는 term.category 기준으로 결정 (selectedFamily 무관)
               const termFamilyId = color?.family || CATEGORY_FAMILY[term.category]?.family || 'fundamental';
               const termFamilyDef = FAMILY_LIST.find(f => f.id === termFamilyId);
               const famColor = termFamilyDef?.color || '#C89650';
+              const sparkSeed = term.id.split('').reduce((a: number, c: string) => a + c.charCodeAt(0), 0) % 12 + 1;
 
               return (
                 <div
                   key={term.id}
-                  className={`term-card${isSel ? ' selected' : ''}`}
                   onClick={() => setSelectedTerm(term)}
                   style={{
-                    background: isSel ? `${famColor}08` : 'rgba(255,255,255,.032)'
+                    position: 'relative',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    height: 220,
+                    padding: '16px 16px 14px',
+                    borderRadius: 12,
+                    cursor: 'pointer',
+                    background: isSel
+                      ? `linear-gradient(135deg, ${famColor}18 0%, rgba(10,10,12,0.95) 100%)`
+                      : 'linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(10,10,12,0.97) 100%)',
+                    border: isSel
+                      ? `1px solid ${famColor}55`
+                      : `1px solid rgba(255,255,255,0.08)`,
+                    boxShadow: isSel
+                      ? `0 0 0 1px ${famColor}22, 0 8px 32px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08)`
+                      : '0 2px 12px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.06)',
+                    transition: 'border-color .2s, box-shadow .2s, background .2s',
+                    overflow: 'hidden',
+                  }}
+                  onMouseEnter={e => {
+                    if (!isSel) {
+                      (e.currentTarget as HTMLDivElement).style.borderColor = `${famColor}44`;
+                      (e.currentTarget as HTMLDivElement).style.boxShadow = `0 0 0 1px ${famColor}18, 0 8px 32px rgba(0,0,0,0.5), inset 0 1px 0 ${famColor}18`;
+                    }
+                  }}
+                  onMouseLeave={e => {
+                    if (!isSel) {
+                      (e.currentTarget as HTMLDivElement).style.borderColor = 'rgba(255,255,255,0.08)';
+                      (e.currentTarget as HTMLDivElement).style.boxShadow = '0 2px 12px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.06)';
+                    }
                   }}
                 >
-                  {/* Color top bar */}
+                  {/* 상단 컬러 라인 */}
                   <div style={{
                     position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    height: 2.5,
+                    top: 0, left: 0, right: 0,
+                    height: 2,
                     background: famColor,
-                    borderRadius: '14px 14px 0 0',
-                    opacity: isSel ? 1 : 0.3,
-                    transition: 'opacity .2s',
-                    boxShadow: isSel ? `0 0 10px ${famColor}88` : undefined,
-                    zIndex: 0,
+                    borderRadius: '12px 12px 0 0',
+                    opacity: isSel ? 1 : 0.45,
                   }} />
 
-                  {/* 대분류·중분류 badge */}
-                  <div style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'flex-start',
-                    marginBottom: 10
-                  }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0 }}>
-                      {/* 대분류 (family) */}
-                      <span style={{
-                        fontFamily: 'var(--mono)',
-                        fontSize: '7px',
-                        letterSpacing: '.18em',
-                        textTransform: 'uppercase',
-                        color: famColor,
-                        opacity: 0.7,
-                      }}>{termFamilyDef?.name || termFamilyId}</span>
-                      {/* 중분류 (category) */}
-                      <span style={{
-                        fontFamily: 'var(--mono)',
-                        fontSize: '8px',
-                        letterSpacing: '.10em',
-                        color: famColor,
-                        padding: '2px 7px',
-                        borderRadius: 4,
-                        background: `${famColor}14`,
-                        border: `1px solid ${famColor}25`,
-                        whiteSpace: 'nowrap',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        maxWidth: 160,
-                      }}>{term.category}</span>
-                    </div>
-                    {isFav && <span style={{ fontSize: 12, color: 'var(--gold)', flexShrink: 0 }}>★</span>}
+                  {/* 카테고리 pill + 즐겨찾기 */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, marginTop: 2 }}>
+                    <span style={{
+                      fontFamily: 'var(--mono)',
+                      fontSize: '9px',
+                      letterSpacing: '.08em',
+                      color: famColor,
+                      background: `${famColor}18`,
+                      border: `1px solid ${famColor}35`,
+                      borderRadius: 4,
+                      padding: '2px 7px',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      maxWidth: '75%',
+                    }}>{term.category}</span>
+                    {isFav && <span style={{ fontSize: 11, color: 'var(--gold)', lineHeight: 1 }}>★</span>}
                   </div>
 
-                  {/* Term name */}
+                  {/* 용어명 */}
                   <div style={{
-                    fontSize: 20,
-                    fontWeight: 500,
-                    color: '#fff',
-                    marginBottom: 2,
-                    letterSpacing: '-.02em',
-                    lineHeight: 1.1
-                  }}>{term.name}</div>
-                  
-                  <div style={{
-                    fontSize: 12,
-                    color: 'var(--t2)',
-                    marginBottom: 10,
-                    fontStyle: 'italic'
-                  }}>{term.fullName}</div>
-
-                  {/* Description */}
-                  <div style={{
-                    fontSize: '11.5px',
-                    color: 'var(--t3)',
-                    lineHeight: 1.65,
-                    display: '-webkit-box',
-                    WebkitLineClamp: 2,
-                    WebkitBoxOrient: 'vertical',
+                    fontSize: 22,
+                    fontWeight: 600,
+                    color: '#f0ece4',
+                    letterSpacing: '-.03em',
+                    lineHeight: 1.1,
+                    marginBottom: 3,
                     overflow: 'hidden',
-                    marginBottom: 12
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}>{term.name}</div>
+
+                  {/* 풀네임 / 한글명 */}
+                  <div style={{
+                    fontSize: 11,
+                    color: 'rgba(255,255,255,0.38)',
+                    fontStyle: 'italic',
+                    marginBottom: 10,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}>{term.fullName && term.fullName !== term.name ? term.fullName : (term.en || '')}</div>
+
+                  {/* 설명 — 남은 공간 채움 */}
+                  <div style={{
+                    fontSize: 11,
+                    color: 'rgba(255,255,255,0.50)',
+                    lineHeight: 1.6,
+                    flex: 1,
+                    overflow: 'hidden',
+                    display: '-webkit-box',
+                    WebkitLineClamp: 3,
+                    WebkitBoxOrient: 'vertical',
                   }}>{term.description}</div>
 
-                  {/* Sparkline footer */}
+                  {/* 하단 divider + sparkline + 버튼 */}
                   <div style={{
-                    borderTop: '1px solid rgba(255,255,255,.05)',
-                    paddingTop: 10,
+                    borderTop: `1px solid rgba(255,255,255,0.06)`,
+                    marginTop: 10,
+                    paddingTop: 9,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
-                    gap: 8
+                    gap: 8,
                   }}>
-                    <div className="tc-spark">
-                      <MiniSparkGlos color={famColor} seed={term.id.charCodeAt(0) % 7 + 1} h={26} />
-                    </div>
-                    <div style={{
-                      textAlign: 'right',
-                      flexShrink: 0
-                    }}>
-                      <span style={{
+                    <MiniSparkGlos color={famColor} seed={sparkSeed} h={24} />
+                    <button
+                      onClick={e => { e.stopPropagation(); setSelectedTerm(term); }}
+                      style={{
                         fontFamily: 'var(--mono)',
-                        fontSize: '8px',
-                        color: 'var(--t3)'
-                      }}>{termFamilyDef?.en.slice(0, 5) || ''}</span>
-                    </div>
+                        fontSize: '9px',
+                        letterSpacing: '.06em',
+                        color: famColor,
+                        background: 'transparent',
+                        border: `1px solid ${famColor}40`,
+                        borderRadius: 4,
+                        padding: '3px 8px',
+                        cursor: 'pointer',
+                        whiteSpace: 'nowrap',
+                        flexShrink: 0,
+                        transition: 'border-color .15s, background .15s',
+                      }}
+                    >&gt;- 계산</button>
                   </div>
-
-                  {/* Hover arrow */}
-                  <span className="tc-arrow" style={{
-                    position: 'absolute',
-                    top: 14,
-                    right: 14,
-                    fontSize: 12,
-                    color: 'var(--t3)',
-                    opacity: 0,
-                    transition: 'opacity .14s'
-                  }}>↗</span>
                 </div>
               );
             })
