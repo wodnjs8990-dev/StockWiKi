@@ -37,58 +37,105 @@ export default function AdminLoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4" style={{ background: '#0f0f0f' }}>
+    <div className="min-h-screen flex items-center justify-center px-4" style={{ position: 'relative', zIndex: 1 }}>
       <div className="w-full max-w-sm">
+
+        {/* 헤더 */}
         <div className="mb-8 text-center">
-          <div className="text-[10px] mono uppercase tracking-[0.3em] mb-2" style={{ color: '#7a7a7a' }}>§ Restricted</div>
-          <h1 className="text-2xl font-light tracking-tight" style={{ color: '#e8e4d6' }}>
-            Admin <span style={{ color: '#C89650', fontWeight: 500 }}>Access</span>
+          <div className="text-[10px] mono uppercase tracking-[0.3em] mb-3" style={{ color: 'rgba(255,255,255,.3)', letterSpacing: '.35em' }}>
+            § Restricted Access
+          </div>
+          <h1 className="text-3xl font-light tracking-tight" style={{ color: '#e8e4dc', fontFamily: 'var(--font-mono, monospace)' }}>
+            Stock<span style={{ color: '#C89650', fontWeight: 500 }}>WiKi</span>
           </h1>
-          <div className="text-[11px] mt-2" style={{ color: '#5a5a5a' }}>
+          <div className="text-[11px] mt-2 mono" style={{ color: 'rgba(255,255,255,.25)', letterSpacing: '.1em' }}>
             인증된 관리자만 접근 가능합니다
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="border p-6" style={{ borderColor: '#2a2a2a', background: '#141414' }}>
-          <label className="block mb-4">
-            <div className="text-[10px] mono uppercase tracking-[0.2em] mb-2" style={{ color: '#7a7a7a' }}>
-              Password
-            </div>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              autoComplete="current-password"
-              autoFocus
-              required
-              disabled={loading}
-              className="w-full bg-transparent border px-3 py-2 text-sm outline-none"
-              style={{ borderColor: '#2a2a2a', color: '#e8e4d6' }}
-            />
-          </label>
+        {/* 로그인 카드 */}
+        <div
+          className="admin-card p-6"
+          style={{
+            background: 'rgba(255,255,255,0.025)',
+            border: '1px solid transparent',
+            backdropFilter: 'blur(24px)',
+            WebkitBackdropFilter: 'blur(24px)',
+            boxShadow: '0 1px 0 rgba(255,255,255,0.09) inset, 0 24px 60px rgba(0,0,0,0.6)',
+          } as React.CSSProperties}
+        >
+          {/* 상단 골드 accent 라인 */}
+          <div style={{ height: 2, background: 'linear-gradient(90deg, transparent, #C89650, transparent)', marginBottom: 24, opacity: 0.7 }} />
 
-          {error && (
-            <div className="text-xs mb-4 px-3 py-2 border-l-2" style={{ borderColor: '#A63D33', background: '#1a0f0f', color: '#E87965' }}>
-              {error}
-            </div>
-          )}
+          <form onSubmit={handleSubmit}>
+            <label className="block mb-5">
+              <div className="text-[10px] mono uppercase tracking-[0.25em] mb-2" style={{ color: 'rgba(255,255,255,.35)' }}>
+                Password
+              </div>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                autoComplete="current-password"
+                autoFocus
+                required
+                disabled={loading}
+                className="w-full border px-3 py-2.5 text-sm outline-none transition-all"
+                style={{
+                  background: 'rgba(255,255,255,0.03)',
+                  borderColor: 'rgba(255,255,255,0.09)',
+                  color: '#e8e4dc',
+                  borderRadius: 8,
+                  fontFamily: 'var(--font-mono, monospace)',
+                } as React.CSSProperties}
+                onFocus={e => {
+                  e.currentTarget.style.borderColor = 'rgba(200,150,80,0.55)';
+                  e.currentTarget.style.boxShadow = '0 0 0 3px rgba(200,150,80,0.12), 0 0 20px rgba(200,150,80,0.10)';
+                }}
+                onBlur={e => {
+                  e.currentTarget.style.borderColor = 'rgba(255,255,255,0.09)';
+                  e.currentTarget.style.boxShadow = 'none';
+                }}
+              />
+            </label>
 
-          <button
-            type="submit"
-            disabled={loading || !password}
-            className="w-full py-2.5 text-sm mono uppercase tracking-[0.2em] transition-all"
-            style={{
-              background: loading || !password ? '#2a2a2a' : '#C89650',
-              color: loading || !password ? '#6a6a6a' : '#0a0a0a',
-              cursor: loading || !password ? 'not-allowed' : 'pointer',
-            }}
-          >
-            {loading ? 'Authenticating...' : 'Enter'}
-          </button>
-        </form>
+            {error && (
+              <div
+                className="text-xs mb-5 px-3 py-2.5 mono"
+                style={{
+                  borderLeft: '2px solid #A63D33',
+                  background: 'rgba(166,61,51,0.08)',
+                  color: '#E87965',
+                  borderRadius: '0 6px 6px 0',
+                }}
+              >
+                ⚠ {error}
+              </div>
+            )}
 
-        <div className="mt-6 text-center">
-          <Link href="/" className="text-[10px] mono uppercase tracking-[0.2em]" style={{ color: '#5a5a5a' }}>
+            <button
+              type="submit"
+              disabled={loading || !password}
+              className="w-full py-2.5 text-sm mono uppercase tracking-[0.2em] transition-all"
+              style={{
+                background: loading || !password
+                  ? 'rgba(255,255,255,0.05)'
+                  : 'linear-gradient(135deg, #d4a255 0%, #C89650 50%, #b8823a 100%)',
+                color: loading || !password ? 'rgba(255,255,255,0.2)' : '#0a0a0a',
+                cursor: loading || !password ? 'not-allowed' : 'pointer',
+                borderRadius: 8,
+                fontWeight: 500,
+                boxShadow: loading || !password ? 'none' : '0 0 24px rgba(200,150,80,0.35), 0 4px 16px rgba(200,150,80,0.18)',
+                border: 'none',
+              } as React.CSSProperties}
+            >
+              {loading ? 'Authenticating...' : 'Enter →'}
+            </button>
+          </form>
+        </div>
+
+        <div className="mt-5 text-center">
+          <Link href="/" className="text-[10px] mono uppercase tracking-[0.2em] transition-opacity hover:opacity-100" style={{ color: 'rgba(255,255,255,.2)' }}>
             ← Back to Site
           </Link>
         </div>

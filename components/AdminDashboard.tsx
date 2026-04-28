@@ -56,12 +56,27 @@ type Deployment = {
 
 // ── 테마
 const DARK: any = {
-  bg: '#0f0f0f', bgCard: '#141414', bgHeader: 'rgba(15,15,15,0.95)', bgSection: '#0f0f0f',
-  bgInput: 'transparent', bgHover: 'rgba(255,255,255,0.05)', bgSkeleton: '#1f1f1f', bgBarTrack: '#1f1f1f',
-  text: '#d4d0c4', textPrimary: '#e8e4d6', textMuted: '#a8a49a', textFaint: '#7a7a7a',
-  textDimmer: '#5a5a5a', textDimmest: '#4a4a4a',
-  border: '#2a2a2a', borderSoft: '#1f1f1f', borderSofter: '#1a1a1a',
+  bg: '#050505', bgCard: 'rgba(255,255,255,0.018)', bgHeader: 'rgba(5,5,5,0.88)', bgSection: 'rgba(255,255,255,0.01)',
+  bgInput: 'transparent', bgHover: 'rgba(255,255,255,0.05)', bgSkeleton: 'rgba(255,255,255,0.06)', bgBarTrack: 'rgba(255,255,255,0.06)',
+  text: '#d4d0c4', textPrimary: '#e8e4dc', textMuted: '#a8a49a', textFaint: '#7a7672',
+  textDimmer: '#5a5650', textDimmest: '#4a4845',
+  border: 'rgba(255,255,255,0.07)', borderSoft: 'rgba(255,255,255,0.04)', borderSofter: 'rgba(255,255,255,0.025)',
   accent: '#C89650', green: '#4A7045', red: '#A63D33', teal: '#4F7E7C', blue: '#4A6FA5',
+  // 카드 glassmorphism 공통 style
+  cardStyle: {
+    background: 'rgba(255,255,255,0.018)',
+    border: '1px solid transparent',
+    backdropFilter: 'blur(24px)',
+    WebkitBackdropFilter: 'blur(24px)',
+    boxShadow: '0 1px 0 rgba(255,255,255,0.07) inset, 0 8px 32px rgba(0,0,0,0.5)',
+  },
+  headerStyle: {
+    background: 'rgba(5,5,5,0.88)',
+    backdropFilter: 'blur(24px)',
+    WebkitBackdropFilter: 'blur(24px)',
+    borderBottom: '1px solid rgba(255,255,255,0.07)',
+    boxShadow: '0 1px 0 rgba(255,255,255,0.04) inset',
+  },
   colorScheme: 'dark' as const,
 };
 const LIGHT: any = {
@@ -71,6 +86,20 @@ const LIGHT: any = {
   textDimmer: '#aaa8a4', textDimmest: '#c0bdb8',
   border: '#d8d4c8', borderSoft: '#e0ddd4', borderSofter: '#e8e4dc',
   accent: '#a07030', green: '#3a5c36', red: '#8b2a20', teal: '#3a6460', blue: '#3a5080',
+  cardStyle: {
+    background: '#fffef9',
+    border: '1px solid #d8d4c8',
+    backdropFilter: 'none',
+    WebkitBackdropFilter: 'none',
+    boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
+  },
+  headerStyle: {
+    background: 'rgba(245,242,235,0.95)',
+    backdropFilter: 'blur(12px)',
+    WebkitBackdropFilter: 'blur(12px)',
+    borderBottom: '1px solid #d8d4c8',
+    boxShadow: 'none',
+  },
   colorScheme: 'light' as const,
 };
 
@@ -100,7 +129,7 @@ function LatencyBadge({ ms, T }: { ms: number; T: any }) {
 }
 function SectionHeader({ title, T, action }: { title: string; T: any; action?: React.ReactNode }) {
   return (
-    <div className="px-5 py-3 border-b flex items-center justify-between" style={{ borderColor: T.border, background: T.bgSection }}>
+    <div className="px-5 py-3 border-b flex items-center justify-between" style={{ borderColor: T.borderSoft, background: T.bgSection }}>
       <span className="text-[13px] mono uppercase tracking-[0.2em]" style={{ color: T.textMuted }}>{title}</span>
       {action}
     </div>
@@ -338,10 +367,10 @@ export default function AdminDashboard({ initialConfig, stats }: { initialConfig
   const inputStyle = { borderColor: T.border, color: T.textPrimary, background: T.bgInput, colorScheme: T.colorScheme };
 
   return (
-    <div className="min-h-screen" style={{ background: T.bg, color: T.text }}>
+    <div className="min-h-screen" style={{ background: dark ? 'transparent' : T.bg, color: T.text }}>
 
       {/* ── 헤더 */}
-      <header className="border-b sticky top-0 z-20" style={{ borderColor: T.border, background: T.bgHeader, backdropFilter: 'blur(8px)' }}>
+      <header className="border-b sticky top-0 z-20" style={{ ...T.headerStyle }}>
         <div className="max-w-[1100px] mx-auto px-4 md:px-8 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="text-lg font-light" style={{ color: T.textPrimary }}>
@@ -416,7 +445,7 @@ export default function AdminDashboard({ initialConfig, stats }: { initialConfig
                   change: analytics ? pctChange(analytics.today.sessions, analytics.yesterday.sessions) : null, changeLabel: '어제 대비' },
                 { label: '28일 순방문', value: analytics?.week28.users, unit: '명', color: T.blue },
               ].map((kpi, i) => (
-                <div key={i} className="border p-4" style={{ borderColor: T.border, background: T.bgCard }}>
+                <div key={i} className="admin-card" style={{ ...T.cardStyle }}>
                   <div className="text-[11px] mono uppercase tracking-[0.2em] mb-2 flex items-center gap-1.5" style={{ color: T.textFaint }}>
                     {kpi.pulse && <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: '#22c55e' }} />}
                     {kpi.label}
@@ -439,8 +468,8 @@ export default function AdminDashboard({ initialConfig, stats }: { initialConfig
             </div>
 
             {/* 7일 일별 PV 바 차트 */}
-            <div className="border" style={{ borderColor: T.border, background: T.bgCard }}>
-              <div className="px-5 py-3 border-b" style={{ borderColor: T.border }}>
+            <div className="admin-card" style={{ ...T.cardStyle }}>
+              <div className="px-5 py-3 border-b" style={{ borderColor: T.borderSoft }}>
                 <span className="text-[12px] mono uppercase tracking-[0.2em]" style={{ color: T.textMuted }}>7일 PV 추이</span>
               </div>
               <div className="p-5">
@@ -466,8 +495,8 @@ export default function AdminDashboard({ initialConfig, stats }: { initialConfig
 
             <div className="grid md:grid-cols-3 gap-4">
               {/* 인기 페이지 TOP 10 */}
-              <div className="md:col-span-2 border" style={{ borderColor: T.border, background: T.bgCard }}>
-                <div className="px-5 py-3 border-b" style={{ borderColor: T.border }}>
+              <div className="md:col-span-2 admin-card" style={{ ...T.cardStyle }}>
+                <div className="px-5 py-3 border-b" style={{ borderColor: T.borderSoft }}>
                   <span className="text-[12px] mono uppercase tracking-[0.2em]" style={{ color: T.textMuted }}>인기 페이지 TOP 10 · 7일</span>
                 </div>
                 <div className="divide-y" style={{ borderColor: T.borderSofter }}>
@@ -497,8 +526,8 @@ export default function AdminDashboard({ initialConfig, stats }: { initialConfig
 
               {/* 기기·국가 */}
               <div className="space-y-4">
-                <div className="border" style={{ borderColor: T.border, background: T.bgCard }}>
-                  <div className="px-4 py-3 border-b" style={{ borderColor: T.border }}>
+                <div className="admin-card" style={{ ...T.cardStyle }}>
+                  <div className="px-4 py-3 border-b" style={{ borderColor: T.borderSoft }}>
                     <span className="text-[12px] mono uppercase tracking-[0.2em]" style={{ color: T.textMuted }}>기기 유형</span>
                   </div>
                   <div className="p-4 space-y-2">
@@ -516,8 +545,8 @@ export default function AdminDashboard({ initialConfig, stats }: { initialConfig
                     })}
                   </div>
                 </div>
-                <div className="border" style={{ borderColor: T.border, background: T.bgCard }}>
-                  <div className="px-4 py-3 border-b" style={{ borderColor: T.border }}>
+                <div className="admin-card" style={{ ...T.cardStyle }}>
+                  <div className="px-4 py-3 border-b" style={{ borderColor: T.borderSoft }}>
                     <span className="text-[12px] mono uppercase tracking-[0.2em]" style={{ color: T.textMuted }}>국가 TOP 5</span>
                   </div>
                   <div className="p-4 space-y-2">
@@ -535,8 +564,8 @@ export default function AdminDashboard({ initialConfig, stats }: { initialConfig
 
             {/* 시간대별 오늘 PV */}
             {analytics?.hourly && analytics.hourly.length > 0 && (
-              <div className="border" style={{ borderColor: T.border, background: T.bgCard }}>
-                <div className="px-5 py-3 border-b" style={{ borderColor: T.border }}>
+              <div className="admin-card" style={{ ...T.cardStyle }}>
+                <div className="px-5 py-3 border-b" style={{ borderColor: T.borderSoft }}>
                   <span className="text-[12px] mono uppercase tracking-[0.2em]" style={{ color: T.textMuted }}>오늘 시간대별 PV</span>
                 </div>
                 <div className="p-5">
@@ -554,7 +583,7 @@ export default function AdminDashboard({ initialConfig, stats }: { initialConfig
 
         {/* ══ STATUS ══ */}
         {activeSection === 'status' && (
-          <div className="border" style={{ borderColor: T.border, background: T.bgCard }}>
+          <div className="admin-card" style={{ ...T.cardStyle }}>
             <SectionHeader title="Site Status" T={T} action={
               <span className="text-[13px] mono uppercase tracking-[0.2em]" style={{ color: config.maintenanceMode ? T.accent : T.green }}>
                 {config.maintenanceMode ? '● Maintenance' : '● Live'}
@@ -572,7 +601,7 @@ export default function AdminDashboard({ initialConfig, stats }: { initialConfig
                   {isPending ? '처리 중...' : config.maintenanceMode ? '점검 해제' : '점검 시작'}
                 </button>
               </div>
-              <div className="space-y-4 pt-5 border-t" style={{ borderColor: T.border }}>
+              <div className="space-y-4 pt-5 border-t" style={{ borderColor: T.borderSoft }}>
                 <label className="block">
                   <div className="text-[13px] mono uppercase tracking-[0.2em] mb-2" style={{ color: T.textFaint }}>점검 메시지</div>
                   <textarea value={message} onChange={e => setMessage(e.target.value)} rows={2}
@@ -598,7 +627,7 @@ export default function AdminDashboard({ initialConfig, stats }: { initialConfig
 
         {/* ══ FEATURES ══ */}
         {activeSection === 'features' && (
-          <div className="border" style={{ borderColor: T.border, background: T.bgCard }}>
+          <div className="admin-card" style={{ ...T.cardStyle }}>
             <SectionHeader title="Feature Toggles" T={T} />
             <div>
               {([
@@ -627,7 +656,7 @@ export default function AdminDashboard({ initialConfig, stats }: { initialConfig
         {/* ══ BANNER ══ */}
         {activeSection === 'banner' && (
           <div className="space-y-5">
-            <div className="border" style={{ borderColor: T.border, background: T.bgCard }}>
+            <div className="admin-card" style={{ ...T.cardStyle }}>
               <SectionHeader title="배너 · 공지 관리" T={T} />
               <div className="p-5 space-y-4">
                 {/* 미리보기 */}
@@ -698,7 +727,7 @@ export default function AdminDashboard({ initialConfig, stats }: { initialConfig
 
         {/* ══ CACHE ══ */}
         {activeSection === 'cache' && (
-          <div className="border" style={{ borderColor: T.border, background: T.bgCard }}>
+          <div className="admin-card" style={{ ...T.cardStyle }}>
             <SectionHeader title="캐시 무효화" T={T} />
             <div className="p-5 space-y-3">
               <div className="text-[13px]" style={{ color: T.textMuted }}>
@@ -732,7 +761,7 @@ export default function AdminDashboard({ initialConfig, stats }: { initialConfig
         {activeSection === 'events' && (
           <div className="space-y-5">
             {/* 이벤트 추가 폼 */}
-            <div className="border" style={{ borderColor: T.border, background: T.bgCard }}>
+            <div className="admin-card" style={{ ...T.cardStyle }}>
               <SectionHeader title="이벤트 수동 추가 (한국 금통위, BOJ 등)" T={T} />
               <div className="p-5 space-y-4">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -770,7 +799,7 @@ export default function AdminDashboard({ initialConfig, stats }: { initialConfig
             </div>
 
             {/* 기존 이벤트 목록 */}
-            <div className="border" style={{ borderColor: T.border, background: T.bgCard }}>
+            <div className="admin-card" style={{ ...T.cardStyle }}>
               <SectionHeader title={`등록된 이벤트 (${customEvents.length}개)`} T={T} />
               {eventsLoading ? (
                 <div className="p-5"><Skeleton T={T} /></div>
@@ -799,7 +828,7 @@ export default function AdminDashboard({ initialConfig, stats }: { initialConfig
 
         {/* ══ MONITOR ══ */}
         {activeSection === 'monitor' && (
-          <div className="border" style={{ borderColor: T.border, background: T.bgCard }}>
+          <div className="admin-card" style={{ ...T.cardStyle }}>
             <SectionHeader title="System Monitor" T={T} action={
               <div className="flex items-center gap-3">
                 {lastChecked && <span className="text-[12px] mono" style={{ color: T.textDimmer }}>마지막 체크 {lastChecked}</span>}
@@ -871,7 +900,7 @@ export default function AdminDashboard({ initialConfig, stats }: { initialConfig
 
         {/* ══ DEPLOY ══ */}
         {activeSection === 'deploy' && (
-          <div className="border" style={{ borderColor: T.border, background: T.bgCard }}>
+          <div className="admin-card" style={{ ...T.cardStyle }}>
             <SectionHeader title="배포 히스토리 · Vercel" T={T} action={
               <button onClick={fetchDeployments} disabled={deployLoading}
                 className="flex items-center gap-1.5 text-[12px] mono uppercase tracking-[0.15em] px-2.5 py-1 border hover:opacity-70"
@@ -927,7 +956,7 @@ export default function AdminDashboard({ initialConfig, stats }: { initialConfig
 
         {/* ══ SECURITY ══ */}
         {activeSection === 'security' && (
-          <div className="border" style={{ borderColor: T.border, background: T.bgCard }}>
+          <div className="admin-card" style={{ ...T.cardStyle }}>
             <SectionHeader title="로그인 이력" T={T} action={
               <button onClick={fetchLoginHistory} disabled={historyLoading}
                 className="flex items-center gap-1.5 text-[12px] mono uppercase tracking-[0.15em] px-2.5 py-1 border hover:opacity-70"
@@ -963,7 +992,7 @@ export default function AdminDashboard({ initialConfig, stats }: { initialConfig
         {/* ══ STATS ══ */}
         {activeSection === 'stats' && (
           <div className="space-y-5">
-            <div className="border" style={{ borderColor: T.border, background: T.bgCard }}>
+            <div className="admin-card" style={{ ...T.cardStyle }}>
               <SectionHeader title="Content Statistics" T={T} />
               <div className="grid grid-cols-2 md:grid-cols-4">
                 {[
@@ -981,7 +1010,7 @@ export default function AdminDashboard({ initialConfig, stats }: { initialConfig
               </div>
             </div>
 
-            <div className="border" style={{ borderColor: T.border, background: T.bgCard }}>
+            <div className="admin-card" style={{ ...T.cardStyle }}>
               <SectionHeader title="Deployment" T={T} />
               <div className="p-5 grid md:grid-cols-2 gap-4 text-sm">
                 <div>
@@ -1004,7 +1033,7 @@ export default function AdminDashboard({ initialConfig, stats }: { initialConfig
         {activeSection === 'changelog' && (
           <div className="space-y-5">
             {/* 버전 요약 카드 */}
-            <div className="border" style={{ borderColor: T.border, background: T.bgCard }}>
+            <div className="admin-card" style={{ ...T.cardStyle }}>
               <SectionHeader title="Version" T={T} action={
                 <a href="/changelog" target="_blank" rel="noreferrer"
                   className="text-[11px] mono uppercase tracking-[0.15em] px-3 py-1 border"
@@ -1029,7 +1058,7 @@ export default function AdminDashboard({ initialConfig, stats }: { initialConfig
             </div>
 
             {/* 패치 히스토리 */}
-            <div className="border" style={{ borderColor: T.border, background: T.bgCard }}>
+            <div className="admin-card" style={{ ...T.cardStyle }}>
               <SectionHeader title="Patch History" T={T} />
               <div className="divide-y" style={{ borderColor: T.borderSoft }}>
                 {CHANGELOG.map((entry, idx) => {
@@ -1074,8 +1103,14 @@ export default function AdminDashboard({ initialConfig, stats }: { initialConfig
 
       {/* Toast */}
       {toast && (
-        <div className="fixed bottom-6 right-4 md:right-6 px-4 py-3 border text-sm mono uppercase tracking-[0.15em] z-50"
-          style={{ background: T.bgCard, borderColor: toast.kind === 'ok' ? T.green : T.red, color: toast.kind === 'ok' ? T.green : T.red }}>
+        <div className="fixed bottom-6 right-4 md:right-6 px-4 py-3 text-sm mono uppercase tracking-[0.15em] z-50 admin-card"
+          style={{
+            ...T.cardStyle,
+            borderLeft: `3px solid ${toast.kind === 'ok' ? T.green : T.red}`,
+            color: toast.kind === 'ok' ? T.green : T.red,
+            boxShadow: `0 0 24px ${toast.kind === 'ok' ? T.green : T.red}28, 0 8px 32px rgba(0,0,0,0.5)`,
+            animation: 'resultFadeIn .35s cubic-bezier(.16,1,.3,1) both',
+          }}>
           {toast.text}
         </div>
       )}

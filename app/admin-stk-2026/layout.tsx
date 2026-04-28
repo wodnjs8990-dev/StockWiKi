@@ -9,5 +9,15 @@ export const metadata: Metadata = {
 };
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  return <>{children}</>;
+  return (
+    <>
+      {/* Ambient mesh gradient — 어드민에도 동일한 배경 적용 */}
+      <div className="liquid-bg" aria-hidden="true">
+        <div className="liquid-blob-1" />
+        <div className="liquid-blob-2" />
+        <div className="liquid-blob-3" />
+      </div>
+      {children}
+    </>
+  );
 }
