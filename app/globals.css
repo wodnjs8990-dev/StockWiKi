@@ -660,6 +660,8 @@ html.light .admin-card::after { display: none; }
 .term-card:hover::before {
   background: linear-gradient(to bottom, rgba(255,255,255,.16) 0%, rgba(255,255,255,.04) 50%, transparent 100%);
 }
+/* 카드 안 모든 직계 자식을 pseudo 위로 올림 */
+.term-card > * { position: relative; z-index: 2; }
 .term-card.selected { background: rgba(200,150,80,.04); box-shadow: 0 1px 0 rgba(200,150,80,.2) inset, 0 0 0 1px rgba(200,150,80,.18), 0 8px 30px rgba(200,150,80,.08); }
 .term-card:hover .tc-arrow { opacity: 1 !important; }
 
