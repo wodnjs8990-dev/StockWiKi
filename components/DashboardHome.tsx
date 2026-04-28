@@ -1,12 +1,14 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 
+/* ── Types ── */
 interface RecentTerm { id: string; name: string; category: string; }
 interface CalcHistEntry { id: string; label: string; results?: { label: string; value: string; unit?: string }[]; ts?: number; }
+interface EventItem { dateKST?: string; date?: string; label: string; desc: string; time?: string; color: string; importance?: number; }
 
 interface Props {
-  T: any;
+  T?: any;
   isDark: boolean;
   totalTerms: number;
   recent: any[];
@@ -14,65 +16,45 @@ interface Props {
   setActiveTab: (tab: string) => void;
   setSelectedCalc: (id: string) => void;
   setSelectedTerm?: (term: any) => void;
+  upcomingEvents?: EventItem[];
 }
 
+/* ── Constants ── */
 const FAMILIES = [
-  { id: 'fundamental', color: '#c8a96e', en: 'FUNDAMENTAL', ko: '기업가치',    cats: ['밸류에이션', '기업재무', '수익성', '회계심화', '+13'] },
-  { id: 'market',      color: '#6ea8c8', en: 'MARKET',      ko: '시장·상품',  cats: ['시장거래', '한국시장', 'ETF·상장', '+8'] },
-  { id: 'macro',       color: '#8bc87a', en: 'MACRO',       ko: '거시경제',    cats: ['통화정책', '물가·인플레', '거시지표', '+13'] },
-  { id: 'risk',        color: '#c87a8b', en: 'RISK',        ko: '리스크·퀀트', cats: ['포트폴리오', '퀀트통계', '성과평가', '+4'] },
-  { id: 'derivatives', color: '#9a7ac8', en: 'DERIVATIVES', ko: '파생·헤지',   cats: ['선물옵션', '파생헤지', '옵션전략', '+5'] },
-  { id: 'trading',     color: '#c8b47a', en: 'TRADING',     ko: '실전매매',    cats: ['기술적지표', '투자심리', '차트패턴', '+6'] },
-  { id: 'industry',    color: '#7ac8c0', en: 'INDUSTRY',    ko: '산업군',      cats: ['AI·반도체', '에너지', '소비재', '+8'] },
-  { id: 'digital',     color: '#c87ab4', en: 'DIGITAL',     ko: '디지털자산',  cats: ['DeFi', '블록체인', '토큰화', '+2'] },
-  { id: 'tax',         color: '#a8c87a', en: 'TAX·LEGAL',   ko: '세금·법률',   cats: ['세금·계좌', '공시·법률', '규제', '+2'] },
+  { id: 'fundamental', color: '#c8a96e', en: 'FUNDAMENTAL', ko: '기업가치',    cnt: 247 },
+  { id: 'market',      color: '#6ea8c8', en: 'MARKET',      ko: '시장·상품',  cnt: 183 },
+  { id: 'macro',       color: '#8bc87a', en: 'MACRO',       ko: '거시경제',    cnt: 312 },
+  { id: 'risk',        color: '#c87a8b', en: 'RISK',        ko: '리스크·퀀트', cnt: 198 },
+  { id: 'derivatives', color: '#9a7ac8', en: 'DERIVATIVES', ko: '파생·헤지',   cnt: 221 },
+  { id: 'trading',     color: '#c8b47a', en: 'TRADING',     ko: '실전매매',    cnt: 289 },
+  { id: 'industry',    color: '#7ac8c0', en: 'INDUSTRY',    ko: '산업군',      cnt: 176 },
+  { id: 'digital',     color: '#c87ab4', en: 'DIGITAL',     ko: '디지털자산',  cnt: 134 },
+  { id: 'tax',         color: '#a8c87a', en: 'TAX·LEGAL',   ko: '세금·법률',   cnt: 98  },
 ];
 
-const QUICK_CALCS = [
-  { id: 'per',   num: 'M01', name: 'PER · EPS 계산기', hint: '주가수익비율 실시간 계산' },
-  { id: 'pbr',   num: 'M02', name: 'PBR · BPS 계산기', hint: '주가순자산비율 분석' },
-  { id: 'dcf',   num: 'M05', name: 'DCF 간이 평가',     hint: '내재가치 추정' },
-  { id: 'roe',   num: 'M07', name: 'ROE · ROA 계산기',  hint: '수익성 지표 분석' },
-  { id: 'bs',    num: 'M24', name: '블랙-숄즈 옵션가',  hint: '옵션 이론가 계산' },
-  { id: 'kelly', num: 'M29', name: '켈리 공식',          hint: '최적 베팅 비율' },
-  { id: 'var',   num: 'M31', name: 'VaR 추정',           hint: '리스크 측정 지표' },
-];
-
-const DAY_KO = ['일요일 · Sun', '월요일 · Mon', '화요일 · Tue', '수요일 · Wed', '목요일 · Thu', '금요일 · Fri', '토요일 · Sat'];
+const DAY_KO = ['일', '월', '화', '수', '목', '금', '토'];
 const pad = (n: number) => String(n).padStart(2, '0');
 
+/* ── Helpers ── */
 function getKST() {
-  const now = new Date();
-  return new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Seoul' }));
+  return new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Seoul' }));
 }
 
-function getMktState() {
-  const kst = getKST();
-  const h = kst.getHours(), m = kst.getMinutes(), dow = kst.getDay();
-  const hm = h * 60 + m;
-  // 월(1)~금(5) 판별
-  const isWeekday = dow >= 1 && dow <= 5;
-  // K200F 야간: 월~금 17:30(1050) ~ 익일 05:00(300)
-  //   → 당일 17:30 이후(isWeekday) OR 익일 새벽 05:00 이전(전날이 평일 = 월요일 새벽~토요일 새벽)
-  //   토요일 새벽(dow=6, hm<300): 금요일 야간 연장 → 허용
-  //   일요일(dow=0): 토요일은 선물 없으므로 → 차단
-  const k200NightPrev = dow === 6 && hm < 300; // 토요일 새벽 (금 야간 연장)
-  const k200NightCur  = isWeekday && hm >= 1050; // 평일 17:30 이후
-  const k200NightNext = isWeekday && hm < 300;   // 평일 새벽 05:00 이전 (전날 개장)
-  // NDX: 월~금 23:30(1410) ~ 익일 06:00(360)
-  //   토요일 새벽(dow=6, hm<360): 금요일 야간 연장 → 허용
-  //   일요일(dow=0): 차단
-  const ndxPrev = dow === 6 && hm < 360;
-  const ndxCur  = isWeekday && hm >= 1410;
-  const ndxNext = isWeekday && hm < 360;
+function getMkt() {
+  const k = getKST(), h = k.getHours(), m = k.getMinutes(), dow = k.getDay(), hm = h * 60 + m, wd = dow >= 1 && dow <= 5;
   return {
-    kospiPre:  isWeekday && hm >= 480 && hm < 540,
-    kospi:     isWeekday && hm >= 540 && hm < 930,
-    nxt:       isWeekday && ((hm >= 480 && hm < 510) || (hm >= 540 && hm < 930)),
-    k200Day:   isWeekday && hm >= 540 && hm < 945,
-    k200Night: k200NightPrev || k200NightCur || k200NightNext,
-    ndx:       ndxPrev || ndxCur || ndxNext,
+    kospiPre:  wd && hm >= 480 && hm < 540,
+    kospi:     wd && hm >= 540 && hm < 930,
+    nxt:       wd && ((hm >= 480 && hm < 510) || (hm >= 540 && hm < 930)),
+    k200Day:   wd && hm >= 540 && hm < 945,
+    k200Night: (dow === 6 && hm < 300) || (wd && hm >= 1050) || (wd && hm < 300),
+    ndx:       (dow === 6 && hm < 360) || (wd && hm >= 1410) || (wd && hm < 360),
   };
+}
+
+function todayStr() {
+  const k = getKST();
+  return `${k.getFullYear()}-${pad(k.getMonth() + 1)}-${pad(k.getDate())}`;
 }
 
 function getLS<T>(key: string, fallback: T): T {
@@ -80,58 +62,127 @@ function getLS<T>(key: string, fallback: T): T {
   try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; } catch { return fallback; }
 }
 
-function useCountUp(target: number, duration = 1400) {
-  const [val, setVal] = useState(0);
+function useCountUp(target: number, dur = 1300) {
+  const [v, setV] = useState(0);
   useEffect(() => {
-    if (target === 0) return;
-    let current = 0;
-    const step = target / (duration / 16);
+    if (!target) return;
+    let c = 0;
+    const s = target / (dur / 16);
     const id = setInterval(() => {
-      current += step;
-      if (current >= target) { setVal(target); clearInterval(id); }
-      else setVal(Math.floor(current));
+      c += s;
+      if (c >= target) { setV(target); clearInterval(id); }
+      else setV(Math.floor(c));
     }, 16);
     return () => clearInterval(id);
-  }, [target, duration]);
-  return val;
+  }, [target, dur]);
+  return v;
 }
 
-export default function DashboardHome({ T, isDark, totalTerms, recent, favorites, setActiveTab, setSelectedCalc }: Props) {
-  const [kstTime, setKstTime] = useState('--:--:--');
-  const [kstDate, setKstDate] = useState('');
-  const [kstDay, setKstDay] = useState('');
-  const [mkt, setMkt] = useState(getMktState());
-  const [recentTerms, setRecentTerms] = useState<RecentTerm[]>([]);
-  const [calcHist, setCalcHist] = useState<CalcHistEntry[]>([]);
-  const [hovFam, setHovFam] = useState<string | null>(null);
-  const [hovCalc, setHovCalc] = useState<string | null>(null);
+/* ── Mini Sparkline ── */
+function MiniSpark({ color = '#C89650', seed = 1, h = 24 }: { color?: string; seed?: number; h?: number }) {
+  const W = 80, H = h;
+  const data = Array.from({ length: 20 }, (_, i) => {
+    const x = Math.sin(i * seed * 0.7 + seed) * 0.5 + Math.cos(i * seed * 0.3) * 0.3;
+    return 40 + x * 25 + (i / 20) * 15;
+  });
+  const min = Math.min(...data), max = Math.max(...data), range = max - min || 1;
+  const pts = data.map((v, i) => `${(i / (data.length - 1)) * W},${H - ((v - min) / range) * (H - 3) - 2}`).join(' ');
+  const id = `ms${seed}${color.replace('#', '')}`;
+  return (
+    <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} style={{ overflow: 'visible' }}>
+      <defs>
+        <linearGradient id={`${id}g`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity={0.2} />
+          <stop offset="100%" stopColor={color} stopOpacity={0} />
+        </linearGradient>
+        <filter id={`${id}f`}>
+          <feGaussianBlur stdDeviation="1" result="b" />
+          <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
+        </filter>
+      </defs>
+      <polygon points={`0,${H} ${pts} ${W},${H}`} fill={`url(#${id}g)`} />
+      <polyline points={pts} fill="none" stroke={color} strokeWidth="1.4"
+        filter={`url(#${id}f)`} style={{ filter: `drop-shadow(0 0 3px ${color}99)` }} />
+    </svg>
+  );
+}
 
-  const favArr = Array.from(favorites);
-  const favCount = favArr.length;
-  const recentCount = recentTerms.length;
-  const calcCount = calcHist.length;
+/* ── Glow Chart ── */
+function GlowChart({ data, color, h = 70 }: { data: number[]; color: string; h?: number }) {
+  const W = 300, H = h, min = Math.min(...data), max = Math.max(...data), range = max - min || 1;
+  const pts = data.map((v, i) => [i / (data.length - 1) * W, H - ((v - min) / range) * (H * 0.85) - H * 0.08] as [number, number]);
+  const path = pts.map((p, i) => `${i ? 'L' : 'M'}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(' ');
+  const area = `${path} L${W},${H} L0,${H} Z`;
+  const gid = `gc${color.replace('#', '')}`;
+  const [lx, ly] = pts[pts.length - 1];
+  return (
+    <svg width="100%" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={{ overflow: 'visible' }}>
+      <defs>
+        <linearGradient id={gid} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity={0.2} />
+          <stop offset="100%" stopColor={color} stopOpacity={0} />
+        </linearGradient>
+        <filter id={`${gid}g`} x="-20%" y="-60%" width="140%" height="220%">
+          <feGaussianBlur stdDeviation="2.5" result="b" />
+          <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
+        </filter>
+      </defs>
+      <path d={area} fill={`url(#${gid})`} />
+      <path d={path} fill="none" stroke={color} strokeWidth="0.8" opacity="0.2" />
+      <path d={path} fill="none" stroke={color} strokeWidth="1.6"
+        style={{ filter: `drop-shadow(0 0 5px ${color}99) drop-shadow(0 0 12px ${color}44)` }} />
+      <circle cx={lx} cy={ly} r="3.5" fill={color}
+        style={{ filter: `drop-shadow(0 0 6px ${color}) drop-shadow(0 0 14px ${color}66)` }} />
+    </svg>
+  );
+}
+
+/* ── deterministic sparkline data ── */
+function genData(base: number, len = 50, vol = 0.008): number[] {
+  const d = [base];
+  for (let i = 1; i < len; i++) d.push(Math.max(d[i - 1] * (1 + (Math.random() - 0.47) * vol), base * 0.85));
+  return d;
+}
+
+/* ════════════════════════════════
+   MAIN COMPONENT
+════════════════════════════════ */
+export default function DashboardHome({
+  isDark, totalTerms, recent, favorites,
+  setActiveTab, setSelectedCalc, upcomingEvents = [],
+}: Props) {
+  const [kstTime, setKstTime]   = useState('--:--:--');
+  const [kstDate, setKstDate]   = useState('');
+  const [kstDay,  setKstDay]    = useState('');
+  const [mkt,     setMkt]       = useState(getMkt());
+  const [recentTerms, setRecentTerms] = useState<RecentTerm[]>([]);
+  const [calcHist,    setCalcHist]    = useState<CalcHistEntry[]>([]);
 
   const c1 = useCountUp(totalTerms || 16323);
   const c2 = useCountUp(69);
   const c3 = useCountUp(200);
-  const c4 = useCountUp(9);
 
+  /* deterministic chart data */
+  const kospiData = useMemo(() => genData(2748, 60, 0.007), []);
+  const ndxData   = useMemo(() => genData(19240, 60, 0.009), []);
+
+  /* Clock + market tick */
   useEffect(() => {
     const tick = () => {
-      const kst = getKST();
-      setKstTime(`${pad(kst.getHours())}:${pad(kst.getMinutes())}:${pad(kst.getSeconds())}`);
-      const y = kst.getFullYear(), mo = pad(kst.getMonth() + 1), d = pad(kst.getDate());
-      setKstDate(`${y}.${mo}.${d}`);
-      setKstDay(DAY_KO[kst.getDay()]);
-      setMkt(getMktState());
+      const k = getKST();
+      setKstTime(`${pad(k.getHours())}:${pad(k.getMinutes())}:${pad(k.getSeconds())}`);
+      setKstDate(`${k.getFullYear()}.${pad(k.getMonth() + 1)}.${pad(k.getDate())}`);
+      setKstDay(DAY_KO[k.getDay()]);
+      setMkt(getMkt());
     };
     tick();
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
   }, []);
 
+  /* Recent + calc history */
   useEffect(() => {
-    if (recent && recent.length > 0) {
+    if (recent?.length > 0) {
       setRecentTerms(recent.slice(0, 4).map((t: any) => ({ id: t.id, name: t.name, category: t.category })));
     } else {
       const ids: string[] = getLS('stockwiki_recent', []);
@@ -143,285 +194,434 @@ export default function DashboardHome({ T, isDark, totalTerms, recent, favorites
     setCalcHist(getLS<CalcHistEntry[]>('stockwiki_calc_history', []).slice(0, 5));
   }, [recent]);
 
-  // 색상 토큰
-  const ON  = '#4A7045';
-  const PRE = '#C89650';
-  const B   = isDark ? '#1e1e1e' : '#e0ddd4';
-  const BG  = isDark ? '#111111' : '#f5f2eb';
-  const BG2 = isDark ? '#141414' : '#edeae0';
-  const INK = isDark ? '#e8e4d6' : '#1a1a1a';
-  const INK2= isDark ? '#c8c4b6' : '#3a3a3a';
-  const M   = isDark ? '#7a7670' : '#5a5550';
-  const F   = isDark ? '#484440' : '#aaa8a4';
-  const F2  = isDark ? '#2e2c28' : '#ccc8c0';
-  const OFF = isDark ? '#2e2c28' : '#aaa8a4';
+  const active = [mkt.kospi, mkt.nxt, mkt.k200Day, mkt.k200Night, mkt.ndx].filter(Boolean).length;
 
   const mktItems = [
-    { label: 'KOSPI',      on: mkt.kospi,     pre: mkt.kospiPre, status: mkt.kospi ? '장중' : mkt.kospiPre ? '프리' : '장외', time: '09:00–15:30' },
-    { label: 'NXT',        on: mkt.nxt,       pre: false,        status: mkt.nxt       ? '장중' : '장외', time: '08:00–08:30' },
-    { label: 'K200F 주간', on: mkt.k200Day,   pre: false,        status: mkt.k200Day   ? '장중' : '장외', time: '09:00–15:45' },
-    { label: 'K200F 야간', on: mkt.k200Night, pre: false,        status: mkt.k200Night ? '장중' : '장외', time: '18:00–05:00' },
-    { label: 'NDX',        on: mkt.ndx,       pre: false,        status: mkt.ndx       ? '장중' : '장외', time: '23:30–06:00' },
+    { l: 'KOSPI',      on: mkt.kospi,     pre: mkt.kospiPre, t: '09:00–15:30' },
+    { l: 'NXT',        on: mkt.nxt,       pre: false,        t: '08:00–08:30' },
+    { l: 'K200F 주간', on: mkt.k200Day,   pre: false,        t: '09:00–15:45' },
+    { l: 'K200F 야간', on: mkt.k200Night, pre: false,        t: '18:00–05:00' },
+    { l: 'NDX',        on: mkt.ndx,       pre: false,        t: '23:30–06:00' },
   ];
 
+  /* Upcoming events — next 4 */
+  const today = todayStr();
+  const upcoming = useMemo(() => {
+    const getDate = (e: EventItem) => e.dateKST ?? e.date ?? '';
+    if (upcomingEvents.length > 0) {
+      return upcomingEvents
+        .filter(e => getDate(e) >= today)
+        .sort((a, b) => getDate(a).localeCompare(getDate(b)))
+        .slice(0, 4);
+    }
+    /* fallback static */
+    return [
+      { dateKST: '2026-05-08', label: 'FOMC',     desc: '금리 결정 · 연준 성명', time: '04:00', color: '#4F7E7C', importance: 3 },
+      { dateKST: '2026-05-12', label: 'CPI',       desc: '4월 소비자물가 (美)',    time: '22:30', color: '#9C8BBD', importance: 3 },
+      { dateKST: '2026-05-14', label: 'K200만기',  desc: '5월 선물 최종거래',     time: '장후',  color: '#8A8A8A', importance: 2 },
+      { dateKST: '2026-05-15', label: 'NVDA',      desc: 'Nvidia Q1 실적 · 장후', time: '장후',  color: '#7B9FDF', importance: 3 },
+    ].filter(e => e.dateKST >= today).slice(0, 4);
+  }, [upcomingEvents, today]);
+
   return (
-    <div style={{ background: BG, color: INK, fontFamily: 'var(--font-sans), Inter, sans-serif' }}>
-      <style>{`
-        @keyframes gridDrift  { from{background-position:0 0} to{background-position:64px 64px} }
-        @keyframes glowPulse  { 0%,100%{opacity:.7;transform:translate(-50%,-50%) scale(1)} 50%{opacity:1;transform:translate(-50%,-50%) scale(1.12)} }
-        @keyframes scanLine   { from{top:-2px} to{top:100%} }
-        @keyframes ghostPulse { 0%,100%{opacity:.5} 50%{opacity:.9} }
-        @keyframes mktpulse   { 0%,100%{opacity:1} 50%{opacity:.12} }
-        .dh-fam-col  { transition: background .2s; }
-        .dh-fam-col:hover { background: rgba(255,255,255,.025) !important; }
-        .dh-fam-col:hover .dh-fam-arr { opacity:1 !important; transform:translateX(0) !important; }
-        .dh-fam-col:hover .dh-fam-bar { opacity:1 !important; }
-        .dh-calc-col { transition: background .15s; }
-        .dh-calc-col:hover { background: rgba(255,255,255,.025) !important; }
-        .dh-calc-col:hover .dh-calc-line { transform: scaleX(1) !important; }
-        .dh-stat-cell { transition: background .14s; }
-        .dh-stat-cell:hover { background: rgba(255,255,255,.03) !important; }
-        .dh-stat-cell:hover .dh-stat-arrow { opacity:1 !important; transform:translate(2px,-2px) !important; }
-        .dh-stat-cell:hover .dh-stat-topbar { transform: scaleX(1) !important; }
-        .dh-hw { transition: background .2s; }
-        .dh-hw:hover { background: rgba(255,255,255,.015) !important; }
-        .dh-hw-link:hover { color: #C89650 !important; }
-        .dh-mkt-row { transition: background .14s; }
-        .dh-mkt-row:hover { background: rgba(255,255,255,.025) !important; }
-        @media (max-width: 900px) {
-          .dh-clock-panel { display:none !important; }
-          .dh-families { display:none !important; }
-          .dh-calcs { display:none !important; }
-          .dh-hero-inner { padding:0 24px !important; }
-          .dh-stat-ticker { grid-template-columns:repeat(2,1fr) !important; }
-          .dh-widgets { grid-template-columns:1fr 1fr !important; }
-        }
-        @media (max-width: 520px) {
-          .dh-widgets { grid-template-columns:1fr !important; }
-          .dh-stat-ticker { grid-template-columns:repeat(2,1fr) !important; }
-        }
-      `}</style>
+    <div className="dash-split" style={{ flex: 1, display: 'flex', overflow: 'hidden', background: '#080808' }}>
+      <div className="page-grid-bg" />
+      <div className="page-scan-line" />
 
-      {/* ══ HERO ══ */}
-      <div style={{ minHeight: 'calc(100vh - 70px)', display: 'grid', gridTemplateRows: '1fr auto', position: 'relative', overflow: 'hidden', borderBottom: `1px solid ${B}` }}>
+      {/* ════════════ LEFT PANEL ════════════ */}
+      <div className="sc dash-left" style={{
+        width: 'clamp(300px,36%,440px)', minWidth: 300, flexShrink: 0,
+        background: 'rgba(0,0,0,.6)', borderRight: '1px solid rgba(255,255,255,.05)',
+      }}>
+        <div style={{ padding: '12px', display: 'flex', flexDirection: 'column', gap: 9 }}>
 
-        {/* 배경 그리드 */}
-        <div style={{
-          position: 'absolute', inset: 0, pointerEvents: 'none',
-          backgroundImage: `linear-gradient(rgba(255,255,255,.028) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.028) 1px,transparent 1px)`,
-          backgroundSize: '64px 64px',
-          animation: 'gridDrift 20s linear infinite',
-          maskImage: 'radial-gradient(ellipse 80% 80% at 50% 50%,black 0%,transparent 100%)',
-          WebkitMaskImage: 'radial-gradient(ellipse 80% 80% at 50% 50%,black 0%,transparent 100%)',
-        }} />
-
-        {/* Glow orb */}
-        <div style={{
-          position: 'absolute', top: '35%', left: '50%',
-          width: 700, height: 500, pointerEvents: 'none',
-          background: 'radial-gradient(ellipse at center,rgba(200,150,80,.07) 0%,transparent 65%)',
-          animation: 'glowPulse 7s ease-in-out infinite',
-        }} />
-
-        {/* Scan line */}
-        <div style={{
-          position: 'absolute', left: 0, right: 0, height: 1, pointerEvents: 'none',
-          background: 'linear-gradient(90deg,transparent 0%,rgba(200,150,80,.18) 50%,transparent 100%)',
-          animation: 'scanLine 12s linear infinite',
-        }} />
-
-        {/* Ghost number */}
-        <div style={{
-          position: 'absolute', right: -40, top: '50%', transform: 'translateY(-50%)',
-          fontFamily: 'var(--font-mono),"IBM Plex Mono",monospace',
-          fontSize: 'clamp(180px,22vw,340px)', fontWeight: 400,
-          color: 'transparent', letterSpacing: '-.06em', lineHeight: 1,
-          WebkitTextStroke: '1px rgba(255,255,255,.04)',
-          pointerEvents: 'none', userSelect: 'none',
-          animation: 'ghostPulse 6s ease-in-out infinite',
-        }}>
-          {(totalTerms || 16323).toLocaleString()}
-        </div>
-
-        {/* Hero content */}
-        <div className="dh-hero-inner" style={{
-          position: 'relative', zIndex: 1,
-          maxWidth: 1400, margin: '0 auto', width: '100%', padding: '0 64px',
-          display: 'flex', flexDirection: 'column', justifyContent: 'center',
-          minHeight: 'calc(100vh - 70px - 120px)',
-        }}>
-          {/* Eyebrow */}
-          <div style={{ fontFamily: 'var(--font-mono),"IBM Plex Mono",monospace', fontSize: 10, letterSpacing: '.36em', textTransform: 'uppercase', color: '#C89650', display: 'flex', alignItems: 'center', gap: 14, marginBottom: 28 }}>
-            <span style={{ display: 'inline-block', width: 36, height: 1, background: '#C89650' }} />
-            전업투자자를 위한 금융 책상
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 40, flexWrap: 'wrap' as const }}>
-            <div>
-              {/* Title */}
-              <h1 style={{ fontSize: 'clamp(42px,6.5vw,96px)', fontWeight: 200, color: INK, letterSpacing: '-.05em', lineHeight: 1.0, marginBottom: 28 }}>
-                가장 강력한<br />
-                투자 무기는<br />
-                <strong style={{ fontWeight: 600, color: '#C89650', position: 'relative' }}>
-                  &apos;제대로 된 정보&apos;
-                  <span style={{ position: 'absolute', bottom: -4, left: 0, right: 0, height: 2, background: '#C89650', opacity: .4 }} />
-                </strong>
-              </h1>
-              <p style={{ fontSize: 15, color: M, lineHeight: 1.85, maxWidth: 480 }}>
-                {(totalTerms || 16323).toLocaleString()}개 금융 용어 · 69종 계산기 · 이벤트 캘린더<br />
-                실전에 필요한 모든 정보가 한 곳에.
-              </p>
-              <div style={{ display: 'flex', gap: 10, marginTop: 24, flexWrap: 'wrap' as const }}>
-                <button onClick={() => setActiveTab('glossary')} style={{ padding: '13px 36px', background: '#C89650', color: '#080808', border: 'none', fontSize: 12.5, fontWeight: 600, letterSpacing: '.08em', cursor: 'pointer', fontFamily: 'inherit', transition: 'opacity .15s' }}>
-                  금융 사전 열기
-                </button>
-                <button onClick={() => setActiveTab('calculator')} style={{ padding: '13px 32px', background: 'transparent', color: M, border: `1px solid ${isDark ? '#333' : '#bbb'}`, fontSize: 12.5, letterSpacing: '.06em', cursor: 'pointer', fontFamily: 'inherit', transition: 'color .15s,border-color .15s' }}>
-                  계산기 보기
-                </button>
-              </div>
+          {/* ── Clock ── */}
+          <div className="card" style={{ padding: '18px 20px' }}>
+            <div style={{ fontFamily: 'var(--mono)', fontSize: 8, letterSpacing: '.26em', textTransform: 'uppercase', color: 'var(--t3)', marginBottom: 8 }}>
+              KOREA STANDARD TIME
             </div>
-
-            {/* Clock + Market panel */}
-            <div className="dh-clock-panel" style={{ display: 'flex', flexDirection: 'column', flexShrink: 0, border: `1px solid ${B}`, background: BG2, minWidth: 260 }}>
-              <div style={{ padding: '24px 28px', borderBottom: `1px solid ${B}` }}>
-                <div style={{ fontFamily: 'var(--font-mono),"IBM Plex Mono",monospace', fontSize: 44, fontWeight: 300, color: INK, letterSpacing: '-.04em', lineHeight: 1, marginBottom: 6 }}>
-                  {kstTime}<span style={{ fontSize: 11, color: F, letterSpacing: '.14em', marginLeft: 5 }}>KST</span>
-                </div>
-                <div style={{ fontFamily: 'var(--font-mono),"IBM Plex Mono",monospace', fontSize: 12, color: F, letterSpacing: '.08em' }}>{kstDate}</div>
-                <div style={{ fontFamily: 'var(--font-mono),"IBM Plex Mono",monospace', fontSize: 9.5, color: F2, letterSpacing: '.18em', textTransform: 'uppercase', marginTop: 2 }}>{kstDay}</div>
+            <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
+              <div style={{
+                fontFamily: 'var(--mono)', fontSize: 40, fontWeight: 300, color: '#ffffff',
+                letterSpacing: '-.04em', lineHeight: 1,
+                textShadow: '0 0 30px rgba(200,150,80,.25), 0 0 60px rgba(200,150,80,.1)',
+              }}>{kstTime}</div>
+              <div style={{ textAlign: 'right', paddingBottom: 2 }}>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--t2)', marginBottom: 2 }}>{kstDate}</div>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 8.5, color: 'var(--t3)', textTransform: 'uppercase' }}>{kstDay}요일</div>
               </div>
-              {mktItems.map((item, i) => {
-                const dotColor = item.on ? ON : item.pre ? PRE : OFF;
-                const statusColor = item.on ? ON : item.pre ? PRE : F;
-                return (
-                  <div key={item.label} className="dh-mkt-row" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 28px', borderBottom: i < mktItems.length - 1 ? `1px solid ${B}` : 'none' }}>
-                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: dotColor, flexShrink: 0, display: 'inline-block', animation: item.on ? 'mktpulse 2.4s ease-in-out infinite' : 'none' }} />
-                    <span style={{ fontFamily: 'var(--font-mono),"IBM Plex Mono",monospace', fontSize: 9.5, letterSpacing: '.16em', color: F, textTransform: 'uppercase', flex: 1 }}>{item.label}</span>
-                    <span style={{ fontFamily: 'var(--font-mono),"IBM Plex Mono",monospace', fontSize: 9.5, letterSpacing: '.08em', color: statusColor }}>{item.status}</span>
-                    <span style={{ fontFamily: 'var(--font-mono),"IBM Plex Mono",monospace', fontSize: 8.5, color: F2 }}>{item.time}</span>
-                  </div>
-                );
-              })}
             </div>
           </div>
-        </div>
 
-        {/* Stat ticker */}
-        <div className="dh-stat-ticker" style={{ position: 'relative', zIndex: 1, borderTop: `1px solid ${B}`, background: BG2, display: 'grid', gridTemplateColumns: 'repeat(4,1fr)' }}>
-          {[
-            { label: '금융 용어',      n: c1, color: '#C89650', sub1: '9개 패밀리',     sub2: '108개 카테고리', tab: 'glossary',    arrow: true },
-            { label: '계산기',          n: c2, color: '#4F7E7C', sub1: 'A/B 시나리오', sub2: '게이지 판정',    tab: 'calculator',  arrow: true },
-            { label: '이벤트 캘린더',   n: c3, color: '#7C6A9B', sub1: 'FOMC · CPI',   sub2: 'K200 만기',      tab: 'events',      arrow: true },
-            { label: '카테고리 패밀리', n: c4, color: '#4A7045', sub1: 'fundamental',  sub2: '→ tax·legal',    tab: null,          arrow: false },
-          ].map((s, i) => (
-            <div key={s.label} className="dh-stat-cell" onClick={() => s.tab && setActiveTab(s.tab)} style={{ padding: '20px 32px', borderRight: i < 3 ? `1px solid ${B}` : 'none', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: s.tab ? 'pointer' : 'default', position: 'relative', overflow: 'hidden' }}>
-              <div className="dh-stat-topbar" style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 1.5, background: s.color, transform: 'scaleX(0)', transformOrigin: 'left', transition: 'transform .3s cubic-bezier(.16,1,.3,1)' }} />
-              <div>
-                <div style={{ fontFamily: 'var(--font-mono),"IBM Plex Mono",monospace', fontSize: 8.5, letterSpacing: '.22em', textTransform: 'uppercase', color: F, marginBottom: 4 }}>{s.label}</div>
-                <div style={{ fontFamily: 'var(--font-mono),"IBM Plex Mono",monospace', fontSize: 'clamp(28px,3vw,42px)', fontWeight: 300, letterSpacing: '-.04em', lineHeight: 1, color: s.color }}>{s.n.toLocaleString()}</div>
+          {/* ── Pills ── */}
+          <div className="scx" style={{ display: 'flex', gap: 5, paddingBottom: 2 }}>
+            {[
+              { l: 'KOSPI',      on: mkt.kospi || mkt.kospiPre, pre: mkt.kospiPre && !mkt.kospi },
+              { l: 'K200F 주간', on: mkt.k200Day },
+              { l: 'K200F 야간', on: mkt.k200Night },
+              { l: 'NDX',        on: mkt.ndx },
+              { l: 'NXT',        on: mkt.nxt },
+            ].map(p => (
+              <div key={p.l} className={`pill${p.on ? ' on' : (p as any).pre ? ' sel' : ''}`}>
+                {p.on && <span className="gdot gd-green" style={{ width: 5, height: 5 }} />}
+                {(p as any).pre && !p.on && <span className="gdot gd-gold" style={{ width: 5, height: 5 }} />}
+                {p.l}
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
-                <div style={{ fontSize: 11, color: F, textAlign: 'right', lineHeight: 1.5 }}>{s.sub1}<br />{s.sub2}</div>
-                {s.arrow && <span className="dh-stat-arrow" style={{ fontSize: 14, color: s.color, opacity: 0, transform: 'translate(0,0)', transition: 'opacity .14s,transform .14s' }}>↗</span>}
+            ))}
+          </div>
+
+          {/* ── Status Grid ── */}
+          <div className="status-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+            {/* 장중 count */}
+            <div className="card" style={{ padding: '16px 18px', background: 'rgba(14,22,14,.7)', borderColor: 'rgba(74,112,69,.2)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                <span style={{
+                  width: 18, height: 18, borderRadius: '50%',
+                  background: 'rgba(74,112,69,.18)', border: '1.5px solid rgba(74,112,69,.6)',
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                  boxShadow: '0 0 10px rgba(74,112,69,.3)',
+                }}>
+                  <svg viewBox="0 0 10 10" width="9" height="9">
+                    <polyline points="2,5 4,7 8,3" stroke="#4A7045" strokeWidth="1.5" fill="none" strokeLinecap="round" />
+                  </svg>
+                </span>
+                <span style={{ fontSize: 11, color: '#4a6a45' }}>장중</span>
               </div>
+              <div style={{
+                fontFamily: 'var(--mono)', fontSize: 46, fontWeight: 300, color: '#ffffff',
+                letterSpacing: '-.05em', lineHeight: 1, textShadow: '0 0 30px rgba(74,112,69,.4)',
+              }}>{active}</div>
             </div>
-          ))}
+            {/* 장외 count */}
+            <div className="card" style={{ padding: '16px 18px', background: 'rgba(18,12,12,.7)', borderColor: 'rgba(184,64,64,.15)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                <svg viewBox="0 0 16 16" width="16" height="16" fill="none">
+                  <path d="M8 2.5 L13.5 12.5 L2.5 12.5 Z" fill="rgba(184,64,64,.12)" stroke="#b84040" strokeWidth="1.4" strokeLinejoin="round" />
+                  <line x1="8" y1="7" x2="8" y2="10" stroke="#b84040" strokeWidth="1.4" strokeLinecap="round" />
+                  <circle cx="8" cy="11.5" r=".8" fill="#b84040" />
+                </svg>
+                <span style={{ fontSize: 11, color: '#6a3a3a' }}>장외</span>
+              </div>
+              <div style={{
+                fontFamily: 'var(--mono)', fontSize: 46, fontWeight: 300, color: '#3a3030',
+                letterSpacing: '-.05em', lineHeight: 1,
+              }}>{5 - active}</div>
+            </div>
+          </div>
+
+          {/* ── KPI Chart ── */}
+          <div className="card" style={{ padding: '18px 20px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 }}>
+              <div style={{ fontFamily: 'var(--mono)', fontSize: 8.5, letterSpacing: '.18em', textTransform: 'uppercase', color: 'var(--t2)' }}>
+                금융 용어 데이터베이스
+              </div>
+              <button onClick={() => setActiveTab('glossary')} style={{
+                fontFamily: 'var(--mono)', fontSize: 9, color: 'var(--t3)',
+                cursor: 'pointer', background: 'none', border: 'none',
+              }}>↗</button>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 5, marginBottom: 2 }}>
+              <span style={{
+                fontFamily: 'var(--mono)', fontSize: 38, fontWeight: 300, color: '#ffffff',
+                letterSpacing: '-.04em', lineHeight: 1,
+                textShadow: '0 0 30px rgba(200,150,80,.45), 0 0 60px rgba(200,150,80,.15)',
+              }}>{c1.toLocaleString()}</span>
+              <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--t2)' }}>terms</span>
+            </div>
+            <div style={{ fontFamily: 'var(--mono)', fontSize: 8, color: 'var(--t3)', marginBottom: 12 }}>
+              9 families · 108 categories
+            </div>
+            <GlowChart data={kospiData} color="#C89650" h={68} />
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6 }}>
+              {['FUN', 'MKT', 'MAC', 'RSK', 'DRV', 'TRD', 'IND', 'DIG', 'TAX'].map(l => (
+                <div key={l} style={{ fontFamily: 'var(--mono)', fontSize: 6, color: 'var(--t4)' }}>{l}</div>
+              ))}
+            </div>
+          </div>
+
+          {/* ── KPI Mini ── */}
+          <div className="kpi-mini-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+            {[
+              { l: '계산기', v: c2, c: '#4a9e9a', sub: '69종 전체', tab: 'calculator' },
+              { l: '이벤트', v: c3, c: '#7C6A9B', sub: '200+ 예정', tab: 'events' },
+            ].map(k => (
+              <div key={k.l} className="card" onClick={() => setActiveTab(k.tab)}
+                style={{ padding: '14px 16px', cursor: 'pointer' }}>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 8, letterSpacing: '.2em', textTransform: 'uppercase', color: 'var(--t2)', marginBottom: 5 }}>{k.l}</div>
+                <div style={{
+                  fontFamily: 'var(--mono)', fontSize: 28, fontWeight: 300, color: k.c,
+                  letterSpacing: '-.04em', lineHeight: 1,
+                  textShadow: `0 0 20px ${k.c}88, 0 0 40px ${k.c}33`,
+                }}>{k.v}</div>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 8, color: 'var(--t3)', marginTop: 4 }}>{k.sub}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* ── CTA ── */}
+          <div className="cta-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+            <button className="btn-gold" onClick={() => setActiveTab('glossary')}>사전 열기 →</button>
+            <button className="btn-ghost" onClick={() => setActiveTab('calculator')}>계산기 →</button>
+          </div>
+
+          {/* ── Footer ── */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '2px 2px 0' }}>
+            <div style={{ fontSize: 11, fontWeight: 300, color: 'var(--t2)' }}>
+              Stock<span style={{ color: 'var(--gold)', fontWeight: 500 }}>Wi</span>Ki
+              <span style={{ fontFamily: 'var(--mono)', fontSize: 8, color: 'var(--t3)', marginLeft: 5 }}>.kr</span>
+            </div>
+            <div style={{ fontFamily: 'var(--mono)', fontSize: 7.5, color: 'var(--t3)' }}>v2 · 2026</div>
+          </div>
         </div>
       </div>
 
-      {/* ══ DASHBOARD WIDGETS ══ */}
-      <div className="dh-widgets" style={{ borderBottom: `1px solid ${B}`, display: 'grid', gridTemplateColumns: 'repeat(3,1fr)' }}>
+      {/* ════════════ RIGHT — BENTO GRID ════════════ */}
+      <div className="sc dash-bento" style={{
+        flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr',
+        gridAutoRows: 'min-content', gap: 10, padding: '12px',
+        background: 'linear-gradient(160deg,rgba(255,255,255,.018) 0%,rgba(0,0,0,0) 100%), #080808',
+        alignContent: 'start',
+      }}>
+
+        {/* ── Index Charts ── */}
         {[
-          { label: '최근 본 용어',   color: '#4F7E7C', count: recentCount, sub: '이번 세션',   tab: 'glossary',    linkLabel: '사전 열기',    empty: '아직 본 용어가 없습니다.\n금융 사전에서 용어를 검색해보세요.', rows: recentTerms.map(t => ({ name: t.name, meta: t.category })) },
-          { label: '즐겨찾기',       color: '#C89650', count: favCount,    sub: '저장된 용어', tab: 'glossary',    linkLabel: '사전에서 추가', empty: '★ 용어 카드에서 즐겨찾기를 추가하세요.\n로컬에 저장돼 계속 유지됩니다.', rows: [] as { name: string; meta: string }[] },
-          { label: '최근 계산 기록', color: '#7C6A9B', count: calcCount,   sub: '이번 세션',   tab: 'calculator',  linkLabel: '계산기 열기',  empty: '계산 기록이 없습니다.\n계산기에서 계산을 시작해보세요.', rows: calcHist.map(h => ({ name: h.label, meta: h.results?.[0] ? `${h.results[0].value}${h.results[0].unit || ''}` : '' })) },
-        ].map((w, i) => (
-          <div key={w.label} className="dh-hw" style={{ borderRight: i < 2 ? `1px solid ${B}` : 'none', padding: '36px 40px', position: 'relative', overflow: 'hidden', cursor: 'default' }}>
-            <div style={{ fontFamily: 'var(--font-mono),"IBM Plex Mono",monospace', fontSize: 9, letterSpacing: '.28em', textTransform: 'uppercase', color: w.color, marginBottom: 18, display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ width: 4, height: 4, borderRadius: '50%', background: w.color, display: 'inline-block' }} />
-              {w.label}
-            </div>
-            <div style={{ fontFamily: 'var(--font-mono),"IBM Plex Mono",monospace', fontSize: 'clamp(52px,6vw,80px)', fontWeight: 300, letterSpacing: '-.05em', lineHeight: 1, marginBottom: 6, color: w.count > 0 ? w.color : F2 }}>
-              {String(w.count).padStart(3, '0')}
-            </div>
-            <div style={{ fontSize: 12, color: F, marginBottom: 20 }}>{w.sub}</div>
-            {w.count === 0 && (
-              <div style={{ fontSize: 13, color: F2, fontStyle: 'italic', lineHeight: 1.8, borderLeft: `1px solid ${B}`, paddingLeft: 14 }}>
-                {w.empty.split('\n').map((line, li) => <span key={li}>{line}{li === 0 && <br />}</span>)}
-              </div>
-            )}
-            {w.rows.length > 0 && (
+          { n: 'KOSPI 종합주가지수', v: 2748.3, ch: '+18.4', pct: 0.67, c: '#C89650', d: kospiData },
+          { n: 'NASDAQ 100 선물',   v: 19241.5, ch: '+124.8', pct: 0.65, c: '#6ea8c8', d: ndxData },
+        ].map(idx => (
+          <div key={idx.n} className="card" style={{ padding: '18px 20px', cursor: 'pointer' }}
+            onClick={() => setActiveTab('glossary')}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 14 }}>
               <div>
-                {w.rows.slice(0, 4).map((row, ri) => (
-                  <div key={ri} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 0', borderBottom: ri < Math.min(w.rows.length, 4) - 1 ? `1px solid ${B}` : 'none' }}>
-                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: w.color, flexShrink: 0, display: 'inline-block' }} />
-                    <span style={{ fontSize: 13, fontWeight: 500, color: INK2, flex: 1 }}>{row.name}</span>
-                    <span style={{ fontFamily: 'var(--font-mono),"IBM Plex Mono",monospace', fontSize: 8.5, color: F2 }}>{row.meta}</span>
-                  </div>
-                ))}
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 8.5, letterSpacing: '.2em', textTransform: 'uppercase', color: 'var(--t2)', marginBottom: 5 }}>
+                  {idx.n}
+                </div>
+                <div style={{
+                  fontFamily: 'var(--mono)', fontSize: 28, fontWeight: 300, color: '#ffffff',
+                  letterSpacing: '-.04em', lineHeight: 1,
+                  textShadow: `0 0 25px ${idx.c}66, 0 0 50px ${idx.c}22`,
+                }}>{idx.v.toLocaleString()}</div>
               </div>
-            )}
-            <div className="dh-hw-link" onClick={() => setActiveTab(w.tab)} style={{ fontFamily: 'var(--font-mono),"IBM Plex Mono",monospace', fontSize: 9.5, letterSpacing: '.12em', textTransform: 'uppercase', color: F, cursor: 'pointer', transition: 'color .14s', display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 16 }}>
-              {w.linkLabel} →
+              <div style={{ textAlign: 'right', paddingTop: 2 }}>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 12, color: '#4A7045', textShadow: '0 0 10px rgba(74,112,69,.6)' }}>
+                  +{idx.pct.toFixed(2)}%
+                </div>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, color: 'rgba(74,112,69,.45)', marginTop: 2 }}>{idx.ch}</div>
+              </div>
+            </div>
+            <GlowChart data={idx.d} color={idx.c} h={58} />
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8 }}>
+              <span style={{ fontFamily: 'var(--mono)', fontSize: 7.5, color: 'var(--t3)' }}>장외 · 전일 종가</span>
+              <span style={{ fontFamily: 'var(--mono)', fontSize: 7.5, color: 'var(--t3)' }}>52W 고점 대비</span>
             </div>
           </div>
         ))}
-      </div>
 
-      {/* ══ 9 FAMILIES ══ */}
-      <div className="dh-families" style={{ borderBottom: `1px solid ${B}`, position: 'relative', overflow: 'hidden' }}>
-        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', padding: '28px 40px 20px', borderBottom: `1px solid ${B}` }}>
-          <div style={{ fontSize: 'clamp(22px,3vw,36px)', fontWeight: 200, color: INK, letterSpacing: '-.03em' }}>
-            <span style={{ color: '#C89650', fontWeight: 500 }}>9</span>개 패밀리 — 투자의 언어
+        {/* ── Featured Term — wide ── */}
+        <div className="card bento-wide" style={{
+          gridColumn: '1/3', padding: '22px 24px', cursor: 'pointer',
+          background: 'rgba(20,18,30,.75)',
+        }} onClick={() => setActiveTab('glossary')}>
+          <div style={{
+            position: 'absolute', top: -40, right: -40, width: 200, height: 200, borderRadius: '50%',
+            background: 'radial-gradient(ellipse,rgba(154,122,200,.15) 0%,transparent 70%)',
+            pointerEvents: 'none',
+          }} />
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 20 }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                <span style={{
+                  width: 3, height: 26, background: '#9a7ac8', borderRadius: 2,
+                  display: 'inline-block', boxShadow: '0 0 8px rgba(154,122,200,.8)',
+                }} />
+                <div>
+                  <div style={{
+                    fontFamily: 'var(--mono)', fontSize: 8, letterSpacing: '.22em',
+                    textTransform: 'uppercase', color: '#9a7ac8', marginBottom: 2,
+                    textShadow: '0 0 8px rgba(154,122,200,.6)',
+                  }}>DERIVATIVES · 오늘의 용어</div>
+                  <div style={{ fontSize: 18, fontWeight: 500, color: 'var(--t1)', letterSpacing: '-.02em' }}>블랙-숄즈 모형</div>
+                </div>
+              </div>
+              <div style={{ fontSize: 11, color: 'var(--t3)', fontStyle: 'italic', marginBottom: 8 }}>Black-Scholes Model</div>
+              <div style={{ fontSize: 12.5, color: 'var(--t2)', lineHeight: 1.75, maxWidth: 440 }}>
+                옵션의 이론적 가격을 계산하기 위한 수학적 모델. 주가, 행사가, 변동성(σ), 무위험이자율, 만기까지의 시간을 입력으로 받아 콜·풋 옵션의 공정가치를 도출합니다.
+              </div>
+            </div>
+            <div style={{
+              flexShrink: 0, textAlign: 'center', padding: '14px 20px',
+              background: 'rgba(0,0,0,.3)', borderRadius: 12, border: '1px solid rgba(255,255,255,.05)',
+            }}>
+              <div style={{ fontFamily: 'var(--mono)', fontSize: 8, letterSpacing: '.14em', color: 'var(--t3)', marginBottom: 8 }}>핵심 공식</div>
+              <div style={{ fontFamily: 'var(--mono)', fontSize: 13, color: '#9a7ac8', textShadow: '0 0 12px rgba(154,122,200,.6)' }}>
+                C = S·N(d₁) − K·e⁻ʳᵀ·N(d₂)
+              </div>
+            </div>
           </div>
-          <div style={{ fontFamily: 'var(--font-mono),"IBM Plex Mono",monospace', fontSize: 9.5, color: F, letterSpacing: '.18em' }}>
-            {(totalTerms || 16323).toLocaleString()} terms · 108 categories
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 14 }}>
+            <span style={{ fontFamily: 'var(--mono)', fontSize: 8.5, color: 'var(--t3)' }}>자세히 보기</span>
+            <span style={{ fontSize: 10, color: 'var(--t3)' }}>→</span>
           </div>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(9,1fr)' }}>
-          {FAMILIES.map((fam, i) => (
-            <div key={fam.id} className="dh-fam-col" onClick={() => setActiveTab('glossary')} onMouseEnter={() => setHovFam(fam.id)} onMouseLeave={() => setHovFam(null)} style={{ borderRight: i < 8 ? `1px solid ${B}` : 'none', padding: '24px 20px 28px', cursor: 'pointer', position: 'relative', overflow: 'hidden' }}>
-              <div className="dh-fam-bar" style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: fam.color, opacity: hovFam === fam.id ? 1 : .4, transition: 'opacity .2s' }} />
-              <div style={{ fontFamily: 'var(--font-mono),"IBM Plex Mono",monospace', fontSize: 8, letterSpacing: '.18em', textTransform: 'uppercase', color: fam.color, marginBottom: 10 }}>{fam.en}</div>
-              <div style={{ fontSize: 16, fontWeight: 300, color: INK, letterSpacing: '-.02em', marginBottom: 12, lineHeight: 1.2 }}>{fam.ko}</div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                {fam.cats.map((c, ci) => (
-                  <span key={ci} style={{ fontFamily: 'var(--font-mono),"IBM Plex Mono",monospace', fontSize: 8.5, color: c.startsWith('+') ? F : F2, lineHeight: 1.4, letterSpacing: '.02em' }}>{c}</span>
+
+        {/* ── Upcoming Events ── */}
+        <div className="card" style={{ padding: '18px 20px', cursor: 'pointer' }} onClick={() => setActiveTab('events')}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+            <div style={{ fontFamily: 'var(--mono)', fontSize: 8.5, letterSpacing: '.2em', textTransform: 'uppercase', color: 'var(--t2)' }}>
+              다음 이벤트
+            </div>
+            <span style={{ fontFamily: 'var(--mono)', fontSize: 9, color: 'var(--t3)' }}>↗</span>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+            {upcoming.map((ev, i) => {
+              const evDate = ev.dateKST ?? ev.date ?? '';
+              const diff = Math.round(
+                (new Date(evDate + 'T00:00:00+09:00').getTime() - new Date(today + 'T00:00:00+09:00').getTime()) / 86400000
+              );
+              return (
+                <div key={i} style={{
+                  display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px',
+                  borderRadius: 8, background: 'rgba(255,255,255,.025)', border: '1px solid rgba(255,255,255,.04)',
+                }}>
+                  <div style={{ width: 3, height: 32, borderRadius: 2, background: ev.color, flexShrink: 0, boxShadow: `0 0 6px ${ev.color}66` }} />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 11.5, fontWeight: 500, color: 'var(--t1)', marginBottom: 1 }}>{ev.label}</div>
+                    <div style={{ fontFamily: 'var(--mono)', fontSize: 8, color: 'var(--t3)' }}>
+                      {evDate.slice(5)} · {ev.desc.slice(0, 18)}
+                    </div>
+                  </div>
+                  <div style={{ fontFamily: 'var(--mono)', fontSize: 13, color: ev.color, textShadow: `0 0 10px ${ev.color}88` }}>
+                    {diff === 0 ? 'D-Day' : `D-${diff}`}
+                  </div>
+                </div>
+              );
+            })}
+            {upcoming.length === 0 && (
+              <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--t3)', textAlign: 'center', padding: '20px 0' }}>
+                예정된 이벤트 없음
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* ── Market Schedule ── */}
+        <div className="card" style={{ padding: '18px 20px' }}>
+          <div style={{ fontFamily: 'var(--mono)', fontSize: 8.5, letterSpacing: '.2em', textTransform: 'uppercase', color: 'var(--t2)', marginBottom: 14 }}>
+            시장 스케줄
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {mktItems.map((m, i) => {
+              const c = m.on ? '#4A7045' : m.pre ? 'var(--gold)' : '#252522';
+              const tc = m.on ? '#6aaa64' : m.pre ? 'var(--gold)' : 'var(--t3)';
+              return (
+                <div key={i} style={{
+                  display: 'flex', alignItems: 'center', gap: 10, padding: '6px 0',
+                  borderBottom: i < mktItems.length - 1 ? '1px solid rgba(255,255,255,.04)' : undefined,
+                }}>
+                  <span className="gdot" style={{
+                    background: c,
+                    boxShadow: m.on ? `0 0 5px ${c}, 0 0 10px ${c}44` : undefined,
+                    animation: m.on ? 'mktpulse 2.2s ease-in-out infinite' : undefined,
+                  }} />
+                  <span style={{ fontFamily: 'var(--mono)', fontSize: 9.5, color: 'var(--t2)', flex: 1 }}>{m.l}</span>
+                  <span style={{ fontFamily: 'var(--mono)', fontSize: 8, color: 'var(--t3)' }}>{m.t}</span>
+                  <span style={{
+                    fontFamily: 'var(--mono)', fontSize: 9.5, color: tc,
+                    textShadow: m.on ? `0 0 8px ${c}88` : undefined,
+                  }}>{m.on ? '장중' : m.pre ? '프리' : '장외'}</span>
+                </div>
+              );
+            })}
+          </div>
+          <div style={{ marginTop: 12, padding: '10px 14px', borderRadius: 10, background: 'rgba(0,0,0,.3)', border: '1px solid rgba(255,255,255,.04)' }}>
+            <div style={{ fontFamily: 'var(--mono)', fontSize: 8, color: 'var(--t3)', marginBottom: 4 }}>SCHEDULE OFFSET</div>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
+              <span style={{ fontFamily: 'var(--mono)', fontSize: 22, fontWeight: 300, color: 'var(--t1)', letterSpacing: '-.04em' }}>± 2.5</span>
+              <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--t2)' }}>min</span>
+            </div>
+          </div>
+        </div>
+
+        {/* ── 9 Families Bento ── */}
+        <div className="card bento-wide" style={{ gridColumn: '1/3', padding: '18px 20px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 14 }}>
+            <div style={{ fontSize: 13, fontWeight: 300, color: 'var(--t1)' }}>
+              <span style={{ color: 'var(--gold)', fontWeight: 500 }}>9</span>개 패밀리 — 투자의 언어
+            </div>
+            <div style={{ fontFamily: 'var(--mono)', fontSize: 8, color: 'var(--t3)' }}>
+              {(totalTerms || 16323).toLocaleString()} TERMS
+            </div>
+          </div>
+          <div className="fam-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(9,1fr)', gap: 6 }}>
+            {FAMILIES.map(f => (
+              <div key={f.id} className="card-sm" onClick={() => setActiveTab('glossary')}
+                style={{ padding: '12px 10px', cursor: 'pointer' }}>
+                <div style={{
+                  position: 'absolute', top: 0, left: 0, right: 0, height: 2,
+                  background: f.color, borderRadius: '12px 12px 0 0', opacity: 0.35,
+                  boxShadow: `0 0 6px ${f.color}44`,
+                }} />
+                <div style={{
+                  fontFamily: 'var(--mono)', fontSize: 7, letterSpacing: '.14em',
+                  textTransform: 'uppercase', color: f.color, marginBottom: 5,
+                  textShadow: `0 0 8px ${f.color}55`,
+                }}>{f.en.slice(0, 5)}</div>
+                <div style={{ fontSize: 11, fontWeight: 400, color: '#8a8680', marginBottom: 3 }}>{f.ko}</div>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 8, color: 'var(--t3)' }}>{f.cnt}</div>
+                <div style={{ marginTop: 8 }}>
+                  <MiniSpark color={f.color} seed={f.id.charCodeAt(0) % 7 + 1} h={20} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* ── Recent / Favorites / Calc History ── */}
+        {[
+          {
+            label: '최근 본 용어', color: '#4F7E7C', tab: 'glossary',
+            rows: recentTerms.map(t => ({ name: t.name, meta: t.category })),
+            empty: '아직 본 용어가 없습니다',
+          },
+          {
+            label: '즐겨찾기', color: '#C89650', tab: 'glossary',
+            rows: [] as { name: string; meta: string }[],
+            count: favorites.size,
+            empty: '★ 용어 카드에서 추가',
+          },
+          {
+            label: '최근 계산 기록', color: '#7C6A9B', tab: 'calculator',
+            rows: calcHist.map(h => ({ name: h.label, meta: h.results?.[0] ? `${h.results[0].value}${h.results[0].unit || ''}` : '' })),
+            empty: '계산 기록이 없습니다',
+          },
+        ].map((w, wi) => (
+          <div key={w.label} className="card" style={{ padding: '18px 20px', cursor: 'pointer' }} onClick={() => setActiveTab(w.tab)}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 14 }}>
+              <span className="gdot" style={{ background: w.color, boxShadow: `0 0 5px ${w.color}` }} />
+              <div style={{ fontFamily: 'var(--mono)', fontSize: 8.5, letterSpacing: '.18em', textTransform: 'uppercase', color: w.color }}>
+                {w.label}
+              </div>
+            </div>
+            {w.rows.length > 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {w.rows.slice(0, 4).map((row, ri) => (
+                  <div key={ri} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 0', borderBottom: ri < 3 ? '1px solid rgba(255,255,255,.04)' : 'none' }}>
+                    <span style={{ width: 5, height: 5, borderRadius: '50%', background: w.color, flexShrink: 0 }} />
+                    <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--t1)', flex: 1 }}>{row.name}</span>
+                    <span style={{ fontFamily: 'var(--mono)', fontSize: 8.5, color: 'var(--t3)' }}>{row.meta}</span>
+                  </div>
                 ))}
               </div>
-              <div className="dh-fam-arr" style={{ fontSize: 11, color: F, marginTop: 14, opacity: 0, transform: 'translateX(-4px)', transition: 'opacity .18s,transform .18s' }}>→</div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* ══ QUICK CALCS ══ */}
-      <div className="dh-calcs" style={{ borderBottom: `1px solid ${B}` }}>
-        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', padding: '28px 40px 20px', borderBottom: `1px solid ${B}` }}>
-          <div style={{ fontSize: 'clamp(22px,3vw,36px)', fontWeight: 200, color: INK, letterSpacing: '-.03em' }}>
-            실전 계산기 <span style={{ color: '#4F7E7C', fontWeight: 500 }}>69</span>종
+            ) : (
+              <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--t3)', padding: '12px 0', lineHeight: 1.7 }}>
+                {w.empty}
+              </div>
+            )}
+            <div style={{
+              fontFamily: 'var(--mono)', fontSize: 8.5, color: 'var(--t3)',
+              marginTop: 12, letterSpacing: '.1em', textTransform: 'uppercase',
+            }}>열기 →</div>
           </div>
-          <div style={{ fontFamily: 'var(--font-mono),"IBM Plex Mono",monospace', fontSize: 9.5, color: F, letterSpacing: '.18em' }}>A/B 시나리오 · 게이지 판정</div>
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)' }}>
-          {QUICK_CALCS.map((c, i) => (
-            <div key={c.id} className="dh-calc-col" onClick={() => { setSelectedCalc(c.id); setActiveTab('calculator'); }} onMouseEnter={() => setHovCalc(c.id)} onMouseLeave={() => setHovCalc(null)} style={{ borderRight: i < 6 ? `1px solid ${B}` : 'none', padding: '22px 24px', cursor: 'pointer', position: 'relative', overflow: 'hidden' }}>
-              <div className="dh-calc-line" style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 1.5, background: '#4F7E7C', transform: hovCalc === c.id ? 'scaleX(1)' : 'scaleX(0)', transformOrigin: 'left', transition: 'transform .3s cubic-bezier(.16,1,.3,1)' }} />
-              <div style={{ fontFamily: 'var(--font-mono),"IBM Plex Mono",monospace', fontSize: 9, color: F, letterSpacing: '.14em', marginBottom: 10 }}>{c.num}</div>
-              <div style={{ fontSize: 13, color: INK2, lineHeight: 1.4, marginBottom: 8, fontWeight: 400 }}>{c.name}</div>
-              <div style={{ fontSize: 11, color: F2, lineHeight: 1.5 }}>{c.hint}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* ══ FOOTER ══ */}
-      <div style={{ borderTop: `1px solid ${B}`, padding: '24px 40px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap' as const, gap: 12 }}>
-        <div style={{ fontSize: 14, fontWeight: 300, color: INK2 }}>
-          Stock<span style={{ color: '#C89650', fontWeight: 500 }}>Wi</span>Ki
-          <span style={{ fontFamily: 'var(--font-mono),"IBM Plex Mono",monospace', fontSize: 9.5, color: F, marginLeft: 6 }}>.kr · 정보 제공 목적 · 투자 권유 아님</span>
-        </div>
-        <div style={{ fontFamily: 'var(--font-mono),"IBM Plex Mono",monospace', fontSize: 9, color: F }}>Designed by Ones</div>
+        ))}
       </div>
     </div>
   );

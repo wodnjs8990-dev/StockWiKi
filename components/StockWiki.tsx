@@ -34,6 +34,7 @@ async function fetchTermById(id: string): Promise<Term | null> {
 import EventsView from '@/components/EventsView';
 import HomeView from '@/components/HomeView';
 import DashboardHome from '@/components/DashboardHome';
+import CommandK from '@/components/CommandK';
 
 // sessionStorage와 연동하는 useState 헬퍼
 // CalcPrefixContext가 있으면 key에 prefix를 붙여 A/B 시나리오 독립 state 보장
@@ -433,191 +434,185 @@ export default function StockWiki({ features, customEvents }: { features?: Featu
     marketImpactBg: '#ece8df',
   };
 
+  /* ── CommandK nav handler ── */
+  const handleCmdNav = (tab: string, termId?: string, calcId?: string) => {
+    setActiveTab(tab);
+    if (calcId) setSelectedCalc(calcId);
+    if (termId) {
+      fetchTermById(termId).then(t => { if (t) openTerm(t); });
+    }
+  };
+
+  /* Any market open? */
+  const anyMktOpen = mkt.kospi || mkt.kospiPre || mkt.nxt || mkt.k200Day || mkt.k200Night || mkt.ndx;
+
+  /* ── Upcoming events for DashboardHome ── */
+  const upcomingEvents = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const BASE = [
+      { date: '2026-05-08', label: 'FOMC',    desc: '금리 결정',     color: '#4F7E7C' },
+      { date: '2026-05-13', label: 'CPI',     desc: '소비자물가지수', color: '#8b7ac8' },
+      { date: '2026-05-15', label: 'PPI',     desc: '생산자물가지수', color: '#7a9bc8' },
+      { date: '2026-06-05', label: 'NFP',     desc: '비농업고용',     color: '#c8a96e' },
+      { date: '2026-06-19', label: 'FOMC',    desc: '금리+점도표',    color: '#4F7E7C' },
+      { date: '2026-07-31', label: 'FOMC',    desc: '금리 결정',     color: '#4F7E7C' },
+      { date: '2026-09-18', label: 'FOMC',    desc: '금리+점도표',    color: '#4F7E7C' },
+      { date: '2026-11-06', label: 'FOMC',    desc: '금리 결정',     color: '#4F7E7C' },
+      { date: '2026-12-18', label: 'FOMC',    desc: '금리+점도표',    color: '#4F7E7C' },
+      // K200 만기 (매 분기 두번째 목요일)
+      { date: '2026-06-11', label: 'K200만기', desc: '선물·옵션 만기일', color: '#c87a8b' },
+      { date: '2026-09-10', label: 'K200만기', desc: '선물·옵션 만기일', color: '#c87a8b' },
+      { date: '2026-12-10', label: 'K200만기', desc: '선물·옵션 만기일', color: '#c87a8b' },
+    ];
+    // Add custom events from props
+    const custom = (customEvents ?? []).map(e => ({
+      date: e.date, label: e.label, desc: e.desc, color: e.color,
+    }));
+    return [...BASE, ...custom]
+      .filter(e => new Date(e.date) >= today)
+      .sort((a, b) => a.date.localeCompare(b.date))
+      .slice(0, 5);
+  }, [customEvents]);
+
   return (
-    <div className="min-h-screen" style={{ background: T.bgPage, color: T.textSecondary, fontFamily: "'Inter', 'Noto Sans KR', sans-serif" }}>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+KR:wght@300;400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
-        * { -webkit-font-smoothing: antialiased; }
-        .mono { font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; }
-        input, button, select { font-family: inherit; color: inherit; }
-        input:focus { outline: none; }
-        input::placeholder { color: ${T.placeholder}; }
-        .ball-joint { width: 8px; height: 8px; border-radius: 50%; background: #8a8a8a; display: inline-block; box-shadow: inset 0 1px 0 rgba(255,255,255,0.15); }
-        .scroll-hide::-webkit-scrollbar { display: none; }
-        .scroll-hide { -ms-overflow-style: none; scrollbar-width: none; }
-      `}</style>
+    <div style={{ background: '#080808', color: 'var(--t1)', fontFamily: 'var(--sans), sans-serif', height: '100dvh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
-      {/* 헤더 */}
-      <header className="border-b sticky top-0 z-30" style={{ borderColor: T.border, background: T.bgHeader, backdropFilter: 'blur(8px)' }}>
-        <div className="max-w-[1400px] mx-auto px-4 md:px-8 py-4 md:py-5 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3 md:gap-4 min-w-0">
-            <button
-              onClick={goHome}
-              className="flex items-baseline gap-2 md:gap-3 leading-none min-w-0 transition-opacity hover:opacity-80 cursor-pointer"
-              title="홈으로"
-              aria-label="홈으로 이동"
-            >
-              <span className="text-xl md:text-2xl font-light tracking-tight whitespace-nowrap" style={{ color: T.textPrimary }}>
-                Stock<span style={{ color: T.accent, fontWeight: 500 }}>WiKi</span>
-              </span>
-              <span className="text-xs mono" style={{ color: T.textFaint }}>.kr</span>
-              <span className="hidden lg:inline-block w-px h-4" style={{ background: T.border }}></span>
-              <span className="hidden lg:inline-block text-[12px] tracking-[0.3em] mono uppercase" style={{ color: T.textFaint }}>Terms & Calculators</span>
-            </button>
-          </div>
-          <div className="flex items-center gap-2">
-            {feat.commandK && (
-              <button
-                onClick={() => setShowCommandK(true)}
-                className="hidden md:flex items-center gap-2 px-3 py-1.5 border text-xs"
-                style={{ borderColor: T.border, color: T.textFaint }}
-              >
-                <Search size={12} />
-                <span>빠른 검색</span>
-                <span className="mono text-[12px] px-1.5 py-0.5 border" style={{ borderColor: T.border }}>⌘K</span>
-              </button>
-            )}
-            {/* 다크/라이트 토글 */}
-            <button
-              onClick={toggleTheme}
-              className="flex items-center justify-center w-8 h-8 border transition-all hover:opacity-80"
-              style={{ borderColor: T.border, color: T.textFaint, background: 'transparent' }}
-              title={isDark ? '라이트 모드로 전환' : '다크 모드로 전환'}
-            >
-              {isDark ? (
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
-                </svg>
-              ) : (
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-                </svg>
-              )}
-            </button>
-            <div className="hidden lg:flex items-center gap-4 text-[13px] mono uppercase tracking-wider" style={{ color: T.textFaint }}>
-              <span suppressHydrationWarning>{new Date().toLocaleDateString('ko-KR')}</span>
-              <button
-                onClick={() => setShowGuide(true)}
-                className="flex items-center gap-1.5 px-2.5 py-1 border transition-all hover:opacity-80"
-                style={{ borderColor: T.border, color: T.textFaint, fontSize: '11px', letterSpacing: '0.15em' }}
-                title="사용 가이드"
-              >
-                <span>?</span>
-                <span>GUIDE</span>
-              </button>
-            </div>
-            {/* 모바일: 검색 버튼 */}
-            {feat.commandK && (
-              <button
-                onClick={() => setShowCommandK(true)}
-                className="flex md:hidden items-center justify-center w-8 h-8 border"
-                style={{ borderColor: T.border, color: T.textFaint }}
-                aria-label="검색"
-              >
-                <Search size={15} />
-              </button>
-            )}
-            {/* 모바일 메뉴 버튼 */}
-            <button
-              onClick={() => setSidebarOpen(true)}
-              className="flex md:hidden items-center justify-center w-8 h-8 border"
-              style={{ borderColor: T.border, color: T.textFaint }}
-              title="메뉴"
-              aria-label="메뉴 열기"
-            >
-              <Menu size={16} />
-            </button>
-          </div>
-        </div>
+      {/* ════ HEADER — Dashboard.html 스타일 ════ */}
+      <header style={{
+        height: 52, flexShrink: 0,
+        background: 'rgba(9,9,11,.97)',
+        borderBottom: '1px solid rgba(255,255,255,.05)',
+        display: 'flex', alignItems: 'center',
+        padding: '0 20px', gap: 8,
+        position: 'sticky', top: 0, zIndex: 100,
+        backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
+      }}>
+        {/* Logo icon */}
+        <button onClick={goHome} style={{
+          width: 28, height: 28, borderRadius: 8,
+          background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.07)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          marginRight: 6, flexShrink: 0, cursor: 'pointer',
+        }}>
+          <svg viewBox="0 0 16 16" width="14" height="14" fill="none">
+            <rect x="2" y="2" width="5" height="5" rx="1.2" stroke="#C89650" strokeWidth="1.2"/>
+            <rect x="9" y="2" width="5" height="5" rx="1.2" fill="#C89650" fillOpacity=".25" stroke="#C89650" strokeWidth="1.2"/>
+            <rect x="2" y="9" width="5" height="5" rx="1.2" stroke="#C89650" strokeWidth=".8" strokeDasharray="1.5,1" opacity=".5"/>
+            <rect x="9" y="9" width="5" height="5" rx="1.2" stroke="#C89650" strokeWidth=".8" opacity=".3"/>
+          </svg>
+        </button>
 
-        <div className="max-w-[1400px] mx-auto px-4 md:px-8 hidden md:flex border-t overflow-x-auto scroll-hide" style={{ borderColor: T.border }}>
+        {/* Nav tabs */}
+        <nav className="hdr-nav" style={{ display: 'flex', gap: 2 }}>
           {[
-            { id: 'home',       label: '홈',        icon: LayoutDashboard },
-            { id: 'glossary',   label: '금융 사전',  icon: BookOpen        },
-            { id: 'calculator', label: '계산기',     icon: Calculator      },
-            { id: 'events',     label: '이벤트',     icon: CalendarDays    },
-          ].filter(tab => tab.id === 'home' || feat[tab.id as keyof Features] !== false).map(tab => {
-            const active = activeTab === tab.id;
-            const Icon = tab.icon;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className="flex items-center gap-2 px-5 text-[13px] transition-all whitespace-nowrap h-full border-b-2"
-                style={{
-                  background: 'transparent',
-                  color: active ? T.textPrimary : T.textMuted,
-                  borderBottomColor: active ? T.accent : 'transparent',
-                  fontWeight: active ? 500 : 400,
-                }}
-              >
-                <Icon size={13} style={{ opacity: active ? 1 : 0.55 }} />
-                <span>{tab.label}</span>
-              </button>
-            );
-          })}
+            { id: 'home',       l: '홈' },
+            { id: 'glossary',   l: '금융 사전' },
+            { id: 'calculator', l: '계산기' },
+            { id: 'events',     l: '이벤트' },
+          ].filter(t => t.id === 'home' || feat[t.id as keyof Features] !== false).map(t => (
+            <button
+              key={t.id}
+              className={`nav-tab${activeTab === t.id ? ' active' : ''}`}
+              onClick={() => setActiveTab(t.id)}
+            >{t.l}</button>
+          ))}
+        </nav>
+
+        {/* Right meta */}
+        <div className="hdr-meta" style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
+          {/* ⌘K search button */}
+          {feat.commandK && (
+            <button
+              onClick={() => setShowCommandK(true)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 8, padding: '6px 12px',
+                background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.1)',
+                borderRadius: 8, color: 'var(--t2)', cursor: 'pointer', transition: 'all .15s',
+                fontFamily: 'var(--sans)', fontSize: 12,
+              }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(200,150,80,.4)'; (e.currentTarget as HTMLElement).style.color = 'var(--gold)'; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,.1)'; (e.currentTarget as HTMLElement).style.color = 'var(--t2)'; }}
+            >
+              <svg viewBox="0 0 16 16" width="12" height="12" fill="none">
+                <circle cx="6.5" cy="6.5" r="4.5" stroke="currentColor" strokeWidth="1.3"/>
+                <line x1="10" y1="10" x2="14" y2="14" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+              </svg>
+              <span>검색</span>
+              <span style={{
+                fontFamily: 'var(--mono)', fontSize: 10, padding: '1px 6px',
+                background: 'rgba(255,255,255,.08)', border: '1px solid rgba(255,255,255,.1)',
+                borderRadius: 4, letterSpacing: '.04em',
+              }}>⌘K</span>
+            </button>
+          )}
+
+          {/* Theme toggle */}
+          <button
+            onClick={toggleTheme}
+            style={{
+              width: 30, height: 30, borderRadius: 8,
+              background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.07)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer', color: 'var(--t2)', transition: 'all .15s',
+            }}
+            title={isDark ? '라이트 모드' : '다크 모드'}
+          >
+            {isDark ? (
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="5"/>
+                <line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
+                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+                <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
+                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+              </svg>
+            ) : (
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+              </svg>
+            )}
+          </button>
+
+          {/* Logo text */}
+          <div style={{ fontFamily: 'var(--mono)', fontSize: 11, fontWeight: 300, color: 'var(--t1)', letterSpacing: '-.01em' }}>
+            Stock<span style={{ color: 'var(--gold)', fontWeight: 500 }}>Wi</span>Ki
+            <span style={{ fontFamily: 'var(--mono)', fontSize: 7, color: 'var(--t3)', marginLeft: 3 }}>v2</span>
+          </div>
         </div>
 
-        {/* ── Market Strip — 통합 레이블, 22px ── */}
-        {(() => {
-          const ON  = T.accentGreen || '#4A7045';
-          const PRE = T.accent || '#C89650';
-          const OFF = isDark ? '#383838' : '#aaa8a4';
-          const BSOFT = isDark ? '#1e1e1e' : '#e0ddd4';
-          const BG = isDark ? '#0a0a0a' : '#f8f5ee';
-
-          const items = [
-            { label: 'KOSPI', color: mkt.kospi ? ON : mkt.kospiPre ? PRE : OFF, live: mkt.kospi, status: mkt.kospi ? '장중' : mkt.kospiPre ? '프리' : '장외' },
-            { label: 'NXT',   color: mkt.nxt  ? ON : OFF, live: mkt.nxt,   status: mkt.nxt   ? '장중' : '장외' },
-            { label: 'K200F 주간', color: mkt.k200Day   ? ON : OFF, live: mkt.k200Day,   status: mkt.k200Day   ? '장중' : '장외' },
-            { label: 'K200F 야간', color: mkt.k200Night ? ON : OFF, live: mkt.k200Night, status: mkt.k200Night ? '장중' : '장외' },
-            { label: 'NDX',   color: mkt.ndx  ? ON : OFF, live: mkt.ndx,   status: mkt.ndx   ? '장중' : '장외' },
-          ];
-
-          return (
-            <div style={{
-              borderTop: `1px solid ${BSOFT}`,
-              background: BG,
-              height: 22,
-              overflowX: 'auto', overflowY: 'hidden',
-              scrollbarWidth: 'none',
-            }} className="mkt-strip-scrollhide">
-              <div style={{
-                maxWidth: 1400, margin: '0 auto', padding: '0 24px',
-                display: 'flex', alignItems: 'center', height: '100%',
-                gap: 0, minWidth: 'max-content',
-              }}>
-                {items.map((item, i) => (
-                  <div key={item.label} style={{
-                    display: 'flex', alignItems: 'center', gap: 5,
-                    paddingRight: 14, borderRight: i < items.length - 1 ? `1px solid ${BSOFT}` : 'none',
-                    marginRight: i < items.length - 1 ? 14 : 0,
-                  }}>
-                    <span style={{
-                      display: 'inline-block', width: 5, height: 5, borderRadius: '50%',
-                      background: item.color, flexShrink: 0,
-                      ...(item.live ? { animation: 'mktpulse 2.4s ease-in-out infinite' } : {}),
-                    }} />
-                    <span style={{
-                      fontFamily: 'var(--font-mono),monospace', fontSize: 9.5,
-                      letterSpacing: '0.1em', color: item.color, whiteSpace: 'nowrap',
-                    }}>
-                      {item.label} {item.status}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          );
-        })()}
+        {/* Mobile: ⌘K + Menu */}
+        <div className="hide-desktop" style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+          {feat.commandK && (
+            <button onClick={() => setShowCommandK(true)} style={{
+              width: 32, height: 32, borderRadius: 8,
+              background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.07)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--t2)',
+            }}>
+              <Search size={15} />
+            </button>
+          )}
+          <button onClick={() => setSidebarOpen(true)} style={{
+            width: 32, height: 32, borderRadius: 8,
+            background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.07)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--t2)',
+          }}>
+            <Menu size={16} />
+          </button>
+        </div>
       </header>
 
-      <style>{`
-        @keyframes mktpulse { 0%,100%{opacity:1} 50%{opacity:.25} }
-        .mkt-strip-scrollhide::-webkit-scrollbar { display: none; }
-      `}</style>
+      {/* ── Market Banner (장중일 때만) ── */}
+      {anyMktOpen && <div className="mkt-banner" />}
 
-      <main className={(activeTab === 'home' || activeTab === 'about') ? '' : 'max-w-[1400px] mx-auto px-4 md:px-8 pt-5 md:pt-6 pb-24 md:pb-12 min-h-[calc(100vh-180px)]'}>
+      <main
+        className="app-body"
+        style={{
+          flex: 1,
+          overflow: (activeTab === 'home' || activeTab === 'about') ? 'hidden' : 'auto',
+          display: 'flex',
+          flexDirection: 'column',
+        }}
+      >
         {activeTab === 'about' && (
           <HomeView
             T={T}
@@ -636,14 +631,14 @@ export default function StockWiki({ features, customEvents }: { features?: Featu
         )}
         {activeTab === 'home' && (
           <DashboardHome
-            T={T}
             isDark={isDark}
-            totalTerms={termsTotal}
+            totalTerms={termsTotal || TERMS_TOTAL}
             recent={recent}
             favorites={favorites}
             setActiveTab={setActiveTab}
             setSelectedCalc={setSelectedCalc}
-            setSelectedTerm={setSelectedTerm}
+            setSelectedTerm={openTerm}
+            upcomingEvents={upcomingEvents}
           />
         )}
         {activeTab === 'glossary' && feat.glossary && (
@@ -860,33 +855,23 @@ export default function StockWiki({ features, customEvents }: { features?: Featu
       )}
 
       {/* 모바일 하단 탭바 */}
-      <nav
-        className="md:hidden fixed bottom-0 inset-x-0 z-40 flex border-t"
-        style={{ background: T.bgHeader, borderColor: T.border, backdropFilter: 'blur(12px)' }}
-      >
+      <nav className="mob-nav">
         {[
-          { id: 'home',       label: '홈',        icon: LayoutDashboard },
-          { id: 'glossary',   label: '사전',       icon: BookOpen        },
-          { id: 'calculator', label: '계산기',     icon: Calculator      },
-          { id: 'events',     label: '이벤트',     icon: CalendarDays    },
+          { id: 'home',       label: '홈',    icon: LayoutDashboard },
+          { id: 'glossary',   label: '사전',   icon: BookOpen        },
+          { id: 'calculator', label: '계산기', icon: Calculator      },
+          { id: 'events',     label: '이벤트', icon: CalendarDays    },
         ].filter(tab => tab.id === 'home' || feat[tab.id as keyof Features] !== false).map(tab => {
           const active = activeTab === tab.id;
           const Icon = tab.icon;
           return (
             <button
               key={tab.id}
+              className={`mob-nav-btn${active ? ' active' : ''}`}
               onClick={() => setActiveTab(tab.id)}
-              className="relative flex-1 flex flex-col items-center justify-center gap-1 py-3 transition-all"
-              style={{ color: active ? T.accent : T.textFaint }}
             >
               <Icon size={20} strokeWidth={active ? 2 : 1.5} />
-              <span className="text-[10px] mono tracking-wide">{tab.label}</span>
-              {active && (
-                <span
-                  className="absolute top-0 inset-x-4 h-0.5"
-                  style={{ background: T.accent }}
-                />
-              )}
+              <span>{tab.label}</span>
             </button>
           );
         })}
@@ -895,33 +880,35 @@ export default function StockWiki({ features, customEvents }: { features?: Featu
       {showCommandK && feat.commandK && (
         <CommandK
           onClose={() => setShowCommandK(false)}
-          onSelect={(term) => {
-            openTerm(term);
-            setActiveTab('glossary');
-            setShowCommandK(false);
-          }}
-          T={T}
+          onNav={handleCmdNav}
+          totalTerms={termsTotal || TERMS_TOTAL}
         />
       )}
 
-      <footer className="border-t md:mb-0 mb-[60px]" style={{ borderColor: T.border, background: T.bgSurface }}>
-        <div className="max-w-[1400px] mx-auto px-4 md:px-8 py-6 flex flex-col md:flex-row md:justify-between md:items-center gap-3 text-[13px] mono uppercase tracking-wider" style={{ color: T.textFooter }}>
-          <div className="flex items-center gap-4 flex-wrap">
-            <span style={{ color: T.textMuted }}>
-              Stock<span style={{ color: T.accent }}>WiKi</span>.kr
-            </span>
-            <span className="w-px h-3 hidden md:inline-block" style={{ background: T.border }}></span>
-            <span suppressHydrationWarning>© {new Date().getFullYear()} · 정보 제공 목적 · 투자 권유 아님</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <a href="/patch-notes" style={{ color: T.textFooter, textDecoration: 'none' }}
-              onMouseEnter={e => (e.currentTarget.style.color = T.accent)}
-              onMouseLeave={e => (e.currentTarget.style.color = T.textFooter)}>
-              패치노트
-            </a>
-            <span className="w-px h-3" style={{ background: T.border }}></span>
-            <span>Designed by Ones</span>
-          </div>
+      <footer style={{
+        flexShrink: 0,
+        borderTop: '1px solid rgba(255,255,255,.05)',
+        background: 'rgba(5,5,7,.95)',
+        padding: '12px 20px',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--t4)',
+        letterSpacing: '.08em', textTransform: 'uppercase',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <span>Stock<span style={{ color: 'var(--gold)' }}>Wi</span>Ki</span>
+          <span style={{ opacity: .4 }}>·</span>
+          <span suppressHydrationWarning>© {new Date().getFullYear()}</span>
+          <span style={{ opacity: .4 }}>·</span>
+          <span>정보 제공 목적 · 투자 권유 아님</span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <a href="/patch-notes" style={{ color: 'var(--t4)', textDecoration: 'none' }}
+            onMouseEnter={e => (e.currentTarget.style.color = 'var(--gold)')}
+            onMouseLeave={e => (e.currentTarget.style.color = 'var(--t4)')}>
+            패치노트
+          </a>
+          <span style={{ opacity: .3 }}>·</span>
+          <span>Designed by Ones</span>
         </div>
       </footer>
 
@@ -943,109 +930,6 @@ export default function StockWiki({ features, customEvents }: { features?: Featu
             {toast.msg}
           </div>
         ))}
-      </div>
-    </div>
-  );
-}
-
-// ─────────────────────────────────────────────
-// CommandK 팔레트
-// ─────────────────────────────────────────────
-function CommandK({ onClose, onSelect, T }) {
-  const [q, setQ] = useState('');
-  const [idx, setIdx] = useState(0);
-  const [results, setResults] = useState<Term[]>([]);
-  const inputRef = useRef(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    inputRef.current?.focus();
-    // 초기 로드: 빠른 검색 8개
-    fetchTerms('', '전체', [], 0).then(res => setResults(res.items.slice(0, 8)));
-  }, []);
-
-  // 검색어 바뀌면 API 호출
-  useEffect(() => {
-    let cancelled = false;
-    fetchTerms(q, '전체', [], 0).then(res => {
-      if (cancelled) return;
-      setResults(res.items.slice(0, 10));
-    });
-    return () => { cancelled = true; };
-  }, [q]);
-
-  useEffect(() => setIdx(0), [q]);
-
-  // 포커스 트랩
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    const focusable = el.querySelectorAll<HTMLElement>(
-      'input, button, [tabindex]:not([tabindex="-1"])'
-    );
-    const first = focusable[0];
-    const last = focusable[focusable.length - 1];
-    const trap = (e: KeyboardEvent) => {
-      if (e.key !== 'Tab') return;
-      if (e.shiftKey) {
-        if (document.activeElement === first) { e.preventDefault(); last.focus(); }
-      } else {
-        if (document.activeElement === last) { e.preventDefault(); first.focus(); }
-      }
-    };
-    el.addEventListener('keydown', trap);
-    return () => el.removeEventListener('keydown', trap);
-  }, []);
-
-  const handleKey = (e) => {
-    if (e.key === 'ArrowDown') { e.preventDefault(); setIdx(i => Math.min(i + 1, results.length - 1)); }
-    if (e.key === 'ArrowUp') { e.preventDefault(); setIdx(i => Math.max(i - 1, 0)); }
-    if (e.key === 'Enter' && results[idx]) onSelect(results[idx]);
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-[10vh] p-4" style={{ background: T.bgOverlay2 }} onClick={onClose}>
-      <div ref={containerRef} className="commandk-in w-full max-w-2xl border" style={{ background: T.bgSurface, borderColor: T.border }} onClick={e => e.stopPropagation()}>
-        <div className="flex items-center gap-3 px-5 py-4 border-b" style={{ borderColor: T.border }}>
-          <Search size={16} style={{ color: T.textFaint }} />
-          <input
-            ref={inputRef}
-            value={q}
-            onChange={e => setQ(e.target.value)}
-            onKeyDown={handleKey}
-            placeholder="용어 빠른 검색..."
-            className="flex-1 bg-transparent text-base"
-            style={{ color: T.textPrimary }}
-          />
-          <span className="text-[12px] mono px-2 py-1 border" style={{ borderColor: T.border, color: T.textFaint }}>ESC</span>
-        </div>
-        <div className="max-h-[50vh] overflow-y-auto">
-          {results.map((t, i) => {
-            const color = CATEGORY_COLORS[t.category];
-            return (
-              <button
-                key={t.id}
-                onClick={() => onSelect(t)}
-                onMouseEnter={() => setIdx(i)}
-                className="w-full flex items-center gap-4 px-5 py-3 text-left transition-colors"
-                style={{ background: i === idx ? T.commandKSelected : 'transparent' }}
-              >
-                <span className="text-[12px] mono px-2 py-1" style={{ background: color?.bg, color: color?.text }}>{t.category}</span>
-                <span className="font-medium" style={{ color: T.textPrimary }}>{t.name}</span>
-                <span className="text-sm" style={{ color: T.textFaint }}>{t.fullName}</span>
-                <span className="ml-auto text-xs mono italic" style={{ color: T.textDimmer }}>{t.en}</span>
-              </button>
-            );
-          })}
-          {results.length === 0 && (
-            <div className="px-5 py-8 text-center text-sm" style={{ color: T.textDimmer }}>결과 없음</div>
-          )}
-        </div>
-        <div className="flex items-center gap-4 px-5 py-3 border-t text-[12px] mono uppercase" style={{ borderColor: T.border, color: T.textFaint }}>
-          <span>↑↓ 이동</span>
-          <span>↵ 선택</span>
-          <span className="ml-auto">{results.length} results</span>
-        </div>
       </div>
     </div>
   );
