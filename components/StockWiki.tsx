@@ -924,15 +924,15 @@ function MiniSparkGlos({ color = '#C89650', seed = 1, h = 26 }: { color?: string
 
 function GlossaryView({ terms, termsHasMore, termsLoading, onLoadMore, searchQuery, setSearchQuery, searchRef, categories, selectedCategory, setSelectedCategory, selectedTerm, setSelectedTerm, closeTerm, totalCount, categoryColors, favorites, toggleFav, favMemos, updateFavMemo, recent, T, isDark, showToast, setActiveTab, selectedFamily, setSelectedFamily: setSelectedFamilyProp, termsMap }: any) {
   const FAMILY_LIST = [
-    { id: 'fundamental', name: '펀더멘털',    en: 'FUNDAMENTAL', color: '#6b9e5c' },
-    { id: 'market',      name: '시장·상품',   en: 'MARKET',      color: '#5a8fbc' },
-    { id: 'macro',       name: '경제·거시',   en: 'ECON',        color: '#c89650' },
-    { id: 'risk',        name: '리스크·퀀트', en: 'RISK',        color: '#c45555' },
-    { id: 'derivatives', name: '파생·헤지',   en: 'DERIV',       color: '#9b6ba8' },
-    { id: 'trading',     name: '매매실전',    en: 'TRADING',     color: '#4a8f6f' },
-    { id: 'industry',    name: '산업·섹터',   en: 'INDUSTRY',    color: '#a67d4f' },
-    { id: 'digital',     name: '디지털자산',  en: 'DIGITAL',     color: '#689db0' },
-    { id: 'tax',         name: '세금·제도',   en: 'TAX',         color: '#6b8a6f' },
+    { id: 'fundamental', name: '펀더멘털',    en: 'FUNDAMENTAL', color: '#6b9e5c', count: 381 },
+    { id: 'market',      name: '시장·상품',   en: 'MARKET',      color: '#5a8fbc', count: 1369 },
+    { id: 'macro',       name: '경제·거시',   en: 'ECON',        color: '#c89650', count: 796 },
+    { id: 'risk',        name: '리스크·퀀트', en: 'RISK',        color: '#c45555', count: 621 },
+    { id: 'derivatives', name: '파생·헤지',   en: 'DERIV',       color: '#9b6ba8', count: 2653 },
+    { id: 'trading',     name: '매매실전',    en: 'TRADING',     color: '#4a8f6f', count: 1868 },
+    { id: 'industry',    name: '산업·섹터',   en: 'INDUSTRY',    color: '#a67d4f', count: 7917 },
+    { id: 'digital',     name: '디지털자산',  en: 'DIGITAL',     color: '#689db0', count: 459 },
+    { id: 'tax',         name: '세금·제도',   en: 'TAX',         color: '#6b8a6f', count: 259 },
   ];
 
   const handleFamilyClick = (fid: string | null) => {
@@ -1048,7 +1048,7 @@ function GlossaryView({ terms, termsHasMore, termsLoading, onLoadMore, searchQue
                 fontSize: '8.5px',
                 color: 'var(--t3)',
                 flexShrink: 0
-              }}>{terms.filter(t => !selectedFamily || categoryColors[t.category]?.family === selectedFamily).length}</span>
+              }}>{fam.count.toLocaleString()}</span>
             </div>
           );
         })}
@@ -1260,8 +1260,11 @@ function GlossaryView({ terms, termsHasMore, termsLoading, onLoadMore, searchQue
               const color = categoryColors[term.category];
               const isFav = favorites.has(term.id);
               const isSel = selectedTerm?.id === term.id;
-              const famColor = FAMILY_LIST.find(f => f.id === selectedFamily)?.color || color?.bg || '#C89650';
-              
+              // 각 카드의 family는 term.category 기준으로 결정 (selectedFamily 무관)
+              const termFamilyId = color?.family || CATEGORY_FAMILY[term.category]?.family || 'fundamental';
+              const termFamilyDef = FAMILY_LIST.find(f => f.id === termFamilyId);
+              const famColor = termFamilyDef?.color || '#C89650';
+
               return (
                 <div
                   key={term.id}
@@ -1285,25 +1288,40 @@ function GlossaryView({ terms, termsHasMore, termsLoading, onLoadMore, searchQue
                     boxShadow: isSel ? `0 0 10px ${famColor}88` : undefined
                   }} />
 
-                  {/* Category badge */}
+                  {/* 대분류·중분류 badge */}
                   <div style={{
                     display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'flex-start',
                     marginBottom: 10
                   }}>
-                    <span style={{
-                      fontFamily: 'var(--mono)',
-                      fontSize: '8px',
-                      letterSpacing: '.14em',
-                      textTransform: 'uppercase',
-                      color: famColor,
-                      padding: '3px 8px',
-                      borderRadius: 4,
-                      background: `${famColor}14`,
-                      border: `1px solid ${famColor}25`
-                    }}>{term.category}</span>
-                    {isFav && <span style={{ fontSize: 12, color: 'var(--gold)' }}>★</span>}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0 }}>
+                      {/* 대분류 (family) */}
+                      <span style={{
+                        fontFamily: 'var(--mono)',
+                        fontSize: '7px',
+                        letterSpacing: '.18em',
+                        textTransform: 'uppercase',
+                        color: famColor,
+                        opacity: 0.7,
+                      }}>{termFamilyDef?.name || termFamilyId}</span>
+                      {/* 중분류 (category) */}
+                      <span style={{
+                        fontFamily: 'var(--mono)',
+                        fontSize: '8px',
+                        letterSpacing: '.10em',
+                        color: famColor,
+                        padding: '2px 7px',
+                        borderRadius: 4,
+                        background: `${famColor}14`,
+                        border: `1px solid ${famColor}25`,
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        maxWidth: 160,
+                      }}>{term.category}</span>
+                    </div>
+                    {isFav && <span style={{ fontSize: 12, color: 'var(--gold)', flexShrink: 0 }}>★</span>}
                   </div>
 
                   {/* Term name */}
@@ -1355,7 +1373,7 @@ function GlossaryView({ terms, termsHasMore, termsLoading, onLoadMore, searchQue
                         fontFamily: 'var(--mono)',
                         fontSize: '8px',
                         color: 'var(--t3)'
-                      }}>{FAMILY_LIST.find(f => f.id === selectedFamily)?.en.slice(0, 5) || ''}</span>
+                      }}>{termFamilyDef?.en.slice(0, 5) || ''}</span>
                     </div>
                   </div>
 
@@ -2019,11 +2037,14 @@ function CalculatorView({ selectedCalc, setSelectedCalc, T, isDark }) {
               </div>
             )}
             <CalcColorContext.Provider value={currentCalc?.color || '#C89650'}>
-              <CalcPrefixContext.Provider value={compareCalcMode ? 'B' : 'A'}>
-                <div ref={panelARef}>
-                  {renderCalcComponent(selectedCalc)}
-                </div>
-              </CalcPrefixContext.Provider>
+              {/* CalcResultsContext.Provider: ResultBox를 sentinel 모드로 전환 — 왼쪽에 카드 중복 렌더 방지 */}
+              <CalcResultsContext.Provider value={{ sink: () => {}, color: currentCalc?.color || '#C89650' }}>
+                <CalcPrefixContext.Provider value={compareCalcMode ? 'B' : 'A'}>
+                  <div ref={panelARef}>
+                    {renderCalcComponent(selectedCalc)}
+                  </div>
+                </CalcPrefixContext.Provider>
+              </CalcResultsContext.Provider>
             </CalcColorContext.Provider>
           </div>
 
