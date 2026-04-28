@@ -94,6 +94,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <script dangerouslySetInnerHTML={{ __html: `(function(){try{var t=localStorage.getItem('stockwiki_theme');if(t==='light')document.documentElement.classList.add('light');}catch(e){}})();` }} />
       </head>
       <body>
+        {/* Liquid mesh gradient — 전체 페이지 공통 ambient 배경 (Magic UI style) */}
+        <div className="liquid-bg" aria-hidden="true">
+          <div className="liquid-blob-1" />
+          <div className="liquid-blob-2" />
+          <div className="liquid-blob-3" />
+        </div>
         {children}
         {!isAdmin && <CookieBanner />}
         {!isAdmin && <Analytics />}

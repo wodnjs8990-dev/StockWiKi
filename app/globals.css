@@ -3,18 +3,300 @@
 @tailwind utilities;
 
 /* ════════════════════════════════════════════════
-   StockWiKi v2 Design System — Dashboard.html 기준
+   StockWiKi v2 Design System — Tailwind + Glassmorphism
    ════════════════════════════════════════════════ */
+
+/* ── Tailwind @layer components: 재사용 유틸리티 ── */
+@layer components {
+  /* Glassmorphism card — backdrop-blur + edge-light border */
+  .glass-card {
+    @apply relative overflow-hidden rounded-2xl;
+    background: rgba(255,255,255,0.02);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid transparent;
+    background-clip: padding-box;
+    box-shadow: 0 1px 0 rgba(255,255,255,0.07) inset, 0 8px 32px rgba(0,0,0,0.45);
+    transition: transform 0.28s cubic-bezier(0.16,1,0.3,1), box-shadow 0.28s, background 0.2s;
+  }
+  .glass-card::before {
+    content: '';
+    @apply absolute inset-0 pointer-events-none;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(to bottom, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0.02) 40%, transparent 100%);
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    z-index: 0;
+  }
+  .glass-card::after {
+    content: '';
+    @apply absolute left-0 right-0 top-0 pointer-events-none;
+    height: 60%;
+    border-radius: 16px 16px 0 0;
+    background: linear-gradient(to bottom, rgba(255,255,255,0.03) 0%, transparent 100%);
+    z-index: 0;
+  }
+  .glass-card:hover {
+    @apply -translate-y-1;
+    background: rgba(255,255,255,0.05);
+    box-shadow: 0 1px 0 rgba(255,255,255,0.10) inset, 0 20px 60px rgba(0,0,0,0.55), 0 4px 16px rgba(0,0,0,0.3);
+  }
+
+  /* Neon chart line */
+  .neon-line {
+    filter: drop-shadow(0 0 6px currentColor);
+    stroke-width: 1.5px;
+  }
+
+  /* Ambient glow blob */
+  .ambient-blob {
+    @apply absolute pointer-events-none;
+    filter: blur(160px);
+  }
+
+  /* Flowing border input wrapper */
+  .flow-border {
+    @apply relative;
+  }
+  .flow-border::before {
+    content: '';
+    @apply absolute pointer-events-none opacity-0 transition-opacity duration-300;
+    inset: -1px;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(90deg, #C89650, #6ea8c8, #9a7ac8, #C89650);
+    background-size: 300% 300%;
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    animation: flowingBorder 3s ease infinite;
+  }
+  .flow-border.focused::before {
+    @apply opacity-100;
+  }
+
+  /* Data number — Inter ExtraBold */
+  .data-num {
+    font-family: 'Inter', 'IBM Plex Mono', monospace;
+    @apply font-extrabold tracking-tight;
+  }
+  .data-unit {
+    @apply text-[0.6em] font-normal ml-[0.2em];
+    opacity: 0.4;
+    letter-spacing: 0;
+  }
+
+  /* Gold button */
+  .btn-gold-tw {
+    @apply relative overflow-hidden rounded-[10px] border-none cursor-pointer font-semibold uppercase;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    padding: 11px 24px;
+    background: linear-gradient(135deg, #d4a255 0%, #C89650 50%, #b8823a 100%);
+    color: #06090f;
+    box-shadow: 0 0 24px rgba(200,150,80,0.35), 0 4px 16px rgba(200,150,80,0.18), 0 1px 0 rgba(255,255,255,0.25) inset;
+    transition: transform 0.18s cubic-bezier(0.16,1,0.3,1), box-shadow 0.18s;
+  }
+  .btn-gold-tw:hover {
+    @apply -translate-y-px;
+    box-shadow: 0 0 36px rgba(200,150,80,0.5), 0 8px 24px rgba(200,150,80,0.25), 0 1px 0 rgba(255,255,255,0.3) inset;
+  }
+
+  /* ══════════════════════════════════════════
+     MAGIC UI / ACETERNITY STYLE COMPONENTS
+     ══════════════════════════════════════════ */
+
+  /* ── Border Beam: 카드 테두리를 따라 빛이 흐르는 효과 ── */
+  .border-beam {
+    @apply relative overflow-hidden;
+    --beam-color: #C89650; /* override via style prop */
+  }
+  .border-beam::before {
+    content: '';
+    position: absolute;
+    pointer-events: none;
+    /* 회전하는 conic-gradient로 테두리 빛 생성 */
+    inset: -1px;
+    border-radius: inherit;
+    background: conic-gradient(
+      from var(--beam-angle, 0deg),
+      transparent 0deg,
+      color-mix(in srgb, var(--beam-color) 90%, white) 60deg,
+      rgba(255,255,255,0.55) 120deg,
+      transparent 180deg
+    );
+    animation: beamRotate 4s linear infinite;
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    padding: 1px;
+    z-index: 2;
+  }
+
+  /* ── Spotlight Card: 마우스 위치에 따라 빛이 따라오는 효과 ── */
+  .spotlight-card {
+    @apply relative overflow-hidden;
+    background: rgba(255,255,255,0.02);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+  }
+  .spotlight-card::before {
+    content: '';
+    @apply absolute pointer-events-none opacity-0 transition-opacity duration-500;
+    inset: 0;
+    background: radial-gradient(600px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(200,150,80,0.06), transparent 40%);
+    z-index: 1;
+  }
+  .spotlight-card:hover::before {
+    @apply opacity-100;
+  }
+
+  /* ── Shimmer Button: 광택이 흐르는 버튼 ── */
+  .shimmer-btn {
+    @apply relative overflow-hidden;
+    background: linear-gradient(110deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.07) 50%, rgba(255,255,255,0.03) 100%);
+    background-size: 200% 100%;
+    animation: shimmerSlide 2.5s ease infinite;
+  }
+
+  /* ── Liquid Background: 배경 mesh gradient 리퀴드 애니메이션 ── */
+  .liquid-bg {
+    @apply fixed inset-0 pointer-events-none overflow-hidden;
+    z-index: 0;
+  }
+  .liquid-blob {
+    @apply absolute rounded-full pointer-events-none;
+    filter: blur(160px);
+    mix-blend-mode: screen;
+    will-change: transform;
+  }
+  .liquid-blob-1 {
+    @apply liquid-blob;
+    width: 900px; height: 700px;
+    top: -20%; left: -15%;
+    background: radial-gradient(ellipse at center, rgba(14,20,48,0.7) 0%, transparent 70%);
+    animation: liquidDrift1 20s ease-in-out infinite alternate;
+  }
+  .liquid-blob-2 {
+    @apply liquid-blob;
+    width: 700px; height: 600px;
+    bottom: -15%; right: -10%;
+    background: radial-gradient(ellipse at center, rgba(36,22,6,0.6) 0%, transparent 70%);
+    animation: liquidDrift2 25s ease-in-out infinite alternate;
+  }
+  .liquid-blob-3 {
+    @apply liquid-blob;
+    width: 500px; height: 400px;
+    top: 30%; left: 40%;
+    background: radial-gradient(ellipse at center, rgba(10,18,38,0.35) 0%, transparent 70%);
+    animation: liquidDrift3 30s ease-in-out infinite alternate;
+  }
+
+  /* ── Magic Card: Magic UI 스타일 카드 (Spotlight + Edge light 결합) ── */
+  .magic-card {
+    @apply relative overflow-hidden rounded-2xl;
+    background: rgba(255,255,255,0.018);
+    border: 1px solid transparent;
+    background-clip: padding-box;
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    box-shadow: 0 1px 0 rgba(255,255,255,0.07) inset, 0 8px 32px rgba(0,0,0,0.5);
+    transition: transform 0.3s cubic-bezier(0.16,1,0.3,1), box-shadow 0.3s, background 0.25s;
+  }
+  /* Edge light 상단 gradient border */
+  .magic-card::before {
+    content: '';
+    @apply absolute inset-0 pointer-events-none;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(
+      to bottom,
+      rgba(255,255,255,0.12) 0%,
+      rgba(255,255,255,0.03) 30%,
+      transparent 70%
+    );
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    z-index: 0;
+    transition: background 0.3s;
+  }
+  /* Inner glow (카드가 배경에서 떠오르는 느낌) */
+  .magic-card::after {
+    content: '';
+    @apply absolute left-0 right-0 top-0 pointer-events-none;
+    height: 55%;
+    border-radius: 16px 16px 0 0;
+    background: linear-gradient(to bottom, rgba(255,255,255,0.025) 0%, transparent 100%);
+    z-index: 0;
+  }
+  .magic-card:hover {
+    transform: translateY(-4px);
+    background: rgba(255,255,255,0.04);
+    box-shadow: 0 1px 0 rgba(255,255,255,0.11) inset, 0 24px 60px rgba(0,0,0,0.6), 0 4px 20px rgba(0,0,0,0.35);
+  }
+  .magic-card:hover::before {
+    background: linear-gradient(
+      to bottom,
+      rgba(255,255,255,0.18) 0%,
+      rgba(255,255,255,0.05) 40%,
+      transparent 80%
+    );
+  }
+
+  /* ── Glow Input: focus 시 빛이 흐르는 입력창 ── */
+  .glow-input {
+    @apply relative;
+    --glow-color: #C89650; /* override per-component via style prop */
+    border-radius: 12px;
+  }
+  /* glow-input is also magic-card — skip duplicate input styles, just add focus ring */
+  .glow-input input:focus {
+    border-color: color-mix(in srgb, var(--glow-color) 55%, transparent) !important;
+    background: color-mix(in srgb, var(--glow-color) 4%, transparent) !important;
+    box-shadow:
+      0 0 0 3px color-mix(in srgb, var(--glow-color) 12%, transparent),
+      0 0 20px color-mix(in srgb, var(--glow-color) 12%, transparent),
+      inset 0 0 20px color-mix(in srgb, var(--glow-color) 5%, transparent) !important;
+  }
+  /* flowing border ring on focus — uses per-card color */
+  .glow-input::after {
+    content: '';
+    @apply absolute pointer-events-none opacity-0;
+    transition: opacity 0.3s ease;
+    inset: -1px;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(90deg,
+      var(--glow-color),
+      #6ea8c8,
+      #9a7ac8,
+      var(--glow-color)
+    );
+    background-size: 400% 400%;
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    animation: flowingBorder 3s ease infinite;
+    z-index: 3;
+  }
+  .glow-input:focus-within::after {
+    @apply opacity-100;
+  }
+}
 *,*::before,*::after { box-sizing: border-box; }
 
 :root {
   /* ── Core palette ── */
-  --bg: #080808;
-  --s1: rgba(255,255,255,.035);
-  --s2: rgba(255,255,255,.055);
-  --b1: rgba(255,255,255,.09);
-  --b2: rgba(255,255,255,.05);
-  --b3: rgba(255,255,255,.13);
+  --bg: #050505;
+  --s1: rgba(255,255,255,.02);
+  --s2: rgba(255,255,255,.04);
+  --b1: rgba(255,255,255,.07);
+  --b2: rgba(255,255,255,.04);
+  --b3: rgba(255,255,255,.11);
 
   /* ── Accent (Gold theme default) ── */
   --gold:  #C89650;
@@ -105,55 +387,82 @@ input, textarea, select {
 .scroll-hide { -ms-overflow-style: none; scrollbar-width: none; }
 
 /* ════════════ GLASS CARD ════════════ */
-.card {
-  background: rgba(255,255,255,.035);
-  border: 1px solid rgba(255,255,255,.09);
+/* ══ .card와 .magic-card 공통 스타일 ══ */
+.card, .magic-card {
+  background: rgba(255,255,255,.018);
+  border: 1px solid transparent;
+  background-clip: padding-box;
   border-radius: 16px;
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
   position: relative;
   overflow: hidden;
-  transition: transform .22s cubic-bezier(.16,1,.3,1), border-color .2s, box-shadow .22s;
+  transition: transform .28s cubic-bezier(.16,1,.3,1), box-shadow .28s, background .25s;
+  box-shadow: 0 1px 0 rgba(255,255,255,.07) inset, 0 8px 32px rgba(0,0,0,.5);
 }
-.card::before {
+/* 엣지 라이팅: 상단 그라데이션 보더 */
+.card::before, .magic-card::before {
   content: '';
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  background: linear-gradient(135deg, rgba(255,255,255,.055) 0%, rgba(255,255,255,.01) 40%, transparent 70%);
+  padding: 1px;
+  background: linear-gradient(to bottom, rgba(255,255,255,.12) 0%, rgba(255,255,255,.03) 30%, transparent 70%);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
   pointer-events: none;
   z-index: 0;
+  transition: background .3s;
 }
-.card::after {
+/* 내부 상단 inner glow — 카드가 배경에서 떠오르는 느낌 */
+.card::after, .magic-card::after {
   content: '';
   position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  box-shadow: inset 1px 1px 0 rgba(255,255,255,.08);
+  left: 0; right: 0; top: 0;
+  height: 55%;
+  border-radius: 16px 16px 0 0;
+  background: linear-gradient(to bottom, rgba(255,255,255,.025) 0%, transparent 100%);
   pointer-events: none;
   z-index: 0;
 }
-.card > * { position: relative; z-index: 1; }
-.card:hover {
-  transform: translateY(-2px);
-  border-color: rgba(255,255,255,.13);
-  box-shadow: 0 12px 40px rgba(0,0,0,.4), 0 4px 16px rgba(0,0,0,.3);
+.card > *, .magic-card > * { position: relative; z-index: 1; }
+.card:hover, .magic-card:hover {
+  transform: translateY(-4px);
+  background: rgba(255,255,255,.045);
+  box-shadow: 0 1px 0 rgba(255,255,255,.11) inset, 0 24px 60px rgba(0,0,0,.6), 0 4px 20px rgba(0,0,0,.35);
+}
+.card:hover::before, .magic-card:hover::before {
+  background: linear-gradient(to bottom, rgba(255,255,255,.18) 0%, rgba(255,255,255,.05) 40%, transparent 80%);
 }
 
 .card-sm {
-  background: rgba(255,255,255,.03);
-  border: 1px solid rgba(255,255,255,.07);
+  background: rgba(255,255,255,.02);
+  border: 1px solid transparent;
+  background-clip: padding-box;
   border-radius: 12px;
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   position: relative;
   overflow: hidden;
-  transition: transform .18s, border-color .15s, box-shadow .18s;
+  transition: transform .22s cubic-bezier(.16,1,.3,1), box-shadow .22s, background .2s;
+  box-shadow: 0 1px 0 rgba(255,255,255,.06) inset, 0 4px 16px rgba(0,0,0,.35);
 }
-.card-sm::before { content: ''; position: absolute; inset: 0; background: linear-gradient(135deg,rgba(255,255,255,.04) 0%,transparent 55%); pointer-events: none; }
-.card-sm::after  { content: ''; position: absolute; inset: 0; box-shadow: inset 1px 1px 0 rgba(255,255,255,.06); pointer-events: none; }
+.card-sm::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(to bottom, rgba(255,255,255,.08) 0%, transparent 60%);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+.card-sm::after { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 50%; background: linear-gradient(to bottom, rgba(255,255,255,.025) 0%, transparent 100%); pointer-events: none; }
 .card-sm > * { position: relative; z-index: 1; }
-.card-sm:hover { transform: translateY(-1px); border-color: rgba(255,255,255,.1); box-shadow: 0 6px 20px rgba(0,0,0,.3); }
+.card-sm:hover { transform: translateY(-2px); background: rgba(255,255,255,.04); box-shadow: 0 1px 0 rgba(255,255,255,.09) inset, 0 8px 24px rgba(0,0,0,.4); }
 
 /* ════════════ NAV TABS ════════════ */
 .nav-tab {
@@ -231,7 +540,7 @@ input, textarea, select {
 /* ════════════ BUTTONS ════════════ */
 .btn-gold {
   padding: 11px 24px;
-  background: var(--gold);
+  background: linear-gradient(135deg, #d4a255 0%, var(--gold) 50%, #b8823a 100%);
   color: #06090f;
   border: none;
   border-radius: 10px;
@@ -240,11 +549,17 @@ input, textarea, select {
   letter-spacing: .14em;
   text-transform: uppercase;
   cursor: pointer;
-  font-weight: 500;
-  transition: opacity .15s;
-  box-shadow: 0 0 20px rgba(200,150,80,.25), 0 4px 12px rgba(200,150,80,.1);
+  font-weight: 600;
+  transition: transform .18s cubic-bezier(.16,1,.3,1), box-shadow .18s, opacity .15s;
+  box-shadow: 0 0 24px rgba(200,150,80,.35), 0 4px 16px rgba(200,150,80,.18), 0 1px 0 rgba(255,255,255,.25) inset;
+  position: relative;
+  overflow: hidden;
 }
-.btn-gold:hover { opacity: .85; }
+.btn-gold:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 0 36px rgba(200,150,80,.5), 0 8px 24px rgba(200,150,80,.25), 0 1px 0 rgba(255,255,255,.3) inset;
+}
+.btn-gold:active { transform: translateY(0); }
 
 .btn-ghost {
   padding: 10px 18px;
@@ -269,19 +584,52 @@ input, textarea, select {
   padding: 18px;
   border-radius: 14px;
   cursor: pointer;
-  transition: transform .2s cubic-bezier(.16,1,.3,1), border-color .2s, box-shadow .22s;
-  background: rgba(255,255,255,.032);
-  border: 1px solid rgba(255,255,255,.07);
+  transition: transform .28s cubic-bezier(.16,1,.3,1), box-shadow .28s, background .2s;
+  background: rgba(255,255,255,.02);
+  border: 1px solid transparent;
+  background-clip: padding-box;
   position: relative;
   overflow: hidden;
+  box-shadow: 0 1px 0 rgba(255,255,255,.07) inset, 0 4px 20px rgba(0,0,0,.4);
 }
-.term-card::before { content: ''; position: absolute; inset: 0; background: linear-gradient(135deg,rgba(255,255,255,.04) 0%,transparent 55%); pointer-events: none; }
-.term-card::after  { content: ''; position: absolute; inset: 0; box-shadow: inset 1px 1px 0 rgba(255,255,255,.07); pointer-events: none; }
-.term-card:hover { border-color: rgba(255,255,255,.12); transform: translateY(-3px); box-shadow: 0 16px 40px rgba(0,0,0,.5), 0 4px 12px rgba(0,0,0,.3); }
-.term-card.selected { border-color: rgba(200,150,80,.4); background: rgba(200,150,80,.06); box-shadow: 0 0 0 1px rgba(200,150,80,.15); }
+/* 엣지 라이팅 보더 */
+.term-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(to bottom, rgba(255,255,255,.09) 0%, rgba(255,255,255,.02) 50%, transparent 100%);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  z-index: 0;
+  transition: background .25s;
+}
+/* 내부 상단 inner glow */
+.term-card::after {
+  content: '';
+  position: absolute;
+  left: 0; right: 0; top: 0;
+  height: 55%;
+  border-radius: 14px 14px 0 0;
+  background: linear-gradient(to bottom, rgba(255,255,255,.025) 0%, transparent 100%);
+  pointer-events: none;
+  z-index: 0;
+}
+.term-card:hover {
+  transform: translateY(-4px);
+  background: rgba(255,255,255,.05);
+  box-shadow: 0 1px 0 rgba(255,255,255,.12) inset, 0 24px 56px rgba(0,0,0,.6), 0 4px 16px rgba(0,0,0,.35);
+}
+.term-card:hover::before {
+  background: linear-gradient(to bottom, rgba(255,255,255,.16) 0%, rgba(255,255,255,.04) 50%, transparent 100%);
+}
+.term-card.selected { background: rgba(200,150,80,.04); box-shadow: 0 1px 0 rgba(200,150,80,.2) inset, 0 0 0 1px rgba(200,150,80,.18), 0 8px 30px rgba(200,150,80,.08); }
 .term-card:hover .tc-arrow { opacity: 1 !important; }
 
-.tc-spark { opacity: .55; transition: opacity .2s; }
+.tc-spark { opacity: .5; transition: opacity .22s; }
 .term-card:hover .tc-spark { opacity: 1; }
 
 .calc-item { display: flex; align-items: center; gap: 12px; padding: 11px 16px; border-radius: 10px; cursor: pointer; transition: all .15s; }
@@ -366,7 +714,110 @@ input, textarea, select {
   animation: bannerPulse 3s ease-in-out infinite;
 }
 
+/* ════════════ AMBIENT MESH GLOW ════════════ */
+/* html, body에 적용하거나 layout wrapper에 적용 */
+.ambient-bg {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+.ambient-bg::before {
+  content: '';
+  position: absolute;
+  width: 900px; height: 700px;
+  top: -20%; left: -15%;
+  background: radial-gradient(ellipse at center, rgba(16, 24, 54, 0.55) 0%, transparent 70%);
+  filter: blur(160px);
+  animation: ambientDrift1 18s ease-in-out infinite alternate;
+}
+.ambient-bg::after {
+  content: '';
+  position: absolute;
+  width: 700px; height: 600px;
+  bottom: -10%; right: -10%;
+  background: radial-gradient(ellipse at center, rgba(40, 28, 8, 0.45) 0%, transparent 70%);
+  filter: blur(160px);
+  animation: ambientDrift2 22s ease-in-out infinite alternate;
+}
+
+/* ════════════ FLOWING BORDER (NumInput focus) ════════════ */
+@keyframes flowingBorder {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+.input-flowing-border {
+  position: relative;
+}
+.input-flowing-border::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(90deg, var(--gold), #6ea8c8, #9a7ac8, var(--gold));
+  background-size: 300% 300%;
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  animation: flowingBorder 3s ease infinite;
+  opacity: 0;
+  transition: opacity .3s;
+}
+.input-flowing-border.active::before { opacity: 1; }
+
+/* ════════════ CHART NEON ════════════ */
+.chart-neon-line {
+  filter: drop-shadow(0 0 6px currentColor);
+  stroke-width: 1.5px;
+}
+.chart-neon-area {
+  opacity: 0.05;
+}
+/* SVG draw animation */
+.chart-draw {
+  stroke-dasharray: 2000;
+  stroke-dashoffset: 2000;
+  animation: chartDraw 1.2s cubic-bezier(.16,1,.3,1) forwards;
+}
+@keyframes chartDraw {
+  to { stroke-dashoffset: 0; }
+}
+
+/* ════════════ DATA NUMBER HIERARCHY ════════════ */
+.data-num {
+  font-family: 'Inter', var(--mono), monospace;
+  font-weight: 800;
+  letter-spacing: -.04em;
+}
+.data-unit {
+  font-size: .6em;
+  opacity: .4;
+  font-weight: 400;
+  letter-spacing: 0;
+  margin-left: .2em;
+}
+
 /* ════════════ ANIMATIONS ════════════ */
+/* Liquid mesh blob drift */
+@keyframes ambientDrift1  { from { transform: translate(0,0) scale(1) }       to { transform: translate(6%,4%) scale(1.08) } }
+@keyframes ambientDrift2  { from { transform: translate(0,0) scale(1) }       to { transform: translate(-5%,-3%) scale(1.06) } }
+@keyframes liquidDrift1   { 0% { transform: translate(0,0) scale(1) rotate(0deg) }   100% { transform: translate(7%,5%) scale(1.1) rotate(8deg) } }
+@keyframes liquidDrift2   { 0% { transform: translate(0,0) scale(1) rotate(0deg) }   100% { transform: translate(-6%,-4%) scale(1.08) rotate(-6deg) } }
+@keyframes liquidDrift3   { 0% { transform: translate(0,0) scale(1) }                100% { transform: translate(4%,-6%) scale(1.12) } }
+/* Border beam rotation */
+@keyframes beamRotate     { from { --beam-angle: 0deg }   to { --beam-angle: 360deg } }
+@property --beam-angle     { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
+/* Shimmer slide */
+@keyframes shimmerSlide   { 0% { background-position: 200% 0 }  100% { background-position: -200% 0 } }
+/* Flowing border gradient */
+@keyframes flowingBorder  { 0% { background-position: 0% 50% }   50% { background-position: 100% 50% }  100% { background-position: 0% 50% } }
+/* Card / item entrance */
+@keyframes cardSlideIn    { from { opacity: 0; transform: translateX(16px) }   to { opacity: 1; transform: translateX(0) } }
+@keyframes histItemIn     { from { opacity: 0; transform: translateY(-6px) }   to { opacity: 1; transform: translateY(0) } }
 @keyframes gridDrift    { from { background-position: 0 0 }             to { background-position: 56px 56px } }
 @keyframes scanLine     { from { top: 0 }                               to { top: 100vh } }
 @keyframes bannerPulse  { 0%,100% { opacity: .6 }                       50% { opacity: 1 } }

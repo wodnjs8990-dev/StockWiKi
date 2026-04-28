@@ -2060,7 +2060,7 @@ function CalculatorView({ selectedCalc, setSelectedCalc, T, isDark }) {
 
             {/* 시장 참고 데이터 */}
             {marketRefs.length > 0 && (
-              <div className="card" style={{ padding: '20px 22px' }}>
+              <div className="magic-card" style={{ padding: '20px 22px' }}>
                 <div style={{ fontFamily: 'var(--mono)', fontSize: 8, letterSpacing: '.22em', textTransform: 'uppercase', color: 'var(--t3)', marginBottom: 16 }}>시장 참고 데이터</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                   {marketRefs.map((ref, i) => (
@@ -2078,7 +2078,7 @@ function CalculatorView({ selectedCalc, setSelectedCalc, T, isDark }) {
 
             {/* SCENARIO B — 비교 모드 */}
             {compareCalcMode && (
-              <div className="card" style={{ padding: '16px 18px' }}>
+              <div className="magic-card" style={{ padding: '16px 18px' }}>
                 <div style={{ fontFamily: 'var(--mono)', fontSize: 8, letterSpacing: '.22em', textTransform: 'uppercase', color: 'var(--t3)', marginBottom: 10 }}>SCENARIO B</div>
                 <CalcColorContext.Provider value={currentCalc?.color || '#C89650'}>
                   <CalcPrefixContext.Provider value="B">
@@ -2100,7 +2100,7 @@ function CalculatorView({ selectedCalc, setSelectedCalc, T, isDark }) {
               };
               const related: string[] = relatedMap[selectedCalc] || [];
               return related.length > 0 ? (
-                <div className="card" style={{ padding: '16px 18px' }}>
+                <div className="magic-card" style={{ padding: '16px 18px' }}>
                   <div style={{ fontFamily: 'var(--mono)', fontSize: 8, letterSpacing: '.22em', textTransform: 'uppercase', color: 'var(--t3)', marginBottom: 10 }}>관련 용어</div>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                     {related.map((r: string) => (
@@ -2113,7 +2113,7 @@ function CalculatorView({ selectedCalc, setSelectedCalc, T, isDark }) {
 
             {/* 계산 기록 */}
             {calcHistory.length > 0 && (
-              <div className="card" style={{ padding: '16px 18px' }}>
+              <div className="magic-card" style={{ padding: '16px 18px' }}>
                 <div style={{ fontFamily: 'var(--mono)', fontSize: 8, letterSpacing: '.22em', textTransform: 'uppercase', color: 'var(--t3)', marginBottom: 12 }}>계산 기록</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                   {calcHistory.slice(0, 5).map((entry, i) => {
@@ -2225,7 +2225,7 @@ function NumInput({ label, value, onChange, unit, placeholder, hint, color: colo
   const koreanUnit = formatKoreanUnit(value);
 
   return (
-    <div className="card" style={{ padding: '16px 18px', background: `linear-gradient(135deg, ${color}08 0%, rgba(255,255,255,.025) 100%)` }}>
+    <div className="magic-card glow-input" style={{ padding: '16px 18px', background: `linear-gradient(135deg, ${color}08 0%, rgba(255,255,255,.025) 100%)`, '--glow-color': color } as React.CSSProperties}>
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 10 }}>
         <label style={{ fontSize: 11, color: 'var(--t2)', fontFamily: 'var(--mono)', letterSpacing: '.08em', textTransform: 'uppercase' as const }}>{label}</label>
         {unit && <span style={{ fontFamily: 'var(--mono)', fontSize: 9, color: color, padding: '2px 8px', borderRadius: 4, background: `${color}14`, border: `1px solid ${color}25` }}>{unit}</span>}
@@ -2357,7 +2357,7 @@ function ResultBox({ label, value, unit, highlight, color: colorProp, bands, int
       data-result-label={label}
       data-result-value={value}
       data-result-unit={unit || ''}
-      className="card"
+      className="magic-card"
       style={{ padding: 0, overflow: 'hidden', minHeight: highlight ? 160 : undefined,
         background: hasValue ? `linear-gradient(135deg,${color}10 0%,rgba(0,0,0,.4) 100%)` : 'rgba(255,255,255,.025)' }}
     >
@@ -2407,7 +2407,7 @@ function CalcHeader({ num, title, desc, color: colorProp, calcId, results }: any
   const hasResults = results && results.some((r: any) => r.value && r.value !== '—' && r.value !== '' && r.value !== '0');
 
   return (
-    <div className="card" style={{ padding: 0, overflow: 'hidden', marginBottom: 8 }}>
+    <div className="magic-card" style={{ padding: 0, overflow: 'hidden', marginBottom: 8 }}>
       <div style={{ height: 3, background: color, boxShadow: `0 0 12px ${color}99` }} />
       <div style={{ padding: '18px 20px' }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 4 }}>
@@ -2470,7 +2470,16 @@ function CalcResultsReader({ containerRef, calcColor, mode }: { containerRef: Re
           }
         }
         return (
-          <div key={i} className="card" style={{ padding: 0, overflow: 'hidden', background: hasValue ? `linear-gradient(135deg,${calcColor}10 0%,rgba(0,0,0,.4) 100%)` : 'rgba(255,255,255,.025)' }}>
+          <div
+            key={i}
+            className={`magic-card${r.highlight && hasValue ? ' border-beam' : ''}`}
+            style={{
+              padding: 0,
+              overflow: 'hidden',
+              background: hasValue ? `linear-gradient(135deg,${calcColor}10 0%,rgba(0,0,0,.4) 100%)` : 'rgba(255,255,255,.025)',
+              '--beam-color': calcColor,
+            } as React.CSSProperties}
+          >
             <div style={{ height: 3, background: hasValue ? calcColor : 'rgba(255,255,255,.06)', transition: 'background .4s', boxShadow: hasValue ? `0 0 12px ${calcColor}88` : undefined }} />
             <div style={{ padding: '24px 26px', position: 'relative', minHeight: r.highlight ? 180 : 100 }}>
               {hasValue && <div style={{ position: 'absolute', inset: 0, background: `radial-gradient(ellipse at 30% 40%,${calcColor}14 0%,transparent 65%)`, pointerEvents: 'none' }} />}
@@ -2530,7 +2539,7 @@ function CalcNote({ lines, how, example, tip, color: colorProp }: any) {
   const color = colorProp || ctxColor;
   const items = how || lines;
   return (
-    <div className="card" style={{ padding: '18px 20px' }}>
+    <div className="magic-card" style={{ padding: '18px 20px' }}>
       <div style={{ fontFamily: 'var(--mono)', fontSize: 8, letterSpacing: '.22em', textTransform: 'uppercase' as const, color: 'var(--t3)', marginBottom: 14 }}>HOW TO USE</div>
       {items && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
