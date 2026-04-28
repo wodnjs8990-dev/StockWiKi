@@ -2,9 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ── IBM Plex 폰트 ── */
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500&family=IBM+Plex+Sans:ital,wght@0,200;0,300;0,400;0,500;0,600;1,300&display=swap');
-
 /* ════════════════════════════════════════════════
    StockWiKi v2 Design System — Dashboard.html 기준
    ════════════════════════════════════════════════ */
