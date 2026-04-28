@@ -970,13 +970,11 @@ function GlossaryView({ terms, termsHasMore, termsLoading, onLoadMore, searchQue
   // 중분류 선택 상태 (category 문자열)
   const [selectedSubCat, setSelectedSubCat] = React.useState<string | null>(null);
 
-  // 현재 terms에서 대분류별 카운트 & 중분류 목록 계산
+  // 전체 TERMS 기준 대분류별 카운트 & 중분류 목록 계산 (사이드바는 항상 전체 기준)
   const groupStats = React.useMemo(() => {
     const map: Record<string, { count: number; cats: Set<string> }> = {};
-    // 전체 terms가 아닌 현재 필터된 terms 기준
-    // 단, 대분류 사이드바는 전체 기준이어야 하므로 _SEARCH_IDX 기준으로 별도 계산
     GROUP_ORDER.forEach(g => { map[g] = { count: 0, cats: new Set() }; });
-    terms.forEach((t: any) => {
+    TERMS.forEach((t: any) => {
       const g = t.group || '';
       if (map[g]) {
         map[g].count++;
@@ -984,7 +982,7 @@ function GlossaryView({ terms, termsHasMore, termsLoading, onLoadMore, searchQue
       }
     });
     return map;
-  }, [terms]);
+  }, []);
 
   // 선택된 대분류의 중분류 목록
   const subCatList = React.useMemo(() => {
