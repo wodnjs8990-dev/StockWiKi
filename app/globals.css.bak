@@ -2,6 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── IBM Plex 폰트 ── */
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500&family=IBM+Plex+Sans:ital,wght@0,200;0,300;0,400;0,500;0,600;1,300&display=swap');
+
 /* ════════════════════════════════════════════════
    StockWiKi v2 Design System — Dashboard.html 기준
    ════════════════════════════════════════════════ */
@@ -23,9 +26,9 @@
 
   /* ── Text scale ── */
   --t1: #e8e4dc;
-  --t2: #b0aca6;
-  --t3: #6e6a66;
-  --t4: #4a4845;
+  --t2: #8a8680;
+  --t3: #3a3835;
+  --t4: #1e1c1a;
 
   /* ── Font stacks ── */
   --mono: 'IBM Plex Mono', monospace;
@@ -54,7 +57,40 @@
   color-scheme: dark;
 }
 
-
+/* ── 라이트 테마 (폴백) ── */
+html.light {
+  --bg: #f5f2eb;
+  --s1: rgba(0,0,0,.04);
+  --s2: rgba(0,0,0,.07);
+  --b1: rgba(0,0,0,.1);
+  --b2: rgba(0,0,0,.06);
+  --b3: rgba(0,0,0,.15);
+  --gold:  #a07030;
+  --green: #3a5c36;
+  --red:   #c04040;
+  --t1: #1a1a1a;
+  --t2: #5a5550;
+  --t3: #aaa8a4;
+  --t4: #d4d2ce;
+  --bg-page:      #f5f2eb;
+  --bg-surface:   #fffef9;
+  --bg-card:      #f0ede4;
+  --bg-hover:     rgba(0,0,0,0.04);
+  --bg-header:    rgba(245,242,235,0.97);
+  --text-primary:   #1a1a1a;
+  --text-secondary: #2a2622;
+  --text-muted:     #5a5550;
+  --text-faint:     #888380;
+  --text-dimmer:    #aaa8a4;
+  --border:       #d8d4c8;
+  --border-soft:  #e0ddd4;
+  --border-mid:   #c8c4b8;
+  --accent:       #a07030;
+  --accent-green: #3a5c36;
+  --accent-green-bg: #edf5ec;
+  --placeholder:  #aaa8a4;
+  color-scheme: light;
+}
 
 /* ════════════ BASE ════════════ */
 html, body {

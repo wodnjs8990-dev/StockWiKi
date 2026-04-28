@@ -1,9 +1,15 @@
 'use client';
 
-import React, { useState, useMemo, useEffect, useRef, createContext, useContext } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback, createContext, useContext } from 'react';
 
 // 계산기 세션 key prefix — 비교 모드에서 B 패널이 독립적인 state를 갖도록
 const CalcPrefixContext = createContext<string>('');
+
+// CalcResultsContext — ResultBox가 결과를 오른쪽 패널로 전달
+type CalcResult = { label: string; value: string; unit: string; highlight?: boolean; bands?: number[]; interpret?: (n:number,isLow:boolean,isHigh:boolean)=>string; color?: string };
+type CalcResultsSink = (results: CalcResult[]) => void;
+const CalcResultsContext = createContext<{ sink: CalcResultsSink; color: string } | null>(null);
+
 import { Search, Calculator, BookOpen, ChevronRight, ChevronLeft, X, ArrowUpRight, Star, Clock, Menu, Link as LinkIcon, Copy, Check, Share2, CalendarDays, Info, Keyboard, LayoutDashboard, TrendingUp } from 'lucide-react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -143,7 +149,7 @@ export default function StockWiki({ features, customEvents }: { features?: Featu
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showCommandK, setShowCommandK] = useState(false);
   const [showGuide, setShowGuide] = useState(false);
-  const [isDark, setIsDark] = useState(true);
+  const isDark = true;
   const [toasts, setToasts] = useState<{ id: number; msg: string; type?: 'success'|'info' }[]>([]);
   const searchRef = useRef<HTMLInputElement | null>(null);
   const lastFocusRef = useRef<HTMLElement | null>(null);
@@ -178,27 +184,13 @@ export default function StockWiki({ features, customEvents }: { features?: Featu
     setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 2500);
   };
 
-  // 테마 초기화 (localStorage)
-  useEffect(() => {
-    const saved = localStorage.getItem('stockwiki_theme');
-    const dark = saved ? saved === 'dark' : true;
-    setIsDark(dark);
-    document.documentElement.classList.toggle('light', !dark);
-  }, []);
-
   // URL의 term 파라미터에서 용어 로드 (마운트 시)
   useEffect(() => {
     if (termFromUrl) {
       fetchTermById(termFromUrl).then(t => { if (t) openTerm(t); });
     }
   }, []); // 마운트 1회만
-
-  const toggleTheme = () => {
-    const next = !isDark;
-    setIsDark(next);
-    document.documentElement.classList.toggle('light', !next);
-    localStorage.setItem('stockwiki_theme', next ? 'dark' : 'light');
-  };
+  const toggleTheme = () => {};  // dark-only
 
   // 즐겨찾기 초기화 (마운트 시)
   useEffect(() => {
@@ -375,8 +367,8 @@ export default function StockWiki({ features, customEvents }: { features?: Featu
     ? ['전체', '★ 즐겨찾기', ...CATEGORIES.slice(1)]
     : CATEGORIES;
 
-  // 다크/라이트 모드 색상 팔레트
-  const T = isDark ? {
+  // 다크/라이트 모드 색상 팔레트 (다크 전용)
+  const T = {
     bgPage:      '#080808',
     bgSurface:   '#0f0f10',
     bgCard:      '#0a0a0c',
@@ -389,9 +381,9 @@ export default function StockWiki({ features, customEvents }: { features?: Featu
     textPrimary:   '#e8e4dc',
     textSecondary: '#c4c0b8',
     textMuted:     '#6a6660',
-    textFaint:     '#3a3835',
-    textDimmer:    '#1e1c1a',
-    textFooter:    '#3a3835',
+    textFaint:     '#6e6a66',
+    textDimmer:    '#4a4845',
+    textFooter:    '#6e6a66',
     textTabActive: '#080808',
     border:      'rgba(255,255,255,0.07)',
     borderSoft:  'rgba(255,255,255,0.05)',
@@ -400,38 +392,10 @@ export default function StockWiki({ features, customEvents }: { features?: Featu
     accentGreen: '#4A7045',
     accentGreenBg: 'rgba(74,112,69,0.1)',
     accentGreenText: '#8bc87a',
-    placeholder: '#3a3835',
+    placeholder: 'rgba(255,255,255,.2)',
     commandKSelected: 'rgba(255,255,255,0.06)',
     inputBg:     'transparent',
     marketImpactBg: 'rgba(255,255,255,0.02)',
-  } : {
-    bgPage:      '#f5f2eb',
-    bgSurface:   '#fffef9',
-    bgCard:      '#ece8df',
-    bgHover:     'rgba(0,0,0,0.04)',
-    bgTabActive: '#1a1a1a',
-    bgHeader:    'rgba(245,242,235,0.95)',
-    bgOverlay:   'rgba(0,0,0,0.5)',
-    bgOverlay2:  'rgba(0,0,0,0.4)',
-    bgInput:     '#edf5ec',
-    textPrimary:   '#1a1a1a',
-    textSecondary: '#2a2622',
-    textMuted:     '#5a5550',
-    textFaint:     '#888380',
-    textDimmer:    '#aaa8a4',
-    textFooter:    '#888380',
-    textTabActive: '#f5f2eb',
-    border:      '#d8d4c8',
-    borderSoft:  '#e0ddd4',
-    borderMid:   '#c8c4b8',
-    accent:      '#a07030',
-    accentGreen: '#3a5c36',
-    accentGreenBg: '#edf5ec',
-    accentGreenText: '#3a5c36',
-    placeholder: '#aaa8a4',
-    commandKSelected: '#ece8df',
-    inputBg:     'transparent',
-    marketImpactBg: '#ece8df',
   };
 
   /* ── CommandK nav handler ── */
@@ -1457,614 +1421,281 @@ function GlossaryView({ terms, termsHasMore, termsLoading, onLoadMore, searchQue
 
 function TermModal({ term, termList, termsMap, onClose, categoryColors, favorites, toggleFav, favMemos, updateFavMemo, onNavigate, onNavigateCalc, onPrev, onNext, T, showToast }: any): JSX.Element {
   const isFav = favorites.has(term.id);
-  const memo = favMemos?.[term.id] || '';
-  const [memoText, setMemoText] = useState(memo);
-  const [memoSaved, setMemoSaved] = useState(false);
+  const [memoText, setMemoText] = useState(favMemos?.[term.id] || '');
+  const [showMemo, setShowMemo] = useState(false);
+  const [activeTocId, setActiveTocId] = useState('sec-easy');
+  const mainScrollRef = useRef<HTMLDivElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);
 
-  const saveMemo = () => {
-    updateFavMemo?.(term.id, memoText);
-    setMemoSaved(true);
-    setTimeout(() => setMemoSaved(false), 1500);
-    showToast?.('메모 저장됨');
-  };
-
-  // 모바일: 핸들 바에서만 드래그 다운으로 닫기 (내부 스크롤과 완전 분리)
-  const handleHandleTouchStart = (e: React.TouchEvent) => {
-    const el = modalRef.current;
-    if (!el) return;
-    // 열릴 때 animation 클래스 제거 — transform 직접 제어를 위해
-    el.style.animation = 'none';
-    (el as any)._handleDragStartY = e.touches[0].clientY;
-    (el as any)._handleDragging = true;
-  };
-  const handleHandleTouchMove = (e: React.TouchEvent) => {
-    const el = modalRef.current;
-    if (!el || !(el as any)._handleDragging) return;
-    e.preventDefault();
-    const dy = e.touches[0].clientY - ((el as any)._handleDragStartY ?? 0);
-    if (dy > 0) {
-      // 1:1로 손가락을 따라감 — 저항 없음
-      el.style.transform = `translateY(${dy}px)`;
-      el.style.transition = 'none';
-    } else {
-      // 위로 당기면 살짝 저항
-      el.style.transform = `translateY(${dy * 0.1}px)`;
-      el.style.transition = 'none';
-    }
-  };
-  const handleHandleTouchEnd = (e: React.TouchEvent) => {
-    const el = modalRef.current;
-    if (!el) return;
-    (el as any)._handleDragging = false;
-    const dy = e.changedTouches[0].clientY - ((el as any)._handleDragStartY ?? 0);
-    const threshold = window.innerHeight * 0.25; // 화면 1/4 이상 내리면 닫힘
-    if (dy > threshold) {
-      el.style.transition = 'transform 0.28s cubic-bezier(0.4,0,0.2,1)';
-      el.style.transform = 'translateY(100%)';
-      setTimeout(() => onClose(), 270);
-    } else {
-      // 원위치 — 스프링처럼 튕겨 올라옴
-      el.style.transition = 'transform 0.32s cubic-bezier(0.34,1.56,0.64,1)';
-      el.style.transform = 'translateY(0)';
-    }
-  };
-  const relatedTerms = term.related?.map((id: string) => termsMap?.get(id)).filter(Boolean) || [];
-  const hasDetailed = !!term.detailed;
-  const hasRelations = term.relations && Object.keys(term.relations).length > 0;
-  const hasImpact = !!term.marketImpact;
-  const hasEasy = !!term.easy;
-
-  const currentIdx = termList ? termList.findIndex(t => t.id === term.id) : -1;
+  const currentIdx = termList ? termList.findIndex((t: any) => t.id === term.id) : -1;
   const hasPrev = currentIdx > 0;
   const hasNext = termList && currentIdx < termList.length - 1;
   const total = termList ? termList.length : 0;
 
-  // 용어 비교 상태
-  const [compareMode, setCompareMode] = useState(false);
-  const [compareTerm, setCompareTerm] = useState<any>(null);
-  const [compareSearch, setCompareSearch] = useState('');
-  const [compareResults, setCompareResults] = useState<any[]>([]);
-  useEffect(() => {
-    if (!compareSearch) {
-      setCompareResults(relatedTerms.slice(0, 6));
-      return;
-    }
-    let cancelled = false;
-    fetchTerms(compareSearch, '전체', [], 0).then(res => {
-      if (cancelled) return;
-      setCompareResults(res.items.filter((t: any) => t.id !== term.id).slice(0, 8));
-    });
-    return () => { cancelled = true; };
-  }, [compareSearch, term.id, relatedTerms]);
+  const relatedTerms = term.related?.map((id: string) => termsMap?.get(id)).filter(Boolean) || [];
+  const categoryColor = categoryColors[term.category];
+  const accentColor = categoryColor?.text || '#C89650';
 
-  // 키보드 ← → 네비게이션
+  // 섹션 정의
+  const sections: { id: string; num: string; label: string; content: React.ReactNode }[] = [];
+  if (term.easy)        sections.push({ id: 'sec-easy',      num: '01', label: '쉽게 말하면', content: term.easy });
+  if (term.description) sections.push({ id: 'sec-overview',  num: String(sections.length + 1).padStart(2,'0'), label: '개요', content: term.description });
+  if (term.detailed)    sections.push({ id: 'sec-detailed',  num: String(sections.length + 1).padStart(2,'0'), label: '심화', content: term.detailed });
+  if (term.formula)     sections.push({ id: 'sec-formula',   num: String(sections.length + 1).padStart(2,'0'), label: '공식', content: term.formula });
+  if (term.example)     sections.push({ id: 'sec-example',   num: String(sections.length + 1).padStart(2,'0'), label: '예시', content: term.example });
+  if (term.marketImpact)sections.push({ id: 'sec-impact',    num: String(sections.length + 1).padStart(2,'0'), label: '시장 영향', content: term.marketImpact });
+
+  // Scrollspy
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (compareMode) return; // 비교 모드에서는 화살표 비활성
+    const el = mainScrollRef.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      entries => {
+        const vis = entries.filter(e => e.isIntersecting).sort((a,b)=>a.boundingClientRect.top - b.boundingClientRect.top);
+        if (vis.length > 0) setActiveTocId(vis[0].target.id);
+      },
+      { root: el, threshold: 0.3 }
+    );
+    el.querySelectorAll('[id^="sec-"]').forEach(s => obs.observe(s));
+    return () => obs.disconnect();
+  }, [term.id]);
+
+  // 키보드 네비
+  useEffect(() => {
+    const h = (e: KeyboardEvent) => {
       if (e.key === 'ArrowLeft' && hasPrev) onPrev?.();
       if (e.key === 'ArrowRight' && hasNext) onNext?.();
+      if (e.key === 'Escape') onClose();
     };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [hasPrev, hasNext, onPrev, onNext, compareMode]);
+    window.addEventListener('keydown', h);
+    return () => window.removeEventListener('keydown', h);
+  }, [hasPrev, hasNext]);
 
-  // 모바일 닫기 애니메이션
-  const closeWithAnimation = () => {
-    const el = modalRef.current;
-    if (el && window.innerWidth < 768) {
-      // CSS animation(modal-panel-in)이 transform을 덮어쓰지 못하도록 제거
-      el.style.animation = 'none';
-      // 강제 reflow — 브라우저가 현재 위치를 확정하도록
-      void el.offsetHeight;
-      el.style.transition = 'transform 0.28s cubic-bezier(0.4,0,0.2,1)';
-      el.style.transform = 'translateY(100%)';
-      setTimeout(() => onClose(), 270);
+  // 모바일 드래그 닫기
+  const handleHandleTouchStart = (e: React.TouchEvent) => {
+    const el = modalRef.current; if (!el) return;
+    el.style.animation = 'none';
+    (el as any)._sy = e.touches[0].clientY; (el as any)._drag = true;
+  };
+  const handleHandleTouchMove = (e: React.TouchEvent) => {
+    const el = modalRef.current; if (!el || !(el as any)._drag) return;
+    e.preventDefault();
+    const dy = e.touches[0].clientY - ((el as any)._sy ?? 0);
+    if (dy > 0) { el.style.transform = `translateY(${dy}px)`; el.style.transition = 'none'; }
+  };
+  const handleHandleTouchEnd = (e: React.TouchEvent) => {
+    const el = modalRef.current; if (!el) return;
+    (el as any)._drag = false;
+    const dy = e.changedTouches[0].clientY - ((el as any)._sy ?? 0);
+    if (dy > window.innerHeight * 0.25) {
+      el.style.transition = 'transform .28s cubic-bezier(.4,0,.2,1)';
+      el.style.transform = 'translateY(100%)'; setTimeout(onClose, 270);
     } else {
-      onClose();
+      el.style.transition = 'transform .32s cubic-bezier(.34,1.56,.64,1)';
+      el.style.transform = 'translateY(0)';
     }
   };
 
-  // Scrollspy — 본문 섹션 교차 관찰
-  const [activeTocId, setActiveTocId] = useState<string>('sec-overview');
-  const mainScrollRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const container = mainScrollRef.current;
-    if (!container) return;
-    const observer = new IntersectionObserver(
-      entries => {
-        // 가장 위에 있는 intersecting 섹션을 활성으로
-        const visible = entries.filter(e => e.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
-        if (visible.length > 0) setActiveTocId(visible[0].target.id);
-      },
-      { root: container, threshold: 0.25, rootMargin: '0px 0px -40% 0px' }
-    );
-    const sections = container.querySelectorAll('[id^="sec-"]');
-    sections.forEach(s => observer.observe(s));
-    return () => observer.disconnect();
-  }, [term.id]);
+  const closeAnim = () => {
+    const el = modalRef.current;
+    if (el && window.innerWidth < 768) {
+      el.style.animation='none'; void el.offsetHeight;
+      el.style.transition='transform .28s cubic-bezier(.4,0,.2,1)';
+      el.style.transform='translateY(100%)'; setTimeout(onClose,270);
+    } else onClose();
+  };
 
   return (
     <div
       className="modal-overlay-in fixed inset-0 z-50 flex md:items-center md:justify-center md:p-4 items-end"
-      style={{ background: T.bgOverlay }}
-      onClick={closeWithAnimation}
+      style={{ background: 'rgba(0,0,0,.85)' }}
+      onClick={closeAnim}
     >
       <div
         ref={modalRef}
-        className="modal-panel-in w-full md:max-w-5xl border flex flex-col"
-        style={{
-          background: T.bgSurface,
-          borderColor: T.border,
-          maxHeight: '92vh',
-          borderRadius: '0',
-        }}
+        className="modal-panel-in w-full md:max-w-4xl border flex flex-col"
+        style={{ background: '#0d0d0d', borderColor: 'rgba(255,255,255,.08)', maxHeight: '92vh', borderRadius: 16, overflow: 'hidden' }}
         onClick={e => e.stopPropagation()}
       >
-        {/* 모바일 드래그 핸들 — 터치 핸들러는 이 영역에만 */}
-        <div
-          className="md:hidden flex justify-center pt-3 pb-2 cursor-grab active:cursor-grabbing"
-          style={{ touchAction: 'none' }}
-          onTouchStart={handleHandleTouchStart}
-          onTouchMove={handleHandleTouchMove}
-          onTouchEnd={handleHandleTouchEnd}
-        >
-          <div className="w-12 h-1 rounded-full" style={{ background: T.borderMid }} />
+        {/* 모바일 드래그 핸들 */}
+        <div className="md:hidden flex justify-center pt-3 pb-1 cursor-grab" style={{ touchAction: 'none' }}
+          onTouchStart={handleHandleTouchStart} onTouchMove={handleHandleTouchMove} onTouchEnd={handleHandleTouchEnd}>
+          <div style={{ width: 48, height: 4, borderRadius: 2, background: 'rgba(255,255,255,.15)' }} />
         </div>
-        <div
-          className="px-4 md:px-8 py-4 md:py-5 flex items-center justify-between border-b sticky top-0 z-10"
-          style={{ background: categoryColors[term.category]?.bg, color: categoryColors[term.category]?.text, borderColor: T.border }}
-        >
-          <div className="flex items-center gap-2 md:gap-3">
-            <span className="ball-joint hidden sm:inline-block" style={{ background: categoryColors[term.category]?.text }}></span>
-            <span className="text-[12px] mono uppercase tracking-[0.3em]">{term.category}</span>
+
+        {/* 상단 바 */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 20px', borderBottom: '1px solid rgba(255,255,255,.06)', flexShrink: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             {total > 0 && (
-              <span className="text-[12px] mono opacity-60 hidden sm:inline">
+              <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'rgba(255,255,255,.35)' }}>
                 {currentIdx + 1} / {total}
               </span>
             )}
           </div>
-          <div className="flex items-center gap-1.5 md:gap-3">
-            <button onClick={() => toggleFav(term.id)} style={{ color: 'inherit' }} title="이 용어 즐겨찾기">
-              <Star size={15} fill={isFav ? 'currentColor' : 'none'} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <button onClick={() => toggleFav(term.id)} style={{ width: 36, height: 36, borderRadius: 9, border: `1px solid rgba(255,255,255,.1)`, background: isFav ? 'rgba(200,150,80,.12)' : 'rgba(255,255,255,.04)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+              <Star size={14} fill={isFav ? accentColor : 'none'} color={isFav ? accentColor : 'rgba(255,255,255,.5)'} />
             </button>
-            {/* 비교 버튼 */}
-            <button
-              onClick={() => { setCompareMode(m => !m); setCompareTerm(null); setCompareSearch(''); }}
-              className="flex items-center gap-1 text-[12px] mono px-1.5 md:px-2 py-1 border transition-all"
-              style={{
-                borderColor: compareMode ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.2)',
-                background: compareMode ? 'rgba(255,255,255,0.15)' : 'transparent',
-                color: 'inherit',
-              }}
-              title="다른 용어와 비교"
-            >
-              <span className="hidden sm:inline">비교</span>
-              <span className="sm:hidden">≡</span>
+            <button onClick={() => setShowMemo(m=>!m)} style={{ width: 36, height: 36, borderRadius: 9, border: `1px solid rgba(255,255,255,.1)`, background: showMemo ? 'rgba(255,255,255,.08)' : 'rgba(255,255,255,.04)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+              <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'rgba(255,255,255,.5)' }}>메</span>
             </button>
-            <button
-              onClick={async (e) => {
-                e.stopPropagation();
-                const url = `${window.location.origin}/?term=${term.id}`;
-                if (navigator.share && /Mobi/i.test(navigator.userAgent)) {
-                  await navigator.share({ title: term.name, text: term.fullName, url });
-                } else {
-                  await navigator.clipboard.writeText(url);
-                  showToast?.('링크 복사됨');
-                }
-              }}
-              style={{ color: 'inherit' }}
-              title="이 용어 공유"
-            >
-              <Share2 size={15} />
+            <button onClick={closeAnim} style={{ width: 36, height: 36, borderRadius: 9, border: '1px solid rgba(255,255,255,.1)', background: 'rgba(255,255,255,.04)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+              <X size={15} color="rgba(255,255,255,.6)" />
             </button>
-            <button onClick={closeWithAnimation} className="flex items-center justify-center w-10 h-10 md:w-7 md:h-7 shrink-0"><X size={18} /></button>
           </div>
         </div>
 
-        {/* ── 2단 바디: 본문 + 사이드 (md 이상) ── */}
-        <div className="flex flex-1 min-h-0">
+        {/* 2단: 본문 + 사이드 */}
+        <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
 
-          {/* 본문 스크롤 영역 */}
-          <div ref={mainScrollRef} className="flex-1 overflow-y-auto p-6 md:p-10 min-w-0" style={{ overscrollBehavior: 'contain', touchAction: 'pan-y' }}>
+          {/* 본문 스크롤 */}
+          <div ref={mainScrollRef} style={{ flex: 1, overflowY: 'auto', padding: '32px 40px 40px', minWidth: 0, overscrollBehavior: 'contain' }}>
 
-          {/* 비교 모드 */}
-          {compareMode && (
-            <div className="mb-8 pb-8 border-b" style={{ borderColor: T.border }}>
-              <div className="flex items-center gap-2 mb-4">
-                <span className="text-[12px] mono uppercase tracking-[0.2em]" style={{ color: T.textFaint }}>용어 비교 · Compare Terms</span>
-                <button
-                  onClick={() => { setCompareMode(false); setCompareTerm(null); }}
-                  className="ml-auto text-[12px] mono px-2 py-0.5 border"
-                  style={{ borderColor: T.border, color: T.textFaint }}
-                >
-                  비교 종료
-                </button>
-              </div>
-
-              {!compareTerm ? (
-                /* 비교 용어 선택 */
-                <div>
-                  <div className="flex border mb-3" style={{ borderColor: T.border }}>
-                    <div className="px-3 py-2 border-r flex items-center" style={{ borderColor: T.border, background: T.bgCard }}>
-                      <Search size={12} style={{ color: T.textFaint }} />
-                    </div>
-                    <input
-                      value={compareSearch}
-                      onChange={e => setCompareSearch(e.target.value)}
-                      placeholder="비교할 용어 검색..."
-                      className="flex-1 px-3 py-2 bg-transparent"
-                      style={{ color: T.textPrimary, fontSize: '16px' }}
-                    />
-                  </div>
-                  <div className="text-[12px] mono mb-2" style={{ color: T.textFaint }}>
-                    {compareSearch ? '검색 결과' : '관련 용어'}
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {compareResults.map((rt: any) => {
-                      const rc = categoryColors[rt.category];
-                      return (
-                        <button
-                          key={rt.id}
-                          onClick={() => setCompareTerm(rt)}
-                          className="flex items-center gap-2 px-3 py-1.5 text-xs border transition-all hover:bg-white/5"
-                          style={{ borderColor: T.border, color: T.textSecondary }}
-                        >
-                          <span className="w-1.5 h-1.5 rounded-full" style={{ background: rc?.bg }}></span>
-                          <span className="font-medium">{rt.name}</span>
-                          <span style={{ color: T.textFaint }}>{rt.fullName}</span>
-                        </button>
-                      );
-                    })}
-                    {compareResults.length === 0 && (
-                      <div className="text-xs" style={{ color: T.textDimmer }}>결과 없음</div>
-                    )}
-                  </div>
-                </div>
-              ) : (
-                /* 나란히 비교 */
-                <div>
-                  <div className="grid grid-cols-2 gap-4">
-                    {/* 현재 용어 */}
-                    <div className="border p-4" style={{ borderColor: categoryColors[term.category]?.bg || T.border, background: T.bgCard }}>
-                      <div className="flex items-center gap-2 mb-3">
-                        <span className="text-[11px] mono px-2 py-0.5" style={{ background: categoryColors[term.category]?.bg, color: categoryColors[term.category]?.text }}>{term.category}</span>
-                        <span className="text-[12px] mono" style={{ color: T.textFaint }}>현재</span>
-                      </div>
-                      <div className="text-2xl font-medium mb-1" style={{ color: T.textPrimary }}>{term.name}</div>
-                      <div className="text-xs mb-3" style={{ color: T.textFaint }}>{term.fullName}</div>
-                      <div className="text-xs leading-relaxed mb-4" style={{ color: T.textMuted }}>{term.description}</div>
-                      {term.formula && (
-                        <div className="mono text-xs px-3 py-2 border-l-2 mb-3" style={{ background: T.bgSurface, borderColor: categoryColors[term.category]?.bg, color: T.textPrimary }}>
-                          {term.formula}
-                        </div>
-                      )}
-                    </div>
-                    {/* 비교 용어 */}
-                    <div className="border p-4" style={{ borderColor: categoryColors[compareTerm.category]?.bg || T.border, background: T.bgCard }}>
-                      <div className="flex items-center gap-2 mb-3">
-                        <span className="text-[11px] mono px-2 py-0.5" style={{ background: categoryColors[compareTerm.category]?.bg, color: categoryColors[compareTerm.category]?.text }}>{compareTerm.category}</span>
-                        <button
-                          onClick={() => setCompareTerm(null)}
-                          className="ml-auto text-[12px] mono px-1.5 py-0.5 border"
-                          style={{ borderColor: T.border, color: T.textFaint }}
-                        >변경</button>
-                      </div>
-                      <div className="text-2xl font-medium mb-1" style={{ color: T.textPrimary }}>{compareTerm.name}</div>
-                      <div className="text-xs mb-3" style={{ color: T.textFaint }}>{compareTerm.fullName}</div>
-                      <div className="text-xs leading-relaxed mb-4" style={{ color: T.textMuted }}>{compareTerm.description}</div>
-                      {compareTerm.formula && (
-                        <div className="mono text-xs px-3 py-2 border-l-2 mb-3" style={{ background: T.bgSurface, borderColor: categoryColors[compareTerm.category]?.bg, color: T.textPrimary }}>
-                          {compareTerm.formula}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  {/* 항목별 비교표 */}
-                  <div className="mt-4 border" style={{ borderColor: T.border }}>
-                    {[
-                      { key: 'category', label: '카테고리' },
-                      { key: 'en', label: '영문' },
-                    ].map(row => (
-                      <div key={row.key} className="grid grid-cols-[120px_1fr_1fr] border-b last:border-b-0" style={{ borderColor: T.border }}>
-                        <div className="px-3 py-2 text-[12px] mono uppercase flex items-center" style={{ background: T.bgCard, color: T.textFaint, borderRight: `1px solid ${T.border}` }}>{row.label}</div>
-                        <div className="px-3 py-2 text-xs border-r" style={{ borderColor: T.border, color: T.textSecondary }}>{term[row.key]}</div>
-                        <div className="px-3 py-2 text-xs" style={{ color: T.textSecondary }}>{compareTerm[row.key]}</div>
-                      </div>
-                    ))}
-                    <div className="grid grid-cols-[120px_1fr_1fr] border-b" style={{ borderColor: T.border }}>
-                      <div className="px-3 py-2 text-[12px] mono uppercase flex items-center" style={{ background: T.bgCard, color: T.textFaint, borderRight: `1px solid ${T.border}` }}>예시</div>
-                      <div className="px-3 py-2 text-xs border-r italic" style={{ borderColor: T.border, color: T.textMuted }}>{term.example?.slice(0, 80)}{term.example?.length > 80 ? '…' : ''}</div>
-                      <div className="px-3 py-2 text-xs italic" style={{ color: T.textMuted }}>{compareTerm.example?.slice(0, 80)}{compareTerm.example?.length > 80 ? '…' : ''}</div>
-                    </div>
-                  </div>
-                  <div className="mt-3 flex gap-2">
-                    <button
-                      onClick={() => onNavigate(compareTerm.id)}
-                      className="text-xs px-3 py-1.5 border transition-all hover:bg-white/5"
-                      style={{ borderColor: T.border, color: T.textMuted }}
-                    >
-                      {compareTerm.name} 상세 보기 →
-                    </button>
-                  </div>
-                </div>
+            {/* 카테고리 pill */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 20 }}>
+              {term.category && (
+                <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: accentColor, padding: '4px 10px', borderRadius: 6, background: `${accentColor}18`, border: `1px solid ${accentColor}30`, letterSpacing: '.08em' }}>
+                  {term.category}
+                </span>
+              )}
+              {term.family && term.family !== term.category && (
+                <>
+                  <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'rgba(255,255,255,.25)' }}>·</span>
+                  <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'rgba(255,255,255,.4)', padding: '4px 10px', borderRadius: 6, background: 'rgba(255,255,255,.05)', border: '1px solid rgba(255,255,255,.1)', letterSpacing: '.08em' }}>
+                    {term.family}
+                  </span>
+                </>
               )}
             </div>
-          )}
 
-          {/* 타이틀 */}
-          <div className="mb-8 pb-6 border-b" style={{ borderColor: T.border }}>
-            <div className="text-4xl md:text-6xl font-light tracking-tight mb-3" style={{ color: T.textPrimary }}>{term.name}</div>
-            <div className="text-base md:text-lg" style={{ color: T.textMuted }}>{term.fullName}</div>
-            <div className="text-sm mono italic mt-1" style={{ color: T.textFaint }}>{term.en}</div>
-          </div>
-
-          {/* 한 줄 요약 (easy) */}
-          {hasEasy && (
-            <div id="sec-easy" className="mb-6 px-5 py-4 border-l-4" style={{ background: T.accentGreenBg, borderColor: T.accentGreen, scrollMarginTop: '8px' }}>
-              <div className="text-[12px] mono uppercase tracking-[0.2em] mb-2" style={{ color: T.accentGreen }}>💡 쉽게 말하면</div>
-              <p className="text-sm md:text-base leading-relaxed" style={{ color: T.accentGreenText }}>{term.easy}</p>
+            {/* 타이틀 */}
+            <div style={{ marginBottom: 32, paddingBottom: 28, borderBottom: '1px solid rgba(255,255,255,.06)' }}>
+              <div style={{ fontSize: 72, fontWeight: 200, lineHeight: 1, letterSpacing: '-.04em', color: '#fff', marginBottom: 14 }}>{term.name}</div>
+              <div style={{ fontSize: 22, fontWeight: 400, color: 'rgba(255,255,255,.75)', marginBottom: 4 }}>{term.fullName}</div>
+              {term.en && <div style={{ fontFamily: 'var(--mono)', fontSize: 12, color: 'rgba(255,255,255,.3)', fontStyle: 'italic' }}>{term.en}</div>}
             </div>
-          )}
 
-          {/* 요약 */}
-          <Section id="sec-overview" label="개요 · Summary" color={categoryColors[term.category]?.bg} T={T}>
-            <p className="text-base md:text-lg leading-relaxed" style={{ color: T.textPrimary }}>{term.description}</p>
-          </Section>
-
-          {/* 상세 설명 */}
-          {hasDetailed && (
-            <Section id="sec-detailed" label="심화 · In-Depth" color={categoryColors[term.category]?.bg} T={T}>
-              <p className="text-sm md:text-base leading-[1.8]" style={{ color: T.textSecondary }}>{term.detailed}</p>
-            </Section>
-          )}
-
-          {/* 공식 */}
-          <Section id="sec-formula" label="공식 · Formula" color={categoryColors[term.category]?.bg} T={T}>
-            <div className="mono text-sm md:text-base px-4 md:px-5 py-3 md:py-4 border-l-4" style={{ background: T.bgCard, borderColor: categoryColors[term.category]?.bg, color: T.textPrimary }}>
-              {term.formula}
-            </div>
-          </Section>
-
-          {/* 예시 */}
-          <Section id="sec-example" label="예시 · Example" color={categoryColors[term.category]?.bg} T={T}>
-            <div className="text-sm italic" style={{ color: T.textMuted }}>{term.example}</div>
-          </Section>
-
-          {/* 관계성 카드 */}
-          {hasRelations && (
-            <Section id="sec-relations" label="연결 관계 · Relations" color={categoryColors[term.category]?.bg} T={T}>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-3">
-                {Object.entries(term.relations).map(([key, value]) => {
-                  // termsMap에서 이름 매칭 시도 (API 캐시 범위 내)
-                  const matchTerm = termsMap ? (Array.from(termsMap.values()) as any[]).find((t: any) =>
-                    t.name === key ||
-                    t.fullName === key ||
-                    key.includes(t.name) ||
-                    (t.en && key.toLowerCase().includes(t.en.toLowerCase()))
-                  ) : null;
-                  const matchColor = matchTerm ? categoryColors[(matchTerm as any).category] : null;
-                  return (
-                    <div
-                      key={key}
-                      className={`border p-4 transition-all ${matchTerm ? 'cursor-pointer hover:bg-white/5' : ''}`}
-                      style={{ borderColor: T.border, background: T.bgCard }}
-                      onClick={matchTerm ? () => onNavigate((matchTerm as any).id) : undefined}
-                    >
-                      <div className="flex items-center justify-between gap-2 mb-2">
-                        <div className="flex items-center gap-2">
-                          {matchColor && <span className="w-1.5 h-1.5 rounded-full" style={{ background: matchColor.bg }}></span>}
-                          <span className="text-sm font-medium" style={{ color: T.textPrimary }}>{key}</span>
-                        </div>
-                        {matchTerm && <ArrowUpRight size={12} style={{ color: T.textFaint }} />}
-                      </div>
-                      <p className="text-xs leading-relaxed" style={{ color: T.textMuted } as any}>{value as React.ReactNode}</p>
-                    </div>
-                  );
-                })}
-              </div>
-            </Section>
-          )}
-
-          {/* 시장 영향 */}
-          {hasImpact && (
-            <Section id="sec-impact" label="시장 영향 · Market Impact" color={categoryColors[term.category]?.bg} T={T}>
-              <div className="text-sm md:text-base leading-relaxed px-4 py-3 border-l-2" style={{ background: T.marketImpactBg, borderColor: T.accent, color: T.textPrimary }}>
-                {term.marketImpact}
-              </div>
-            </Section>
-          )}
-
-          {/* 관련 용어 */}
-          {relatedTerms.length > 0 && (
-            <div className="mt-6 pt-6 border-t" style={{ borderColor: T.border }}>
-              <div className="text-[12px] mono uppercase tracking-[0.2em] mb-3" style={{ color: T.textFaint }}>관련 용어 · Related Terms</div>
-              <div className="flex flex-wrap gap-2">
-                {relatedTerms.map(rt => {
-                  const rc = categoryColors[rt.category];
-                  return (
-                    <button
-                      key={rt.id}
-                      onClick={() => onNavigate(rt.id)}
-                      className="flex items-center gap-2 px-3 py-1.5 text-xs border transition-all hover:bg-white/5"
-                      style={{ borderColor: T.border, color: T.textSecondary }}
-                    >
-                      <span className="w-1.5 h-1.5 rounded-full" style={{ background: rc?.bg }}></span>
-                      <span className="font-medium">{rt.name}</span>
-                      <ChevronRight size={10} />
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* 즐겨찾기 메모 */}
-          {isFav && (
-            <div className="mt-6 pt-6 border-t" style={{ borderColor: T.border }}>
-              <div className="flex items-center gap-2 mb-3">
-                <Star size={11} fill={T.accent} stroke={T.accent} />
-                <div className="text-[12px] mono uppercase tracking-[0.2em]" style={{ color: T.textFaint }}>내 메모 · My Note</div>
-                {memoText !== memo && (
-                  <span className="text-[11px] mono ml-1" style={{ color: T.accent }}>● 미저장</span>
-                )}
-              </div>
-              <div className="relative border" style={{ borderColor: T.border }}>
+            {/* 메모 패널 */}
+            {showMemo && (
+              <div style={{ marginBottom: 28, padding: '16px 18px', borderRadius: 12, background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.08)' }}>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 9, letterSpacing: '.2em', color: 'rgba(255,255,255,.3)', marginBottom: 10 }}>메모</div>
                 <textarea
                   value={memoText}
                   onChange={e => setMemoText(e.target.value)}
-                  placeholder="이 용어에 대한 메모를 남겨보세요 (예: 투자 전략, 참고 사항 등)"
+                  placeholder="나만의 메모를 작성하세요..."
                   rows={3}
-                  className="w-full px-4 py-3 text-sm bg-transparent resize-none"
-                  style={{ color: T.textPrimary, fontFamily: 'inherit' }}
+                  style={{ width: '100%', background: 'transparent', border: 'none', outline: 'none', resize: 'none', color: '#fff', fontSize: 13, lineHeight: 1.6, fontFamily: 'var(--sans)' }}
                 />
-              </div>
-              <div className="flex items-center justify-between mt-2">
-                <span className="text-[12px] mono" style={{ color: T.textFaint }}>
-                  {memoText.length > 0 ? `${memoText.length}자` : ''}
-                </span>
-                <button
-                  onClick={saveMemo}
-                  disabled={memoText === memo}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs mono transition-all"
-                  style={{
-                    background: memoSaved ? T.accentGreen : (memoText !== memo ? T.accent : T.borderMid),
-                    color: memoText !== memo ? (memoSaved ? '#fff' : '#0a0a0a') : T.textFaint,
-                    cursor: memoText !== memo ? 'pointer' : 'not-allowed',
-                  }}
-                >
-                  {memoSaved ? <><Check size={11} /><span>저장됨</span></> : <span>저장</span>}
-                </button>
-              </div>
-            </div>
-          )}
-          {!isFav && (
-            <div className="mt-6 pt-6 border-t flex items-center gap-2" style={{ borderColor: T.border }}>
-              <Star size={11} style={{ color: T.textDimmer }} />
-              <span className="text-[12px] mono" style={{ color: T.textDimmer }}>즐겨찾기 추가 시 개인 메모를 작성할 수 있습니다</span>
-            </div>
-          )}
-          </div>{/* /본문 스크롤 */}
-
-          {/* ── 사이드바 (PC only) ── */}
-          <aside
-            className="hidden md:flex flex-col shrink-0 border-l overflow-y-auto"
-            style={{ width: '260px', borderColor: T.border, background: T.bgCard }}
-          >
-            {/* § 목차 */}
-            <div className="px-5 pt-5 pb-3 border-b" style={{ borderColor: T.border }}>
-              <div className="text-[11px] mono uppercase tracking-[0.25em] mb-3" style={{ color: T.textFaint }}>목차 · Contents</div>
-              <div className="flex flex-col">
-                {([
-                  ...(hasEasy ? [{ id: 'sec-easy', n: '01', label: '쉽게 말하면' }] : []),
-                  { id: 'sec-overview',  n: hasEasy ? '02' : '01', label: '개요' },
-                  ...(hasDetailed ? [{ id: 'sec-detailed', n: hasEasy ? '03' : '02', label: '심화 설명' }] : []),
-                  { id: 'sec-formula', n: (() => { let c = 1; if (hasEasy) c++; if (hasDetailed) c++; return String(c + 1).padStart(2,'0'); })(), label: '공식' },
-                  { id: 'sec-example', n: (() => { let c = 2; if (hasEasy) c++; if (hasDetailed) c++; return String(c + 1).padStart(2,'0'); })(), label: '예시' },
-                  ...(hasRelations ? [{ id: 'sec-relations', n: (() => { let c = 3; if (hasEasy) c++; if (hasDetailed) c++; return String(c + 1).padStart(2,'0'); })(), label: '연결 관계' }] : []),
-                  ...(hasImpact ? [{ id: 'sec-impact', n: (() => { let c = 4; if (hasEasy) c++; if (hasDetailed) c++; if (hasRelations) c++; return String(c + 1).padStart(2,'0'); })(), label: '시장 영향' }] : []),
-                ] as { id: string; n: string; label: string }[]).map(item => {
-                  const isActive = activeTocId === item.id;
-                  return (
-                    <button
-                      key={item.id}
-                      onClick={() => {
-                        const el = mainScrollRef.current?.querySelector(`#${item.id}`);
-                        el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                      }}
-                      className="flex items-center gap-2 text-xs py-1.5 px-1 rounded-sm text-left transition-all"
-                      style={{
-                        color: isActive ? (categoryColors[term.category]?.bg || T.accent) : T.textMuted,
-                        background: isActive ? `${categoryColors[term.category]?.bg || T.accent}15` : 'transparent',
-                        fontWeight: isActive ? 600 : 400,
-                      }}
-                    >
-                      <span className="w-4 text-right mono text-[10px] shrink-0" style={{ color: isActive ? (categoryColors[term.category]?.bg || T.accent) : T.textDimmer }}>{item.n}</span>
-                      <span>{item.label}</span>
-                      {isActive && <span className="ml-auto w-1 h-3 rounded-full shrink-0" style={{ background: categoryColors[term.category]?.bg || T.accent }} />}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* § 관련 용어 */}
-            {relatedTerms.length > 0 && (
-              <div className="px-5 pt-4 pb-3 border-b" style={{ borderColor: T.border }}>
-                <div className="text-[11px] mono uppercase tracking-[0.25em] mb-3" style={{ color: T.textFaint }}>관련 용어</div>
-                <div className="flex flex-col gap-1">
-                  {relatedTerms.slice(0, 6).map(rt => {
-                    const rc = categoryColors[rt.category];
-                    return (
-                      <button
-                        key={rt.id}
-                        onClick={() => onNavigate(rt.id)}
-                        className="flex items-center gap-2 text-xs py-1.5 text-left hover:opacity-80 transition-opacity"
-                        style={{ color: T.textSecondary }}
-                      >
-                        <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: rc?.bg }}></span>
-                        <span className="font-medium truncate">{rt.name}</span>
-                        <ChevronRight size={10} className="ml-auto shrink-0" style={{ color: T.textFaint }} />
-                      </button>
-                    );
-                  })}
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 8 }}>
+                  <button onClick={() => { updateFavMemo?.(term.id, memoText); showToast?.('메모 저장됨'); }} style={{ fontFamily: 'var(--mono)', fontSize: 10, color: accentColor, background: 'none', border: 'none', cursor: 'pointer', letterSpacing: '.08em' }}>저장</button>
                 </div>
               </div>
             )}
 
-            {/* § 계산기 바로가기 */}
-            <div className="px-5 pt-4 pb-4 mt-auto">
-              <div className="text-[11px] mono uppercase tracking-[0.25em] mb-3" style={{ color: T.textFaint }}>계산기 바로가기</div>
-              <button
-                onClick={() => { onClose(); if (onNavigateCalc) onNavigateCalc(); }}
-                className="w-full flex items-center justify-between px-3 py-2.5 border text-xs transition-all hover:opacity-80"
-                style={{ borderColor: T.border, color: T.textMuted, background: T.bgSurface }}
-              >
-                <span>관련 계산기 보기</span>
-                <Calculator size={12} />
-              </button>
-            </div>
-          </aside>
-        </div>{/* /flex 2단 */}
+            {/* 섹션들 */}
+            {sections.map((sec, i) => (
+              <div key={sec.id} id={sec.id} style={{ marginBottom: 32, scrollMarginTop: 8 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+                  <div style={{ width: 3, height: 18, borderRadius: 2, background: accentColor, boxShadow: `0 0 8px ${accentColor}88` }} />
+                  <span style={{ fontFamily: 'var(--mono)', fontSize: 9, color: accentColor, letterSpacing: '.12em' }}>{sec.num}</span>
+                  <span style={{ fontFamily: 'var(--mono)', fontSize: 9, color: 'rgba(255,255,255,.25)', letterSpacing: '.12em' }}>·</span>
+                  <span style={{ fontFamily: 'var(--mono)', fontSize: 9, color: 'rgba(255,255,255,.5)', letterSpacing: '.1em' }}>{sec.label}</span>
+                </div>
+                {sec.id === 'sec-formula' ? (
+                  <div style={{ padding: '18px 22px', borderRadius: 12, background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.08)', fontFamily: 'var(--mono)', fontSize: 15, color: '#fff', lineHeight: 1.7 }}>
+                    {sec.content as string}
+                  </div>
+                ) : sec.id === 'sec-example' ? (
+                  <div style={{ padding: '16px 20px', borderRadius: 12, borderLeft: `3px solid ${accentColor}55`, background: `${accentColor}08`, fontFamily: 'var(--mono)', fontSize: 13, color: 'rgba(255,255,255,.7)', fontStyle: 'italic', lineHeight: 1.7 }}>
+                    {sec.content as string}
+                  </div>
+                ) : (
+                  <p style={{ fontSize: 15, lineHeight: 1.8, color: 'rgba(255,255,255,.75)' }}>{sec.content as string}</p>
+                )}
+              </div>
+            ))}
 
-        {/* ── 하단 prev/next 바 ── */}
-        <div
-          className="flex items-center justify-between border-t px-5 py-3 shrink-0"
-          style={{ borderColor: T.border, background: T.bgCard }}
-        >
-          <button
-            onClick={(e) => { e.stopPropagation(); onPrev?.(); }}
-            disabled={!hasPrev}
-            className="flex items-center gap-2 text-xs mono px-3 py-2 border transition-all"
-            style={{
-              borderColor: hasPrev ? T.borderMid : T.border,
-              color: hasPrev ? T.textMuted : T.textDimmer,
-              background: 'transparent',
-              cursor: hasPrev ? 'pointer' : 'not-allowed',
-              opacity: hasPrev ? 1 : 0.4,
-            }}
-          >
-            <ChevronLeft size={12} />
-            <span>이전</span>
+            {/* 관련 용어 (본문 하단) */}
+            {relatedTerms.length > 0 && (
+              <div style={{ marginTop: 8, paddingTop: 24, borderTop: '1px solid rgba(255,255,255,.06)' }}>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 9, letterSpacing: '.2em', color: 'rgba(255,255,255,.3)', marginBottom: 14 }}>관련 용어</div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                  {relatedTerms.map((rt: any) => (
+                    <button key={rt.id} onClick={() => onNavigate(rt.id)}
+                      style={{ padding: '8px 16px', borderRadius: 8, background: 'rgba(255,255,255,.05)', border: '1px solid rgba(255,255,255,.09)', color: 'rgba(255,255,255,.7)', fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, transition: 'all .15s' }}>
+                      {rt.name}
+                      <ChevronRight size={11} style={{ opacity: .5 }} />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 계산기 열기 버튼 */}
+            {term.calcId && (
+              <button
+                onClick={onNavigateCalc}
+                style={{ marginTop: 28, padding: '14px 28px', borderRadius: 12, background: `linear-gradient(135deg, ${accentColor} 0%, ${accentColor}cc 100%)`, color: '#000', fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '.12em', fontWeight: 700, cursor: 'pointer', border: 'none', boxShadow: `0 4px 20px ${accentColor}44` }}
+              >
+                계산기 열기 →
+              </button>
+            )}
+          </div>
+
+          {/* 우측 사이드: 목차 + 관련 용어 */}
+          <div className="hidden md:flex flex-col" style={{ width: 200, flexShrink: 0, borderLeft: '1px solid rgba(255,255,255,.06)', padding: '28px 20px', overflowY: 'auto' }}>
+            {/* 목차 */}
+            <div style={{ fontFamily: 'var(--mono)', fontSize: 8.5, letterSpacing: '.2em', color: 'rgba(255,255,255,.25)', marginBottom: 14 }}>CONTENTS</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginBottom: 32 }}>
+              {sections.map(sec => {
+                const isActive = activeTocId === sec.id;
+                return (
+                  <button key={sec.id}
+                    onClick={() => {
+                      const el = mainScrollRef.current?.querySelector(`#${sec.id}`);
+                      el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }}
+                    style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px', borderRadius: 8, background: isActive ? 'rgba(255,255,255,.07)' : 'transparent', border: isActive ? `1px solid rgba(255,255,255,.1)` : '1px solid transparent', textAlign: 'left', cursor: 'pointer', transition: 'all .15s' }}>
+                    {isActive && <div style={{ width: 2, height: 14, borderRadius: 1, background: accentColor, flexShrink: 0 }} />}
+                    <span style={{ fontSize: 12, color: isActive ? '#fff' : 'rgba(255,255,255,.4)', fontWeight: isActive ? 500 : 400 }}>{sec.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* 관련 용어 사이드 */}
+            {relatedTerms.length > 0 && (
+              <>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 8.5, letterSpacing: '.2em', color: 'rgba(255,255,255,.25)', marginBottom: 10 }}>관련 용어</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                  {relatedTerms.slice(0, 6).map((rt: any) => (
+                    <button key={rt.id} onClick={() => onNavigate(rt.id)}
+                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 12px', borderRadius: 8, background: 'transparent', border: '1px solid transparent', color: 'rgba(255,255,255,.5)', fontSize: 13, cursor: 'pointer', textAlign: 'left', transition: 'all .15s' }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,.05)'; (e.currentTarget as HTMLButtonElement).style.color = '#fff'; }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,.5)'; }}>
+                      <span>{rt.name}</span>
+                      <ChevronRight size={11} style={{ opacity: .4 }} />
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* 하단 네비 */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px', borderTop: '1px solid rgba(255,255,255,.06)', flexShrink: 0 }}>
+          <button onClick={onPrev} disabled={!hasPrev}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 8, background: hasPrev ? 'rgba(255,255,255,.05)' : 'transparent', border: `1px solid ${hasPrev ? 'rgba(255,255,255,.1)' : 'transparent'}`, color: hasPrev ? 'rgba(255,255,255,.7)' : 'transparent', fontFamily: 'var(--mono)', fontSize: 11, cursor: hasPrev ? 'pointer' : 'default', transition: 'all .15s' }}>
+            <ChevronRight size={12} style={{ transform: 'rotate(180deg)' }} />
+            이전
           </button>
           {total > 0 && (
-            <span className="text-[11px] mono" style={{ color: T.textDimmer }}>
-              {currentIdx + 1} / {total}
-            </span>
+            <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'rgba(255,255,255,.25)' }}>{currentIdx + 1} / {total}</span>
           )}
-          <button
-            onClick={(e) => { e.stopPropagation(); onNext?.(); }}
-            disabled={!hasNext}
-            className="flex items-center gap-2 text-xs mono px-3 py-2 border transition-all"
-            style={{
-              borderColor: hasNext ? T.borderMid : T.border,
-              color: hasNext ? T.textMuted : T.textDimmer,
-              background: 'transparent',
-              cursor: hasNext ? 'pointer' : 'not-allowed',
-              opacity: hasNext ? 1 : 0.4,
-            }}
-          >
-            <span>다음</span>
+          <button onClick={onNext} disabled={!hasNext}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 8, background: hasNext ? accentColor : 'transparent', border: `1px solid ${hasNext ? accentColor : 'transparent'}`, color: hasNext ? '#000' : 'transparent', fontFamily: 'var(--mono)', fontSize: 11, fontWeight: 700, cursor: hasNext ? 'pointer' : 'default', transition: 'all .15s', boxShadow: hasNext ? `0 0 12px ${accentColor}55` : 'none' }}>
+            다음
             <ChevronRight size={12} />
           </button>
         </div>
@@ -2367,66 +1998,62 @@ function CalculatorView({ selectedCalc, setSelectedCalc, T, isDark }) {
           CALCULATORS › {activeGroup?.name?.toUpperCase() || 'INDEX'} › {currentCalc?.num || '—'}
         </div>
 
-        <div style={{ padding: '16px 20px', display: 'grid', gridTemplateColumns: '1fr 420px', gap: 16, alignItems: 'start' }}>
+        <div style={{ padding: '12px 20px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, alignItems: 'start' }}>
 
-          {/* ── INPUT CARD ── */}
-          <div style={{ position: 'relative', background: 'rgba(255,255,255,.032)', border: '1px solid rgba(255,255,255,.07)', borderRadius: 16, overflow: 'hidden' }}>
-            {/* Color top bar */}
+          {/* ── LEFT COL: A/B 버튼 + CalcHeader + Inputs + CalcNote ── */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
             {currentCalc && (
-              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: currentCalc.color, boxShadow: `0 0 12px ${currentCalc.color}99` }} />
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 4, marginBottom: 6 }}>
+                {['A', 'B'].map(m => {
+                  const isActive = (m === 'A' && !compareCalcMode) || (m === 'B' && compareCalcMode);
+                  return (
+                    <button key={m} onClick={() => setCompareCalcMode(m === 'B')}
+                      style={{ width: 32, height: 28, borderRadius: 7, border: `1px solid ${isActive ? currentCalc.color + '60' : 'rgba(255,255,255,.08)'}`, background: isActive ? `${currentCalc.color}18` : 'transparent', color: isActive ? currentCalc.color : 'var(--t2)', fontFamily: 'var(--mono)', fontSize: 11, cursor: 'pointer', fontWeight: 600, transition: 'all .15s' }}>
+                      {m}
+                    </button>
+                  );
+                })}
+              </div>
             )}
-            <div style={{ padding: '20px 22px 22px', marginTop: 2 }}>
-              {/* Calc header */}
-              {currentCalc && (
-                <div style={{ marginBottom: 20 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <span style={{ fontFamily: 'var(--mono)', fontSize: 8.5, letterSpacing: '.14em', textTransform: 'uppercase', color: currentCalc.color, padding: '3px 10px', borderRadius: 5, background: `${currentCalc.color}14`, border: `1px solid ${currentCalc.color}30` }}>{currentCalc.num}</span>
-                      <span style={{ fontFamily: 'var(--mono)', fontSize: 8.5, color: 'var(--t3)' }}>{activeGroup?.name}</span>
-                    </div>
-                    <div style={{ display: 'flex', gap: 5 }}>
-                      {['A', 'B'].map(m => (
-                        <button key={m} onClick={() => setCompareCalcMode(m === 'B')}
-                          style={{ width: 28, height: 28, borderRadius: 7, background: (m === 'A' && !compareCalcMode) || (m === 'B' && compareCalcMode) ? `${currentCalc.color}20` : 'rgba(255,255,255,.04)', border: `1px solid ${(m === 'A' && !compareCalcMode) || (m === 'B' && compareCalcMode) ? currentCalc.color + '50' : 'rgba(255,255,255,.08)'}`, color: (m === 'A' && !compareCalcMode) || (m === 'B' && compareCalcMode) ? currentCalc.color : 'var(--t3)', fontFamily: 'var(--mono)', fontSize: 10, cursor: 'pointer', fontWeight: 600 }}>
-                          {m}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  <div style={{ fontSize: 22, fontWeight: 300, color: '#fff', letterSpacing: '-.03em', marginBottom: 5 }}>{currentCalc.name}</div>
-                  <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--t3)' }}>{(currentCalc as any).desc ?? ''}</div>
-                </div>
-              )}
-
-              {/* Calc component (actual inputs) */}
-              <CalcPrefixContext.Provider value={compareCalcMode ? 'B' : 'A'}>
-                <div ref={panelARef}>
-                  {renderCalcComponent(selectedCalc)}
-                </div>
-              </CalcPrefixContext.Provider>
-            </div>
+            <CalcPrefixContext.Provider value={compareCalcMode ? 'B' : 'A'}>
+              <div ref={panelARef}>
+                {renderCalcComponent(selectedCalc)}
+              </div>
+            </CalcPrefixContext.Provider>
           </div>
 
-          {/* ── RESULT / REFERENCE PANEL ── */}
+          {/* ── RIGHT COL: 결과 패널 (HTML 프로토타입 그대로) ── */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
 
-            {/* Market reference card */}
+            {/* 결과 카드들 — panelARef의 sentinel [data-result-label] 에서 읽음 */}
+            <CalcResultsReader
+              containerRef={panelARef}
+              calcColor={currentCalc?.color || '#C89650'}
+              mode={compareCalcMode ? 'B' : 'A'}
+            />
+
+            {/* 시장 참고 데이터 */}
             {marketRefs.length > 0 && (
-              <div style={{ background: 'rgba(255,255,255,.025)', border: '1px solid rgba(255,255,255,.06)', borderRadius: 14, padding: '16px 18px' }}>
-                <div style={{ fontFamily: 'var(--mono)', fontSize: 8, letterSpacing: '.2em', textTransform: 'uppercase', color: 'var(--t3)', marginBottom: 12 }}>시장 기준 참고</div>
-                {marketRefs.map((ref, i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 0', borderBottom: i < marketRefs.length - 1 ? '1px solid rgba(255,255,255,.04)' : 'none' }}>
-                    <span style={{ fontSize: 12, color: 'var(--t2)' }}>{ref.label}</span>
-                    <span style={{ fontFamily: 'var(--mono)', fontSize: 13, color: '#fff', fontWeight: 500 }}>{ref.val}<span style={{ fontSize: 10, color: 'var(--t3)', marginLeft: 3 }}>{ref.unit}</span></span>
-                  </div>
-                ))}
+              <div className="card" style={{ padding: '20px 22px' }}>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 8, letterSpacing: '.22em', textTransform: 'uppercase', color: 'var(--t3)', marginBottom: 16 }}>시장 참고 데이터</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  {marketRefs.map((ref, i) => (
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', borderRadius: 10, background: 'rgba(255,255,255,.03)', border: '1px solid rgba(255,255,255,.05)' }}>
+                      <span style={{ fontSize: 12, color: 'var(--t2)' }}>{ref.label}</span>
+                      <div style={{ textAlign: 'right' }}>
+                        <span style={{ fontFamily: 'var(--mono)', fontSize: 15, fontWeight: 400, color: '#fff', letterSpacing: '-.02em' }}>{ref.val}</span>
+                        <span style={{ fontFamily: 'var(--mono)', fontSize: 9, color: 'var(--t3)', marginLeft: 4 }}>{ref.unit}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
 
-            {/* Compare mode panel B */}
+            {/* SCENARIO B — 비교 모드 */}
             {compareCalcMode && (
-              <div style={{ background: 'rgba(255,255,255,.025)', border: '1px solid rgba(255,255,255,.06)', borderRadius: 14, padding: '16px 18px' }}>
-                <div style={{ fontFamily: 'var(--mono)', fontSize: 8, letterSpacing: '.2em', color: 'var(--t3)', marginBottom: 10 }}>SCENARIO B</div>
+              <div className="card" style={{ padding: '16px 18px' }}>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 8, letterSpacing: '.22em', textTransform: 'uppercase', color: 'var(--t3)', marginBottom: 10 }}>SCENARIO B</div>
                 <CalcPrefixContext.Provider value="B">
                   <div ref={panelBRef}>
                     {renderCalcComponent(selectedCalc)}
@@ -2435,26 +2062,53 @@ function CalculatorView({ selectedCalc, setSelectedCalc, T, isDark }) {
               </div>
             )}
 
-            {/* Calc history */}
-            {calcHistory.length > 0 && (
-              <div style={{ background: 'rgba(255,255,255,.025)', border: '1px solid rgba(255,255,255,.06)', borderRadius: 14, padding: '16px 18px' }}>
-                <div style={{ fontFamily: 'var(--mono)', fontSize: 8, letterSpacing: '.2em', textTransform: 'uppercase', color: 'var(--t3)', marginBottom: 12 }}>최근 계산</div>
-                {calcHistory.slice(0, 5).map((entry, i) => (
-                  <div key={i} onClick={() => setSelectedCalc(entry.id)}
-                    className="hist-item"
-                    style={{ marginBottom: 6, cursor: 'pointer' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                      <span style={{ fontFamily: 'var(--mono)', fontSize: 9, color: 'var(--t3)' }}>{entry.label}</span>
-                      <span style={{ fontFamily: 'var(--mono)', fontSize: 9, color: 'var(--t3)' }}>{new Date(entry.ts).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}</span>
-                    </div>
-                    {entry.results.slice(0, 2).map((r, j) => (
-                      <div key={j} style={{ display: 'flex', gap: 6 }}>
-                        <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--t3)' }}>{r.label}:</span>
-                        <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--gold)', fontWeight: 500 }}>{r.value}</span>
-                      </div>
+            {/* 관련 용어 pills */}
+            {currentCalc && (() => {
+              const relatedMap: Record<string, string[]> = {
+                per: ['EPS','PBR','ROE','DCF'], pbr: ['BPS','PER','ROE'],
+                roe: ['ROA','순이익','자기자본','PER'], dcf: ['FCF','WACC','내재가치','성장률'],
+                kelly: ['기대값','변동성','리스크관리'], sharpe: ['소르티노','최대낙폭','변동성'],
+                var: ['CVaR','신뢰수준','정규분포'], wacc: ['자기자본비용','CAPM','베타'],
+              };
+              const related: string[] = relatedMap[selectedCalc] || [];
+              return related.length > 0 ? (
+                <div className="card" style={{ padding: '16px 18px' }}>
+                  <div style={{ fontFamily: 'var(--mono)', fontSize: 8, letterSpacing: '.22em', textTransform: 'uppercase', color: 'var(--t3)', marginBottom: 10 }}>관련 용어</div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                    {related.map((r: string) => (
+                      <div key={r} className="pill" style={{ fontSize: 11, cursor: 'default' }}>{r}</div>
                     ))}
                   </div>
-                ))}
+                </div>
+              ) : null;
+            })()}
+
+            {/* 계산 기록 */}
+            {calcHistory.length > 0 && (
+              <div className="card" style={{ padding: '16px 18px' }}>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 8, letterSpacing: '.22em', textTransform: 'uppercase', color: 'var(--t3)', marginBottom: 12 }}>계산 기록</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {calcHistory.slice(0, 5).map((entry, i) => {
+                    const entryColor = CALC_CATEGORIES.flatMap(c => c.calcs.map(cl => ({ ...cl, color: c.color }))).find(c => c.id === entry.id)?.color || '#C89650';
+                    const highlightResult = entry.results.find(r => r.value && r.value !== '—');
+                    return (
+                      <div key={i} onClick={() => setSelectedCalc(entry.id)}
+                        className="hist-item"
+                        style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
+                        <div style={{ width: 3, height: 28, borderRadius: 2, background: entryColor, flexShrink: 0, boxShadow: `0 0 5px ${entryColor}66` }} />
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 11.5, color: '#fff', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{entry.label}</div>
+                          <div style={{ fontFamily: 'var(--mono)', fontSize: 9, color: 'var(--t3)', marginTop: 1 }}>{new Date(entry.ts).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}</div>
+                        </div>
+                        {highlightResult && (
+                          <div style={{ fontFamily: 'var(--mono)', fontSize: 14, color: entryColor, textShadow: `0 0 8px ${entryColor}88`, flexShrink: 0 }}>
+                            {highlightResult.value}<span style={{ fontSize: 9, marginLeft: 2, color: 'var(--t3)' }}>{highlightResult.unit}</span>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             )}
           </div>
@@ -2522,56 +2176,47 @@ function formatKoreanUnit(value: string | number): string {
   return '';
 }
 
-function NumInput({ label, value, onChange, unit, placeholder, hint }: any) {
+function NumInput({ label, value, onChange, unit, placeholder, hint, color = '#C89650' }: any) {
   const [isFocused, setIsFocused] = useState(false);
 
-  // 포커스 중: 원본값 표시 (소수점 입력 가능하도록)
-  // 포커스 해제 시: 쉼표 포함 형식으로 표시
   const displayValue = (() => {
     if (value === '' || value === null || value === undefined) return '';
-    if (isFocused) return String(value); // 편집 중엔 원본 그대로
+    if (isFocused) return String(value);
     const num = Number(value);
     if (!isFinite(num)) return String(value);
-    // 소수점 이하 자리 보존 (toLocaleString은 소수점 잘라낼 수 있음)
     return num.toLocaleString('ko-KR', { maximumFractionDigits: 10 });
   })();
 
-  // 입력 시: 쉼표 제거하고 숫자만 저장
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const raw = e.target.value.replace(/[^\d.-]/g, ''); // 숫자·소수점·음수만
+    const raw = e.target.value.replace(/[^\d.-]/g, '');
     onChange(raw);
   };
 
-  // 한국어 단위
   const koreanUnit = formatKoreanUnit(value);
 
   return (
-    <div>
-      <label className="block text-[12px] mono uppercase tracking-[0.2em] mb-2" style={{ color: _T.textFaint }}>{label}</label>
-      <div className="relative border" style={{ borderColor: _BORDER, background: _T.bgSurface }}>
-        <input
-          type="text"
-          inputMode="decimal"
-          value={displayValue}
-          onChange={handleChange}
-          onFocus={() => setIsFocused(true)}
-          onBlur={() => setIsFocused(false)}
-          placeholder={placeholder}
-          className="w-full px-4 py-3 mono text-base bg-transparent"
-          style={{ color: _T.textPrimary }}
-        />
-        {unit && <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs mono" style={{ color: _T.textFaint }}>{unit}</span>}
+    <div className="card" style={{ padding: '16px 18px', background: `linear-gradient(135deg, ${color}08 0%, rgba(255,255,255,.025) 100%)` }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 10 }}>
+        <label style={{ fontSize: 11, color: 'var(--t2)', fontFamily: 'var(--mono)', letterSpacing: '.08em', textTransform: 'uppercase' as const }}>{label}</label>
+        {unit && <span style={{ fontFamily: 'var(--mono)', fontSize: 9, color: color, padding: '2px 8px', borderRadius: 4, background: `${color}14`, border: `1px solid ${color}25` }}>{unit}</span>}
       </div>
-      {/* 한국어 단위 표시 (입력값 있을 때만) */}
+      <input
+        className="inp"
+        type="text"
+        inputMode="decimal"
+        value={displayValue}
+        onChange={handleChange}
+        onFocus={() => setIsFocused(true)}
+        onBlur={() => setIsFocused(false)}
+        placeholder={placeholder}
+        style={{ fontSize: 22, fontFamily: 'var(--mono)', fontWeight: 300, letterSpacing: '-.02em', color: '#ffffff', background: 'rgba(0,0,0,.3)', border: '1px solid rgba(255,255,255,.1)', borderRadius: 10, padding: '12px 16px', width: '100%' }}
+      />
       {koreanUnit && (
-        <div className="text-xs mt-1.5 mono" style={{ color: _T.accent }}>
-          ≈ {koreanUnit}
-        </div>
+        <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: color, marginTop: 6 }}>≈ {koreanUnit}</div>
       )}
-      {hint && !koreanUnit && <div className="text-[12px] mt-1" style={{ color: _T.textFooter }}>{hint}</div>}
-      {hint && koreanUnit && <div className="text-[12px] mt-0.5" style={{ color: _T.textFooter }}>{hint}</div>}
+      {hint && <div style={{ fontSize: 11, color: 'var(--t3)', marginTop: 4 }}>{hint}</div>}
       {Number(value) < 0 && (
-        <div className="text-[12px] mt-1" style={{ color: '#A63D33' }}>⚠ 음수 입력됨</div>
+        <div style={{ fontSize: 11, color: '#c87a8b', marginTop: 4 }}>⚠ 음수 입력됨</div>
       )}
     </div>
   );
@@ -2587,16 +2232,34 @@ function dispatchCalcHistory(calcId: string, calcName: string, results: { label:
 }
 
 function ResultBox({ label, value, unit, highlight, color = '#C89650', bands, interpret }: any) {
+  const ctx = useContext(CalcResultsContext);
   const [copied, setCopied] = useState(false);
 
-  // value가 쉼표 포함 숫자 문자열인지 확인해서 한국어 단위 계산
+  // Context 있으면 오른쪽 패널로 올리고 invisible sentinel 반환
+  const resultRef = React.useRef({ label, value, unit, highlight, bands, interpret, color });
+  useEffect(() => {
+    resultRef.current = { label, value, unit, highlight, bands, interpret, color };
+  });
+
+  if (ctx) {
+    // sentinel: data attribute만 남기고 DOM은 숨김
+    return (
+      <span
+        data-result-label={label}
+        data-result-value={value}
+        data-result-unit={unit || ''}
+        data-result-highlight={highlight ? '1' : ''}
+        style={{ display: 'none' }}
+      />
+    );
+  }
+
+  // standalone mode (context 없을 때 — 비교B 패널 등)
   let koreanUnit = '';
   if (typeof value === 'string') {
     const num = Number(value.replace(/,/g, ''));
-    if (isFinite(num) && num !== 0) {
-      if (unit === '원' || unit === 'KRW') {
-        koreanUnit = formatKoreanUnit(num);
-      }
+    if (isFinite(num) && num !== 0 && (unit === '원' || unit === 'KRW')) {
+      koreanUnit = formatKoreanUnit(num);
     }
   }
 
@@ -2613,71 +2276,74 @@ function ResultBox({ label, value, unit, highlight, color = '#C89650', bands, in
   };
 
   const hasValue = value && value !== '—' && value !== '0';
+  const resultNum = hasValue ? parseFloat((value || '').replace(/,/g, '')) : null;
+
+  let gaugeJsx: React.ReactNode = null;
+  if (highlight && bands && resultNum != null && isFinite(resultNum)) {
+    const [low, high] = bands as [number, number];
+    const pct = Math.min(Math.max((resultNum - low) / (high - low), 0), 1);
+    const gc = pct < .33 ? '#4A7045' : pct < .67 ? color : '#c87a8b';
+    const lowLabel = (bands as any)[2] || '저평가';
+    const midLabel = (bands as any)[3] || '적정';
+    const highLabel = (bands as any)[4] || '고평가';
+    const isLow = pct < .33; const isHigh = pct >= .67;
+    const judgeLabel = isLow ? '▼ ' + lowLabel : isHigh ? '▲ ' + highLabel : '◆ ' + midLabel;
+    gaugeJsx = (
+      <div style={{ marginTop: 16 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+          {[lowLabel, midLabel, highLabel].map((l, i) => (
+            <span key={i} style={{ fontFamily: 'var(--mono)', fontSize: 8, color: 'var(--t3)' }}>{l}</span>
+          ))}
+        </div>
+        <div style={{ position: 'relative', height: 12, borderRadius: 6, background: 'rgba(255,255,255,.06)', overflow: 'hidden' }}>
+          <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${pct * 100}%`, borderRadius: 6, background: `linear-gradient(90deg,${gc}88,${gc})`, animation: 'gaugeIn .9s cubic-bezier(.16,1,.3,1) both', boxShadow: `0 0 16px ${gc}88` }} />
+        </div>
+        <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: gc, marginTop: 8, textShadow: `0 0 10px ${gc}88` }}>{judgeLabel} 수준</div>
+        {interpret && resultNum != null && (
+          <div style={{ marginTop: 8, fontSize: 11.5, lineHeight: 1.55, color: 'rgba(255,255,255,.6)', fontStyle: 'italic' }}>
+            {interpret(resultNum, pct < .33, pct >= .67)}
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div
-      className="p-4 md:p-5 relative group"
       data-result-label={label}
       data-result-value={value}
       data-result-unit={unit || ''}
-      style={{
-        background: highlight ? color : _T.bgCard,
-        color: highlight ? '#0a0a0a' : _T.textPrimary
-      }}
+      className="card"
+      style={{ padding: 0, overflow: 'hidden', minHeight: highlight ? 160 : undefined,
+        background: hasValue ? `linear-gradient(135deg,${color}10 0%,rgba(0,0,0,.4) 100%)` : 'rgba(255,255,255,.025)' }}
     >
-      <div className="flex items-center justify-between mb-2">
-        <div className="text-[12px] mono uppercase tracking-[0.2em]" style={{ opacity: 0.7 }}>{label}</div>
-        {hasValue && (
-          <button
-            onClick={handleCopy}
-            className="text-[11px] mono uppercase tracking-[0.15em] px-1.5 py-0.5 transition-all flex items-center gap-1"
-            style={{ opacity: copied ? 1 : 0.4, color: 'inherit' }}
-            title="결과 복사"
-          >
-            {copied ? <><Check size={10} /><span>복사됨</span></> : <><Copy size={10} /><span>복사</span></>}
-          </button>
+      <div style={{ height: 3, background: hasValue ? color : 'rgba(255,255,255,.06)', transition: 'background .4s', boxShadow: hasValue ? `0 0 12px ${color}88` : undefined }} />
+      <div style={{ padding: '20px 22px', position: 'relative' }}>
+        {hasValue && <div style={{ position: 'absolute', inset: 0, background: `radial-gradient(ellipse at 30% 40%,${color}14 0%,transparent 65%)`, pointerEvents: 'none' }} />}
+        {!hasValue ? (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 120, gap: 10, textAlign: 'center', position: 'relative', zIndex: 1 }}>
+            <div style={{ width: 40, height: 40, borderRadius: 12, background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.08)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <svg viewBox="0 0 22 22" width="16" height="16" fill="none"><circle cx="11" cy="11" r="9" stroke="rgba(255,255,255,.15)" strokeWidth="1.2"/><line x1="11" y1="7" x2="11" y2="11" stroke={color} strokeWidth="1.5" strokeLinecap="round" opacity=".6"/><circle cx="11" cy="14" r="1" fill={color} opacity=".6"/></svg>
+            </div>
+            <div style={{ fontSize: 12, fontWeight: 300, color: 'rgba(255,255,255,.2)' }}>{label}</div>
+          </div>
+        ) : (
+          <div style={{ position: 'relative', zIndex: 1 }}>
+            <div style={{ fontFamily: 'var(--mono)', fontSize: 9, letterSpacing: '.22em', textTransform: 'uppercase' as const, color: color, marginBottom: 8, textShadow: `0 0 10px ${color}88` }}>{label}</div>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 4 }}>
+              <span style={{ fontFamily: 'var(--mono)', fontSize: highlight ? 56 : 36, fontWeight: 200, color: '#fff', letterSpacing: '-.06em', lineHeight: 1, textShadow: highlight ? `0 0 30px ${color}cc, 0 0 60px ${color}55` : `0 0 20px ${color}88` }}>{value}</span>
+              <span style={{ fontFamily: 'var(--mono)', fontSize: highlight ? 18 : 13, color: 'rgba(255,255,255,.35)', lineHeight: 1 }}>{unit}</span>
+            </div>
+            {koreanUnit && <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--t3)', marginBottom: 4 }}>≈ {koreanUnit}</div>}
+            {!gaugeJsx && hasValue && (
+              <button onClick={handleCopy} style={{ fontFamily: 'var(--mono)', fontSize: 9, color: copied ? color : 'var(--t3)', background: 'none', border: 'none', cursor: 'pointer', letterSpacing: '.08em', padding: 0 }}>
+                {copied ? '복사됨 ✓' : '복사'}
+              </button>
+            )}
+            {gaugeJsx}
+          </div>
         )}
       </div>
-      <div className="text-2xl md:text-3xl font-light mono tabular-nums">
-        {value} <span className="text-xs md:text-sm" style={{ opacity: 0.6 }}>{unit}</span>
-      </div>
-      {koreanUnit && (
-        <div className="text-xs mt-2 mono" style={{ opacity: 0.7 }}>≈ {koreanUnit}</div>
-      )}
-      {/* 게이지 바 + 판정 칩 (highlight + bands prop 있을 때) */}
-      {highlight && bands && (() => {
-        const num = parseFloat((value || '').replace(/,/g, ''));
-        if (!isFinite(num)) return null;
-        const [low, high] = bands as [number, number];
-        const range = high - low;
-        const pct = Math.min(95, Math.max(5, ((num - low) / range) * 100));
-        const isLow  = num < low;
-        const isHigh = num >= high;
-        const judgeColor = isLow ? '#6f9c6a' : isHigh ? '#b94040' : '#c89650';
-        const judgeLabel = isLow ? '저평가 구간' : isHigh ? '고평가 구간' : '중립 구간';
-        const defaultInterp = isLow
-          ? `${num.toFixed(1)} — 업종 기준(${low}~${high}) 대비 저평가.`
-          : isHigh
-            ? `${num.toFixed(1)} — 업종 기준(${low}~${high}) 대비 고평가.`
-            : `${num.toFixed(1)} — 업종 기준 중립 범위.`;
-        return (
-          <div style={{ marginTop: 14 }}>
-            <div style={{ height: 4, background: 'rgba(0,0,0,0.25)', position: 'relative', marginBottom: 4 }}>
-              <div style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: `${pct}%`, background: 'linear-gradient(90deg, #6f9c6a 0%, #c89650 50%, #b94040 100%)' }} />
-              <div style={{ position: 'absolute', top: -3, left: `${pct}%`, width: 2, height: 10, background: 'rgba(255,255,255,0.9)', transform: 'translateX(-50%)' }} />
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, fontFamily: "'IBM Plex Mono',monospace", letterSpacing: '0.18em', textTransform: 'uppercase', opacity: 0.6, marginBottom: 8 }}>
-              <span>저평가</span><span>중립</span><span>고평가</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ border: `1px solid ${judgeColor}`, color: judgeColor, fontFamily: "'IBM Plex Mono',monospace", fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', padding: '2px 7px', background: 'rgba(0,0,0,0.2)' }}>◉ {judgeLabel}</span>
-            </div>
-            <div style={{ marginTop: 8, fontSize: 11.5, lineHeight: 1.55, color: 'rgba(255,255,255,0.75)', fontStyle: 'italic' }}>
-              {interpret ? interpret(num, isLow, isHigh) : defaultInterp}
-            </div>
-          </div>
-        );
-      })()}
     </div>
   );
 }
@@ -2695,84 +2361,132 @@ function CalcHeader({ num, title, desc, color = '#C89650', calcId, results }: an
   const hasResults = results && results.some((r: any) => r.value && r.value !== '—' && r.value !== '' && r.value !== '0');
 
   return (
-    <div className="mb-6 md:mb-8 pb-5 md:pb-6 border-b" style={{ borderColor: _BORDER }}>
-      <div className="flex items-baseline gap-4 mb-2">
-        <span className="text-xs mono" style={{ color }}>M—{num}</span>
-        <span className="h-px flex-1" style={{ background: _BORDER }}></span>
-        {hasResults && (
-          <button
-            onClick={handleSave}
-            className="flex items-center gap-1 text-[12px] mono px-2 py-0.5 border transition-all"
-            style={{
-              borderColor: saved ? _T.accentGreen : _BORDER,
-              color: saved ? _T.accentGreen : _T.textFaint,
-            }}
-            title="이 결과를 히스토리에 저장"
-          >
-            {saved ? <><Check size={9} /><span>저장됨</span></> : <><Clock size={9} /><span>저장</span></>}
-          </button>
-        )}
+    <div className="card" style={{ padding: 0, overflow: 'hidden', marginBottom: 8 }}>
+      <div style={{ height: 3, background: color, boxShadow: `0 0 12px ${color}99` }} />
+      <div style={{ padding: '18px 20px' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 4 }}>
+          <div>
+            <div style={{ fontFamily: 'var(--mono)', fontSize: 9, letterSpacing: '.18em', textTransform: 'uppercase' as const, color: color, marginBottom: 6, textShadow: `0 0 8px ${color}88` }}>M—{num}</div>
+            <div style={{ fontSize: 20, fontWeight: 500, color: '#fff', letterSpacing: '-.02em' }}>{title}</div>
+            {desc && <div style={{ fontSize: 12, color: 'var(--t2)', marginTop: 4 }}>{desc}</div>}
+          </div>
+          {hasResults && (
+            <button
+              onClick={handleSave}
+              style={{ flexShrink: 0, marginLeft: 12, padding: '5px 12px', borderRadius: 7, background: saved ? 'rgba(74,112,69,.2)' : 'rgba(255,255,255,.04)', border: `1px solid ${saved ? '#4A7045' : 'rgba(255,255,255,.1)'}`, color: saved ? '#8bc87a' : 'var(--t3)', fontFamily: 'var(--mono)', fontSize: 9, letterSpacing: '.1em', cursor: 'pointer', transition: 'all .15s' }}
+            >
+              {saved ? '저장됨 ✓' : '저장'}
+            </button>
+          )}
+        </div>
       </div>
-      <h2 className="text-2xl md:text-3xl font-light tracking-tight mb-2" style={{ color: _T.textPrimary }}>{title}</h2>
-      <p className="text-sm" style={{ color: _T.textMuted }}>{desc}</p>
     </div>
   );
 }
 
-function CalcNote({ lines, how, example, tip }: any) {
-  // 기존 호환성: lines 배열만 전달된 경우
-  if (lines && !how && !example && !tip) {
-    return (
-      <div className="mt-6 md:mt-8 pt-5 md:pt-6 border-t" style={{ borderColor: _BORDER }}>
-        <div className="text-[12px] mono uppercase tracking-[0.2em] mb-3" style={{ color: _T.textFaint }}>Notes</div>
-        {lines.map((line, i) => (
-          <div key={i} className="text-xs leading-relaxed" style={{ color: _T.textMuted }}>— {line}</div>
-        ))}
-      </div>
-    );
-  }
-  // 새 구조: how(사용법), example(예시), tip(팁)
+
+// CalcResultsReader — 왼쪽 패널의 sentinel들에서 결과를 읽어 context sink 호출
+function CalcResultsReader({ containerRef, calcColor, mode }: { containerRef: React.RefObject<HTMLDivElement>; calcColor: string; mode: string }) {
+  const [results, setResults] = useState<any[]>([]);
+
+  useEffect(() => {
+    const readResults = () => {
+      if (!containerRef.current) return;
+      const sentinels = containerRef.current.querySelectorAll('[data-result-label]');
+      const arr: any[] = [];
+      sentinels.forEach(el => {
+        const label = el.getAttribute('data-result-label') || '';
+        const value = el.getAttribute('data-result-value') || '';
+        const unit = el.getAttribute('data-result-unit') || '';
+        const highlight = el.getAttribute('data-result-highlight') === '1';
+        if (label) arr.push({ label, value, unit, highlight, color: calcColor });
+      });
+      setResults(arr);
+    };
+    readResults();
+    const obs = new MutationObserver(readResults);
+    if (containerRef.current) obs.observe(containerRef.current, { subtree: true, childList: true, characterData: true, attributes: true });
+    return () => obs.disconnect();
+  }, [containerRef, calcColor, mode]);
+
   return (
-    <div className="mt-6 md:mt-8 pt-5 md:pt-6 border-t space-y-5" style={{ borderColor: _BORDER }}>
-      {how && (
-        <div>
-          <div className="flex items-center gap-2 mb-2">
-            <span className="w-1 h-3" style={{ background: _T.accent }}></span>
-            <div className="text-[12px] mono uppercase tracking-[0.2em]" style={{ color: _T.textFaint }}>How to Use · 사용법</div>
+    <>
+      {results.map((r, i) => {
+        const hasValue = r.value && r.value !== '—' && r.value !== '0';
+        const resultNum = hasValue ? parseFloat((r.value || '').replace(/,/g, '')) : null;
+        let koreanUnit = '';
+        if (typeof r.value === 'string') {
+          const num = Number(r.value.replace(/,/g, ''));
+          if (isFinite(num) && num !== 0 && (r.unit === '원' || r.unit === 'KRW')) {
+            koreanUnit = formatKoreanUnit(num);
+          }
+        }
+        return (
+          <div key={i} className="card" style={{ padding: 0, overflow: 'hidden', background: hasValue ? `linear-gradient(135deg,${calcColor}10 0%,rgba(0,0,0,.4) 100%)` : 'rgba(255,255,255,.025)' }}>
+            <div style={{ height: 3, background: hasValue ? calcColor : 'rgba(255,255,255,.06)', transition: 'background .4s', boxShadow: hasValue ? `0 0 12px ${calcColor}88` : undefined }} />
+            <div style={{ padding: '24px 26px', position: 'relative', minHeight: r.highlight ? 180 : 100 }}>
+              {hasValue && <div style={{ position: 'absolute', inset: 0, background: `radial-gradient(ellipse at 30% 40%,${calcColor}14 0%,transparent 65%)`, pointerEvents: 'none' }} />}
+              {!hasValue ? (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: r.highlight ? 140 : 70, gap: 10, textAlign: 'center' }}>
+                  <div style={{ width: 40, height: 40, borderRadius: 12, background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.08)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <svg viewBox="0 0 22 22" width="16" height="16" fill="none"><circle cx="11" cy="11" r="9" stroke="rgba(255,255,255,.15)" strokeWidth="1.2"/><line x1="11" y1="7" x2="11" y2="11" stroke={calcColor} strokeWidth="1.5" strokeLinecap="round" opacity=".6"/><circle cx="11" cy="14" r="1" fill={calcColor} opacity=".6"/></svg>
+                  </div>
+                  <div style={{ fontSize: 12, fontWeight: 300, color: 'rgba(255,255,255,.2)' }}>{r.label}</div>
+                </div>
+              ) : (
+                <div style={{ position: 'relative', zIndex: 1 }}>
+                  <div style={{ fontFamily: 'var(--mono)', fontSize: 9, letterSpacing: '.22em', textTransform: 'uppercase' as const, color: calcColor, marginBottom: 10, textShadow: `0 0 10px ${calcColor}88` }}>
+                    {r.label} · SCENARIO {mode}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 8 }}>
+                    <span style={{ fontFamily: 'var(--mono)', fontSize: r.highlight ? 64 : 36, fontWeight: 200, color: '#fff', letterSpacing: '-.06em', lineHeight: 1, textShadow: r.highlight ? `0 0 30px ${calcColor}cc, 0 0 60px ${calcColor}55` : `0 0 20px ${calcColor}88` }}>
+                      {r.value}
+                    </span>
+                    <span style={{ fontFamily: 'var(--mono)', fontSize: r.highlight ? 22 : 14, color: 'rgba(255,255,255,.35)', lineHeight: 1 }}>{r.unit}</span>
+                  </div>
+                  {koreanUnit && <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--t3)', marginBottom: 4 }}>≈ {koreanUnit}</div>}
+                </div>
+              )}
+            </div>
           </div>
-          <div className="space-y-1.5">
-            {how.map((line, i) => (
-              <div key={i} className="text-xs md:text-sm leading-relaxed" style={{ color: _T.textSecondary }}>
-                <span className="mono mr-2" style={{ color: _T.textFooter }}>{String(i + 1).padStart(2, '0')}.</span>{line}
-              </div>
-            ))}
-          </div>
+        );
+      })}
+    </>
+  );
+}
+
+
+function CalcNote({ lines, how, example, tip }: any) {
+  // lines 단독: HOW TO USE 표시
+  const items = how || lines;
+  return (
+    <div className="card" style={{ padding: '18px 20px' }}>
+      <div style={{ fontFamily: 'var(--mono)', fontSize: 8, letterSpacing: '.22em', textTransform: 'uppercase' as const, color: 'var(--t3)', marginBottom: 14 }}>HOW TO USE</div>
+      {items && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {items.map((tip: string, i: number) => (
+            <div key={i} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+              <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: '#C89650', flexShrink: 0, textShadow: '0 0 8px #C89650aa', minWidth: 18 }}>0{i + 1}.</span>
+              <span style={{ fontSize: 12.5, color: 'var(--t2)', lineHeight: 1.7 }}>{tip}</span>
+            </div>
+          ))}
         </div>
       )}
       {example && (
-        <div>
-          <div className="flex items-center gap-2 mb-2">
-            <span className="w-1 h-3" style={{ background: '#A63D33' }}></span>
-            <div className="text-[12px] mono uppercase tracking-[0.2em]" style={{ color: _T.textFaint }}>Example · 예시</div>
-          </div>
-          <div className="text-xs md:text-sm leading-relaxed p-3 md:p-4 border-l-2" style={{ borderColor: '#A63D33', background: _T.bgCard, color: _T.textSecondary }}>
-            {typeof example === 'string' ? example : example.map((line, i) => (
-              <div key={i} className={i > 0 ? 'mt-1' : ''}>{line}</div>
-            ))}
+        <div style={{ marginTop: 14, padding: '12px 14px', borderRadius: 10, background: 'rgba(200,150,80,.07)', border: '1px solid rgba(200,150,80,.2)', borderLeft: '3px solid rgba(200,150,80,.5)' }}>
+          <div style={{ fontFamily: 'var(--mono)', fontSize: 12, color: '#fff', lineHeight: 1.7 }}>
+            {typeof example === 'string' ? example : example.map((l: string, i: number) => <div key={i}>{l}</div>)}
           </div>
         </div>
       )}
-      {tip && (
-        <div>
-          <div className="flex items-center gap-2 mb-2">
-            <span className="w-1 h-3" style={{ background: _T.accentGreen }}></span>
-            <div className="text-[12px] mono uppercase tracking-[0.2em]" style={{ color: _T.textFaint }}>Tips · 해석 가이드</div>
-          </div>
-          <div className="space-y-1.5">
-            {tip.map((line, i) => (
-              <div key={i} className="text-xs md:text-sm leading-relaxed" style={{ color: _T.textMuted }}>— {line}</div>
-            ))}
-          </div>
+      {tip && !how && !lines && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 10 }}>
+          {tip.map((t: string, i: number) => (
+            <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+              <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: '#C89650', flexShrink: 0, minWidth: 18 }}>—</span>
+              <span style={{ fontSize: 12, color: 'var(--t2)', lineHeight: 1.6 }}>{t}</span>
+            </div>
+          ))}
         </div>
       )}
     </div>
@@ -2794,15 +2508,15 @@ function PERCalc() {
   const eps = netIncome && shares ? Number(netIncome) / Number(shares) : 0;
   const per = price && eps ? Number(price) / eps : 0;
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <CalcHeader num="01" title="PER · EPS 계산" desc="주가수익비율과 주당순이익을 산출합니다." />
-      <div className="grid md:grid-cols-3 gap-5 mb-8">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <NumInput label="현재 주가" value={price} onChange={setPrice} unit="원" placeholder="50,000" />
         <NumInput label="당기순이익 (연간)" value={netIncome} onChange={setNetIncome} unit="원" placeholder="100,000,000,000" hint="연간 총 순이익" />
         <NumInput label="발행주식수" value={shares} onChange={setShares} unit="주" placeholder="10,000,000" hint="자기주식 제외" />
       </div>
-      <div className="grid md:grid-cols-2 border" style={{ borderColor: _BORDER }}>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="EPS · 주당순이익" value={fmt(eps)} unit="원" /></div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
+        <ResultBox label="EPS · 주당순이익" value={fmt(eps)} unit="원" />
         <ResultBox label="PER · 주가수익비율" value={fmt(per)} unit="배" highlight bands={[10, 25]} interpret={(n, isLow, isHigh) => isLow ? `PER ${n.toFixed(1)}배 — 저평가 구간. 업종·성장성 함께 확인하세요.` : isHigh ? `PER ${n.toFixed(1)}배 — 고평가 구간. 성장 프리미엄이 반영된 수준.` : `PER ${n.toFixed(1)}배 — 업종 평균 수준.`} />
       </div>
       <CalcNote
@@ -2836,16 +2550,16 @@ function PSRCalc() {
   const psr = price && sps ? Number(price) / sps : 0;
   const marketCap = price && shares ? Number(price) * Number(shares) : 0;
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <CalcHeader num="03" title="PSR · 주가매출비율" desc="적자·성장 기업 평가에 유용한 매출 기반 밸류에이션." />
-      <div className="grid md:grid-cols-3 gap-5 mb-8">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <NumInput label="현재 주가" value={price} onChange={setPrice} unit="원" placeholder="50,000" />
         <NumInput label="연간 매출액" value={sales} onChange={setSales} unit="원" placeholder="500,000,000,000" hint="최근 4분기 합산" />
         <NumInput label="발행주식수" value={shares} onChange={setShares} unit="주" placeholder="10,000,000" />
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-3 border" style={{ borderColor: _BORDER }}>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="SPS · 주당매출액" value={fmt(sps, 0)} unit="원" /></div>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="시가총액" value={fmt(marketCap, 0)} unit="원" /></div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
+        <ResultBox label="SPS · 주당매출액" value={fmt(sps, 0)} unit="원" />
+        <ResultBox label="시가총액" value={fmt(marketCap, 0)} unit="원" />
         <ResultBox label="PSR · 주가매출비율" value={fmt(psr, 2)} unit="배" highlight />
       </div>
       <CalcNote
@@ -2879,15 +2593,15 @@ function PBRCalc() {
   const bps = equity && shares ? Number(equity) / Number(shares) : 0;
   const pbr = price && bps ? Number(price) / bps : 0;
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <CalcHeader num="02" title="PBR · BPS 계산" desc="주가순자산비율과 주당순자산을 산출합니다." />
-      <div className="grid md:grid-cols-3 gap-5 mb-8">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <NumInput label="현재 주가" value={price} onChange={setPrice} unit="원" placeholder="30,000" />
         <NumInput label="자본총계" value={equity} onChange={setEquity} unit="원" placeholder="500,000,000,000" hint="재무상태표의 자본총계" />
         <NumInput label="발행주식수" value={shares} onChange={setShares} unit="주" placeholder="10,000,000" />
       </div>
-      <div className="grid md:grid-cols-2 border" style={{ borderColor: _BORDER }}>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="BPS · 주당순자산" value={fmt(bps)} unit="원" /></div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
+        <ResultBox label="BPS · 주당순자산" value={fmt(bps)} unit="원" />
         <ResultBox label="PBR · 주가순자산비율" value={fmt(pbr)} unit="배" highlight bands={[0.5, 2.0]} interpret={(n, isLow, isHigh) => isLow ? `PBR ${n.toFixed(2)}배 — 순자산 대비 저평가.` : isHigh ? `PBR ${n.toFixed(2)}배 — 순자산 대비 고평가.` : `PBR ${n.toFixed(2)}배 — 통상적 범위.`} />
       </div>
       <CalcNote
@@ -2921,15 +2635,15 @@ function TargetPriceCalc() {
   const target = eps && targetPer ? Number(eps) * Number(targetPer) : 0;
   const upside = current && target ? ((target - Number(current)) / Number(current)) * 100 : 0;
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <CalcHeader num="04" title="목표주가 계산" desc="EPS와 적정 PER로 목표주가를 산출합니다." />
-      <div className="grid md:grid-cols-3 gap-5 mb-8">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <NumInput label="예상 EPS" value={eps} onChange={setEps} unit="원" placeholder="5,000" />
         <NumInput label="목표 PER" value={targetPer} onChange={setTargetPer} unit="배" placeholder="12" />
         <NumInput label="현재 주가" value={current} onChange={setCurrent} unit="원" placeholder="45,000" />
       </div>
-      <div className="grid md:grid-cols-2 border" style={{ borderColor: _BORDER }}>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="목표주가" value={fmt(target, 0)} unit="원" highlight /></div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
+        <ResultBox label="목표주가" value={fmt(target, 0)} unit="원" highlight />
         <ResultBox label="상승여력" value={fmt(upside)} unit="%" />
       </div>
       <CalcNote
@@ -2976,17 +2690,17 @@ function DCFCalc() {
   const enterpriseValue = pv + pvTerminal;
 
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <CalcHeader num="05" title="DCF 간이 평가" desc="향후 5년 FCF와 영구성장률로 기업가치를 추정합니다." />
-      <div className="grid md:grid-cols-2 gap-5 mb-8">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <NumInput label="현재 FCF (연간)" value={fcf} onChange={setFcf} unit="원" placeholder="10,000,000,000" />
         <NumInput label="FCF 성장률 (5년)" value={growth} onChange={setGrowth} unit="%" placeholder="5" />
         <NumInput label="할인율 (WACC)" value={discount} onChange={setDiscount} unit="%" placeholder="10" hint="보통 8~12%" />
         <NumInput label="영구성장률" value={terminal} onChange={setTerminal} unit="%" placeholder="2.5" hint="GDP 성장률 수준" />
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-3 border" style={{ borderColor: _BORDER }}>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="5년 PV 합계" value={fmt(pv, 0)} unit="원" /></div>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="터미널 PV" value={fmt(pvTerminal, 0)} unit="원" /></div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
+        <ResultBox label="5년 PV 합계" value={fmt(pv, 0)} unit="원" />
+        <ResultBox label="터미널 PV" value={fmt(pvTerminal, 0)} unit="원" />
         <ResultBox label="기업가치 (EV)" value={fmt(enterpriseValue, 0)} unit="원" highlight />
       </div>
       <CalcNote
@@ -3026,18 +2740,18 @@ function WACCCalc() {
   const wD = V ? Number(debt) / V : 0;
   const wacc = (wE * Number(re || 0) + wD * Number(rd || 0) * (1 - Number(taxrate) / 100));
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <CalcHeader num="06" title="WACC 계산" desc="가중평균자본비용을 산출합니다." />
-      <div className="grid md:grid-cols-2 gap-5 mb-8">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <NumInput label="자기자본 (시가총액)" value={mktcap} onChange={setMktcap} unit="원" placeholder="500,000,000,000" />
         <NumInput label="부채 (시장가치)" value={debt} onChange={setDebt} unit="원" placeholder="200,000,000,000" />
         <NumInput label="자기자본비용 (Re)" value={re} onChange={setRe} unit="%" placeholder="10" hint="CAPM으로 산출" />
         <NumInput label="타인자본비용 (Rd)" value={rd} onChange={setRd} unit="%" placeholder="4.5" hint="회사채 금리 수준" />
         <NumInput label="법인세율" value={taxrate} onChange={setTaxrate} unit="%" placeholder="22" />
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-3 border" style={{ borderColor: _BORDER }}>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="자기자본 비중" value={fmt(wE * 100)} unit="%" /></div>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="부채 비중" value={fmt(wD * 100)} unit="%" /></div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
+        <ResultBox label="자기자본 비중" value={fmt(wE * 100)} unit="%" />
+        <ResultBox label="부채 비중" value={fmt(wD * 100)} unit="%" />
         <ResultBox label="WACC" value={fmt(wacc)} unit="%" highlight />
       </div>
       <CalcNote
@@ -3073,15 +2787,15 @@ function ROECalc() {
   const roe = ni && equity ? (Number(ni) / Number(equity)) * 100 : 0;
   const roa = ni && assets ? (Number(ni) / Number(assets)) * 100 : 0;
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <CalcHeader num="07" title="ROE · ROA 계산" desc="자기자본이익률과 총자산이익률을 산출합니다." color="#A63D33" />
-      <div className="grid md:grid-cols-3 gap-5 mb-8">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <NumInput label="당기순이익" value={ni} onChange={setNi} unit="원" placeholder="50,000,000,000" />
         <NumInput label="자기자본" value={equity} onChange={setEquity} unit="원" placeholder="500,000,000,000" />
         <NumInput label="총자산" value={assets} onChange={setAssets} unit="원" placeholder="1,000,000,000,000" />
       </div>
-      <div className="grid md:grid-cols-2 border" style={{ borderColor: _BORDER }}>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="ROE" value={fmt(roe)} unit="%" highlight color="#A63D33" /></div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
+        <ResultBox label="ROE" value={fmt(roe)} unit="%" highlight color="#A63D33" />
         <ResultBox label="ROA" value={fmt(roa)} unit="%" />
       </div>
       <CalcNote
@@ -3119,18 +2833,18 @@ function DuPontCalc() {
   const leverage = assets && equity ? Number(assets) / Number(equity) : 0;
   const roe = margin * turnover * leverage * 100;
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <CalcHeader num="08" title="듀퐁 분해" desc="ROE를 순이익률 · 자산회전율 · 재무레버리지로 분해합니다." color="#A63D33" />
-      <div className="grid md:grid-cols-2 gap-5 mb-8">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <NumInput label="당기순이익" value={ni} onChange={setNi} unit="원" placeholder="50,000,000,000" />
         <NumInput label="매출액" value={sales} onChange={setSales} unit="원" placeholder="1,000,000,000,000" />
         <NumInput label="총자산" value={assets} onChange={setAssets} unit="원" placeholder="1,500,000,000,000" />
         <NumInput label="자기자본" value={equity} onChange={setEquity} unit="원" placeholder="600,000,000,000" />
       </div>
-      <div className="grid md:grid-cols-4 border" style={{ borderColor: _BORDER }}>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="순이익률" value={fmt(margin * 100)} unit="%" /></div>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="자산회전율" value={fmt(turnover, 3)} unit="회" /></div>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="재무레버리지" value={fmt(leverage, 3)} unit="배" /></div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
+        <ResultBox label="순이익률" value={fmt(margin * 100)} unit="%" />
+        <ResultBox label="자산회전율" value={fmt(turnover, 3)} unit="회" />
+        <ResultBox label="재무레버리지" value={fmt(leverage, 3)} unit="배" />
         <ResultBox label="ROE" value={fmt(roe)} unit="%" highlight color="#A63D33" />
       </div>
       <CalcNote
@@ -3167,17 +2881,17 @@ function MarginCalc() {
   const op = sales && cogs && sga ? ((Number(sales) - Number(cogs) - Number(sga)) / Number(sales)) * 100 : 0;
   const net = sales && ni ? (Number(ni) / Number(sales)) * 100 : 0;
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <CalcHeader num="09" title="마진 분석" desc="매출총이익률 · 영업이익률 · 순이익률을 함께 계산합니다." color="#A63D33" />
-      <div className="grid md:grid-cols-2 gap-5 mb-8">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <NumInput label="매출액" value={sales} onChange={setSales} unit="원" placeholder="1,000,000,000,000" />
         <NumInput label="매출원가" value={cogs} onChange={setCogs} unit="원" placeholder="600,000,000,000" />
         <NumInput label="판관비" value={sga} onChange={setSga} unit="원" placeholder="200,000,000,000" />
         <NumInput label="당기순이익" value={ni} onChange={setNi} unit="원" placeholder="120,000,000,000" />
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-3 border" style={{ borderColor: _BORDER }}>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="매출총이익률" value={fmt(gross)} unit="%" /></div>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="영업이익률" value={fmt(op)} unit="%" highlight color="#A63D33" /></div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
+        <ResultBox label="매출총이익률" value={fmt(gross)} unit="%" />
+        <ResultBox label="영업이익률" value={fmt(op)} unit="%" highlight color="#A63D33" />
         <ResultBox label="순이익률" value={fmt(net)} unit="%" />
       </div>
       <CalcNote
@@ -3213,16 +2927,16 @@ function BEPCalc() {
   const sales = price ? unit * Number(price) : 0;
   const cm = price && varcost ? ((Number(price) - Number(varcost)) / Number(price)) * 100 : 0;
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <CalcHeader num="10" title="손익분기점 (BEP)" desc="손익분기 판매수량과 매출액을 산출합니다." color="#A63D33" />
-      <div className="grid md:grid-cols-3 gap-5 mb-8">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <NumInput label="고정비 (연간)" value={fixed} onChange={setFixed} unit="원" placeholder="100,000,000" />
         <NumInput label="단위당 판매가" value={price} onChange={setPrice} unit="원" placeholder="10,000" />
         <NumInput label="단위당 변동비" value={varcost} onChange={setVarcost} unit="원" placeholder="6,000" />
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-3 border" style={{ borderColor: _BORDER }}>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="BEP 수량" value={fmt(unit, 0)} unit="개" highlight color="#A63D33" /></div>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="BEP 매출액" value={fmt(sales, 0)} unit="원" /></div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
+        <ResultBox label="BEP 수량" value={fmt(unit, 0)} unit="개" highlight color="#A63D33" />
+        <ResultBox label="BEP 매출액" value={fmt(sales, 0)} unit="원" />
         <ResultBox label="한계이익률" value={fmt(cm)} unit="%" />
       </div>
       <CalcNote
@@ -3257,16 +2971,16 @@ function DividendCalc() {
   const annualDiv = dps && shares ? Number(dps) * Number(shares) : 0;
   const afterTax = annualDiv * (1 - 0.154);
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <CalcHeader num="11" title="배당수익률 계산" desc="배당수익률과 세후 실수령액을 산출합니다." color="#C08E6A" />
-      <div className="grid md:grid-cols-3 gap-5 mb-8">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <NumInput label="현재 주가" value={price} onChange={setPrice} unit="원" placeholder="50,000" />
         <NumInput label="주당배당금 (DPS)" value={dps} onChange={setDps} unit="원" placeholder="2,000" />
         <NumInput label="보유주식수" value={shares} onChange={setShares} unit="주" placeholder="100" />
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-3 border" style={{ borderColor: _BORDER }}>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="배당수익률" value={fmt(yld)} unit="%" highlight color="#C08E6A" /></div>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="세전 배당금" value={fmt(annualDiv, 0)} unit="원" /></div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
+        <ResultBox label="배당수익률" value={fmt(yld)} unit="%" highlight color="#C08E6A" />
+        <ResultBox label="세전 배당금" value={fmt(annualDiv, 0)} unit="원" />
         <ResultBox label="세후 수령액" value={fmt(afterTax, 0)} unit="원" />
       </div>
       <CalcNote
@@ -3309,17 +3023,17 @@ function CompoundCalc() {
   const totalInvested = p + m * n * 12;
   const profit = total - totalInvested;
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <CalcHeader num="12" title="복리 계산" desc="원금과 월 적립금의 복리 수익을 산출합니다." color="#C08E6A" />
-      <div className="grid md:grid-cols-2 gap-5 mb-8">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <NumInput label="초기 원금" value={principal} onChange={setPrincipal} unit="원" placeholder="10,000,000" />
         <NumInput label="매월 추가 투자" value={monthly} onChange={setMonthly} unit="원" placeholder="500,000" />
         <NumInput label="연 수익률" value={rate} onChange={setRate} unit="%" placeholder="8" />
         <NumInput label="투자 기간" value={years} onChange={setYears} unit="년" placeholder="20" />
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-3 border" style={{ borderColor: _BORDER }}>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="최종 평가액" value={fmt(total, 0)} unit="원" highlight color="#C08E6A" /></div>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="총 투자원금" value={fmt(totalInvested, 0)} unit="원" /></div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
+        <ResultBox label="최종 평가액" value={fmt(total, 0)} unit="원" highlight color="#C08E6A" />
+        <ResultBox label="총 투자원금" value={fmt(totalInvested, 0)} unit="원" />
         <ResultBox label="순수익" value={fmt(profit, 0)} unit="원" />
       </div>
       <CalcNote
@@ -3354,15 +3068,15 @@ function CAGRCalc() {
   const cagr = start && end && years ? (Math.pow(Number(end) / Number(start), 1 / Number(years)) - 1) * 100 : 0;
   const totalReturn = start && end ? ((Number(end) - Number(start)) / Number(start)) * 100 : 0;
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <CalcHeader num="13" title="CAGR 연평균 복리수익률" desc="시작값과 종료값으로 연평균 성장률을 계산합니다." color="#C08E6A" />
-      <div className="grid md:grid-cols-3 gap-5 mb-8">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <NumInput label="시작 값" value={start} onChange={setStart} unit="" placeholder="10,000,000" />
         <NumInput label="종료 값" value={end} onChange={setEnd} unit="" placeholder="25,000,000" />
         <NumInput label="기간" value={years} onChange={setYears} unit="년" placeholder="10" />
       </div>
-      <div className="grid md:grid-cols-2 border" style={{ borderColor: _BORDER }}>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="CAGR" value={fmt(cagr)} unit="%" highlight color="#C08E6A" /></div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
+        <ResultBox label="CAGR" value={fmt(cagr)} unit="%" highlight color="#C08E6A" />
         <ResultBox label="총 수익률" value={fmt(totalReturn)} unit="%" />
       </div>
       <CalcNote
@@ -3396,9 +3110,9 @@ function Rule72Calc() {
   const yearsToDouble = rate ? 72 / Number(rate) : 0;
   const rateFromYears = years ? 72 / Number(years) : 0;
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <CalcHeader num="14" title="72의 법칙" desc="원금이 2배가 되는 기간 또는 필요 수익률을 추정합니다." color="#C08E6A" />
-      <div className="grid md:grid-cols-2 gap-5 mb-8">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <div>
           <NumInput label="연 수익률로 계산" value={rate} onChange={setRate} unit="%" placeholder="8" />
           <div className="mt-4">
@@ -3448,21 +3162,19 @@ function AvgPriceCalc() {
   const pnl = currentValue - totalCost;
   const pnlRate = totalCost ? (pnl / totalCost) * 100 : 0;
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <CalcHeader num="15" title="평균단가 · 물타기 계산" desc="추가매수 후 평균단가와 평가손익을 산출합니다." color="#8A8A8A" />
-      <div className="grid md:grid-cols-2 gap-5 mb-5">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <NumInput label="① 매수가" value={p1} onChange={setP1} unit="원" placeholder="50,000" />
         <NumInput label="① 수량" value={q1} onChange={setQ1} unit="주" placeholder="100" />
         <NumInput label="② 추가매수가" value={p2} onChange={setP2} unit="원" placeholder="40,000" />
         <NumInput label="② 수량" value={q2} onChange={setQ2} unit="주" placeholder="100" />
-      </div>
-      <div className="mb-8">
         <NumInput label="현재가 (손익 계산용)" value={current} onChange={setCurrent} unit="원" placeholder="45,000" />
       </div>
-      <div className="grid md:grid-cols-2 border" style={{ borderColor: _BORDER }}>
-        <div className="border-r border-b" style={{ borderColor: _BORDER }}><ResultBox label="평균 매수단가" value={fmt(avg, 0)} unit="원" highlight color="#8A8A8A" /></div>
-        <div className="border-b" style={{ borderColor: _BORDER }}><ResultBox label="총 보유수량" value={fmt(totalQty, 0)} unit="주" /></div>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="평가손익" value={fmt(pnl, 0)} unit="원" /></div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
+        <ResultBox label="평균 매수단가" value={fmt(avg, 0)} unit="원" highlight color="#8A8A8A" />
+        <ResultBox label="총 보유수량" value={fmt(totalQty, 0)} unit="주" />
+        <ResultBox label="평가손익" value={fmt(pnl, 0)} unit="원" />
         <ResultBox label="수익률" value={fmt(pnlRate)} unit="%" />
       </div>
       <CalcNote
@@ -3509,7 +3221,7 @@ function CommissionCalc() {
   const marketLabel = { kospi: 'KOSPI', kosdaq: 'KOSDAQ·K-OTC', konex: 'KONEX', unlisted: '비상장·장외' };
 
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <CalcHeader num="16" title="수수료 · 세금 계산" desc="주식 거래 수수료와 증권거래세를 산출합니다. 2026년 기준." color="#8A8A8A" />
       <div className="flex mb-4 border" style={{ borderColor: _BORDER }}>
         <button onClick={() => setType('buy')} className="flex-1 py-3 text-sm font-medium transition-all border-r"
@@ -3527,15 +3239,15 @@ function CommissionCalc() {
           </button>
         ))}
       </div>
-      <div className="grid md:grid-cols-3 gap-5 mb-8">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <NumInput label="주가" value={price} onChange={setPrice} unit="원" placeholder="50,000" />
         <NumInput label="수량" value={qty} onChange={setQty} unit="주" placeholder="100" />
         <NumInput label="수수료율" value={feeRate} onChange={setFeeRate} unit="%" placeholder="0.015" />
       </div>
-      <div className={`grid ${type === 'sell' ? 'md:grid-cols-4' : 'md:grid-cols-3'} border`} style={{ borderColor: _BORDER }}>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="거래금액" value={fmt(amount, 0)} unit="원" /></div>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="수수료" value={fmt(fee, 0)} unit="원" /></div>
-        {type === 'sell' && <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label={`증권거래세 (${taxRatePct}%)`} value={fmt(tax, 0)} unit="원" /></div>}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
+        <ResultBox label="거래금액" value={fmt(amount, 0)} unit="원" />
+        <ResultBox label="수수료" value={fmt(fee, 0)} unit="원" />
+        {type === 'sell' && <ResultBox label={`증권거래세 (${taxRatePct}%)`} value={fmt(tax, 0)} unit="원" />}
         <ResultBox label={type === 'buy' ? '총 매수대금' : '실수령액'} value={fmt(total, 0)} unit="원" highlight color="#8A8A8A" />
       </div>
       <CalcNote
@@ -3572,14 +3284,14 @@ function BreakevenCalc() {
   const breakeven = totalCost / (1 - Number(feeRate) / 100 - taxRate / 100);
   const pctUp = bp ? ((breakeven - bp) / bp) * 100 : 0;
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <CalcHeader num="17" title="손익분기 주가" desc="수수료·세금 반영한 실제 손익분기 매도가를 계산합니다." color="#8A8A8A" />
-      <div className="grid md:grid-cols-2 gap-5 mb-8">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <NumInput label="매수가" value={buyPrice} onChange={setBuyPrice} unit="원" placeholder="50,000" />
         <NumInput label="수수료율 (편도)" value={feeRate} onChange={setFeeRate} unit="%" placeholder="0.015" />
       </div>
-      <div className="grid md:grid-cols-2 border" style={{ borderColor: _BORDER }}>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="손익분기 매도가" value={fmt(breakeven, 0)} unit="원" highlight color="#8A8A8A" /></div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
+        <ResultBox label="손익분기 매도가" value={fmt(breakeven, 0)} unit="원" highlight color="#8A8A8A" />
         <ResultBox label="필요 상승률" value={fmt(pctUp)} unit="%" />
       </div>
       <CalcNote
@@ -3616,17 +3328,17 @@ function PositionSizeCalc() {
   const posValue = shares * Number(entry || 0);
   const posPct = capital ? (posValue / Number(capital)) * 100 : 0;
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <CalcHeader num="18" title="포지션 사이징" desc="리스크 한도 기준으로 적정 매수 수량을 계산합니다." color="#8A8A8A" />
-      <div className="grid md:grid-cols-2 gap-5 mb-8">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <NumInput label="총 투자금" value={capital} onChange={setCapital} unit="원" placeholder="100,000,000" />
         <NumInput label="1회 허용 리스크" value={riskPct} onChange={setRiskPct} unit="%" placeholder="2" hint="보통 1~2%" />
         <NumInput label="진입가" value={entry} onChange={setEntry} unit="원" placeholder="50,000" />
         <NumInput label="손절가" value={stop} onChange={setStop} unit="원" placeholder="47,000" />
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-3 border" style={{ borderColor: _BORDER }}>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="허용 손실액" value={fmt(riskAmt, 0)} unit="원" /></div>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="매수 수량" value={fmt(shares, 0)} unit="주" highlight color="#8A8A8A" /></div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
+        <ResultBox label="허용 손실액" value={fmt(riskAmt, 0)} unit="원" />
+        <ResultBox label="매수 수량" value={fmt(shares, 0)} unit="주" highlight color="#8A8A8A" />
         <ResultBox label="포지션 비중" value={fmt(posPct)} unit="%" />
       </div>
       <CalcNote
@@ -3665,7 +3377,7 @@ function FuturesCalc() {
   const directedDiff = side === 'long' ? diff : -diff;
   const pnl = directedDiff * Number(contracts || 0) * Number(multiplier || 0);
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <CalcHeader num="22" title="선물 손익 계산" desc="KOSPI200 선물 기준 손익을 산출합니다." color="#6B6B6B" />
       <div className="flex mb-5 border" style={{ borderColor: _BORDER }}>
         <button onClick={() => setSide('long')} className="flex-1 py-3 text-sm font-medium transition-all border-r"
@@ -3673,14 +3385,14 @@ function FuturesCalc() {
         <button onClick={() => setSide('short')} className="flex-1 py-3 text-sm font-medium transition-all"
           style={{ background: side === 'short' ? '#A63D33' : 'transparent', color: side === 'short' ? _T.textPrimary : _T.textMuted }}>SHORT · 매도</button>
       </div>
-      <div className="grid md:grid-cols-2 gap-5 mb-8">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <NumInput label="진입가 (포인트)" value={entry} onChange={setEntry} unit="pt" placeholder="350.00" />
         <NumInput label="청산가 (포인트)" value={exit} onChange={setExit} unit="pt" placeholder="355.00" />
         <NumInput label="계약수" value={contracts} onChange={setContracts} unit="계약" placeholder="1" />
         <NumInput label="승수" value={multiplier} onChange={setMultiplier} unit="원" placeholder="250,000" />
       </div>
-      <div className="grid md:grid-cols-2 border" style={{ borderColor: _BORDER }}>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="포인트 손익" value={fmt(directedDiff, 2)} unit="pt" /></div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
+        <ResultBox label="포인트 손익" value={fmt(directedDiff, 2)} unit="pt" />
         <ResultBox label="손익금액" value={fmt(pnl, 0)} unit="원" highlight color={pnl >= 0 ? '#C89650' : '#A63D33'} />
       </div>
       <CalcNote
@@ -3718,16 +3430,16 @@ function LeverageCalc() {
   const leverage = margin && capital ? Number(notional) / Number(capital) : 0;
   const maxLoss = capital && marginRate ? Number(capital) / (Number(marginRate) / 100) : 0;
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <CalcHeader num="23" title="레버리지 · 증거금" desc="필요 증거금과 실질 레버리지를 산출합니다." color="#6B6B6B" />
-      <div className="grid md:grid-cols-3 gap-5 mb-8">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <NumInput label="계약 명목금액" value={notional} onChange={setNotional} unit="원" placeholder="100,000,000" />
         <NumInput label="증거금률" value={marginRate} onChange={setMarginRate} unit="%" placeholder="10" />
         <NumInput label="투자 가용 자본" value={capital} onChange={setCapital} unit="원" placeholder="10,000,000" />
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-3 border" style={{ borderColor: _BORDER }}>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="필요 증거금" value={fmt(margin, 0)} unit="원" /></div>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="실질 레버리지" value={fmt(leverage)} unit="배" highlight color="#6B6B6B" /></div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
+        <ResultBox label="필요 증거금" value={fmt(margin, 0)} unit="원" />
+        <ResultBox label="실질 레버리지" value={fmt(leverage)} unit="배" highlight color="#6B6B6B" />
         <ResultBox label="최대 명목포지션" value={fmt(maxLoss, 0)} unit="원" />
       </div>
       <CalcNote
@@ -3789,7 +3501,7 @@ function BlackScholesCalc() {
   const result = valid ? blackScholes(Number(S), Number(K), Number(T) / 365, Number(r) / 100, Number(sigma) / 100, type) : null;
 
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <CalcHeader num="24" title="블랙-숄즈 옵션가" desc="유럽형 옵션의 이론가를 계산합니다." color="#6B6B6B" />
       <div className="flex mb-5 border" style={{ borderColor: _BORDER }}>
         <button onClick={() => setType('call')} className="flex-1 py-3 text-sm font-medium transition-all border-r"
@@ -3797,16 +3509,16 @@ function BlackScholesCalc() {
         <button onClick={() => setType('put')} className="flex-1 py-3 text-sm font-medium transition-all"
           style={{ background: type === 'put' ? '#A63D33' : 'transparent', color: type === 'put' ? _T.textPrimary : _T.textMuted }}>PUT · 풋옵션</button>
       </div>
-      <div className="grid md:grid-cols-2 gap-5 mb-8">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <NumInput label="기초자산 가격 (S)" value={S} onChange={setS} unit="원" placeholder="350" />
         <NumInput label="행사가 (K)" value={K} onChange={setK} unit="원" placeholder="355" />
         <NumInput label="만기까지 일수 (T)" value={T} onChange={setT} unit="일" placeholder="30" />
         <NumInput label="무위험금리 (r)" value={r} onChange={setR} unit="%" placeholder="3.5" />
         <NumInput label="변동성 (σ)" value={sigma} onChange={setSigma} unit="%" placeholder="20" hint="내재변동성 또는 역사적변동성" />
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-3 border" style={{ borderColor: _BORDER }}>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="d₁" value={result ? fmt(result.d1, 4) : '—'} unit="" /></div>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="d₂" value={result ? fmt(result.d2, 4) : '—'} unit="" /></div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
+        <ResultBox label="d₁" value={result ? fmt(result.d1, 4) : '—'} unit="" />
+        <ResultBox label="d₂" value={result ? fmt(result.d2, 4) : '—'} unit="" />
         <ResultBox label={type === 'call' ? '콜 이론가' : '풋 이론가'} value={result ? fmt(result.price, 2) : '—'} unit="원" highlight color="#6B6B6B" />
       </div>
       <CalcNote
@@ -3864,7 +3576,7 @@ function GreeksCalc() {
   }
 
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <CalcHeader num="25" title="옵션 Greeks" desc="델타·감마·세타·베가·로를 동시에 산출합니다." color="#6B6B6B" />
       <div className="flex mb-5 border" style={{ borderColor: _BORDER }}>
         <button onClick={() => setType('call')} className="flex-1 py-3 text-sm font-medium border-r"
@@ -3872,18 +3584,18 @@ function GreeksCalc() {
         <button onClick={() => setType('put')} className="flex-1 py-3 text-sm font-medium"
           style={{ background: type === 'put' ? '#A63D33' : 'transparent', color: type === 'put' ? _T.textPrimary : _T.textMuted }}>PUT</button>
       </div>
-      <div className="grid md:grid-cols-2 gap-5 mb-8">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <NumInput label="기초자산 (S)" value={S} onChange={setS} unit="원" placeholder="350" />
         <NumInput label="행사가 (K)" value={K} onChange={setK} unit="원" placeholder="355" />
         <NumInput label="만기일수 (T)" value={T} onChange={setT} unit="일" placeholder="30" />
         <NumInput label="무위험금리" value={r} onChange={setR} unit="%" placeholder="3.5" />
         <NumInput label="변동성" value={sigma} onChange={setSigma} unit="%" placeholder="20" />
       </div>
-      <div className="grid md:grid-cols-5 border" style={{ borderColor: _BORDER }}>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="Delta Δ" value={greeks ? fmt(greeks.delta, 4) : '—'} unit="" highlight color="#6B6B6B" /></div>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="Gamma Γ" value={greeks ? fmt(greeks.gamma, 5) : '—'} unit="" /></div>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="Theta Θ" value={greeks ? fmt(greeks.theta, 4) : '—'} unit="/일" /></div>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="Vega ν" value={greeks ? fmt(greeks.vega, 4) : '—'} unit="" /></div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
+        <ResultBox label="Delta Δ" value={greeks ? fmt(greeks.delta, 4) : '—'} unit="" highlight color="#6B6B6B" />
+        <ResultBox label="Gamma Γ" value={greeks ? fmt(greeks.gamma, 5) : '—'} unit="" />
+        <ResultBox label="Theta Θ" value={greeks ? fmt(greeks.theta, 4) : '—'} unit="/일" />
+        <ResultBox label="Vega ν" value={greeks ? fmt(greeks.vega, 4) : '—'} unit="" />
         <ResultBox label="Rho ρ" value={greeks ? fmt(greeks.rho, 4) : '—'} unit="" />
       </div>
       <CalcNote
@@ -3920,16 +3632,16 @@ function SharpeCalc() {
   const sharpe = rp && sigma ? (Number(rp) - Number(rf)) / Number(sigma) : 0;
   const sortino = rp && downside ? (Number(rp) - Number(rf)) / Number(downside) : 0;
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <CalcHeader num="28" title="샤프 · 소티노지수" desc="위험조정수익률을 두 가지 지표로 비교합니다." color="#4F7E7C" />
-      <div className="grid md:grid-cols-2 gap-5 mb-8">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <NumInput label="포트폴리오 수익률" value={rp} onChange={setRp} unit="%" placeholder="15" />
         <NumInput label="무위험수익률" value={rf} onChange={setRf} unit="%" placeholder="3.5" />
         <NumInput label="표준편차 (전체)" value={sigma} onChange={setSigma} unit="%" placeholder="12" />
         <NumInput label="하방편차" value={downside} onChange={setDownside} unit="%" placeholder="8" hint="손실 구간의 표준편차" />
       </div>
-      <div className="grid md:grid-cols-2 border" style={{ borderColor: _BORDER }}>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="샤프지수" value={fmt(sharpe, 3)} unit="" highlight color="#4F7E7C" /></div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
+        <ResultBox label="샤프지수" value={fmt(sharpe, 3)} unit="" highlight color="#4F7E7C" />
         <ResultBox label="소티노지수" value={fmt(sortino, 3)} unit="" />
       </div>
       <CalcNote
@@ -3966,16 +3678,16 @@ function KellyCalc() {
   const f = b > 0 ? (b * p - q) / b : 0;
   const halfKelly = f / 2;
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <CalcHeader num="29" title="켈리 공식" desc="장기 기대수익률 극대화를 위한 최적 베팅 비율을 산출합니다." color="#4F7E7C" />
-      <div className="grid md:grid-cols-3 gap-5 mb-8">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <NumInput label="승률" value={winRate} onChange={setWinRate} unit="%" placeholder="55" />
         <NumInput label="평균 수익금" value={winAmt} onChange={setWinAmt} unit="원" placeholder="200,000" />
         <NumInput label="평균 손실금" value={lossAmt} onChange={setLossAmt} unit="원" placeholder="100,000" />
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-3 border" style={{ borderColor: _BORDER }}>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="Full Kelly" value={fmt(f * 100)} unit="%" highlight color="#4F7E7C" /></div>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="Half Kelly (권장)" value={fmt(halfKelly * 100)} unit="%" /></div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
+        <ResultBox label="Full Kelly" value={fmt(f * 100)} unit="%" highlight color="#4F7E7C" />
+        <ResultBox label="Half Kelly (권장)" value={fmt(halfKelly * 100)} unit="%" />
         <ResultBox label="손익비 (b)" value={fmt(b)} unit=":1" />
       </div>
       <CalcNote
@@ -4008,14 +3720,14 @@ function MDDCalc() {
   const mdd = peak && trough ? ((Number(trough) - Number(peak)) / Number(peak)) * 100 : 0;
   const recovery = peak && trough ? ((Number(peak) - Number(trough)) / Number(trough)) * 100 : 0;
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <CalcHeader num="30" title="최대낙폭 (MDD)" desc="고점 대비 최대 하락률과 원금 회복에 필요한 수익률을 계산합니다." color="#4F7E7C" />
-      <div className="grid md:grid-cols-2 gap-5 mb-8">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <NumInput label="고점 (Peak)" value={peak} onChange={setPeak} unit="원" placeholder="100,000,000" />
         <NumInput label="저점 (Trough)" value={trough} onChange={setTrough} unit="원" placeholder="70,000,000" />
       </div>
-      <div className="grid md:grid-cols-2 border" style={{ borderColor: _BORDER }}>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="MDD" value={fmt(mdd)} unit="%" highlight color="#A63D33" /></div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
+        <ResultBox label="MDD" value={fmt(mdd)} unit="%" highlight color="#A63D33" />
         <ResultBox label="회복 필요 수익률" value={fmt(recovery)} unit="%" />
       </div>
       <CalcNote
@@ -4052,9 +3764,9 @@ function VaRCalc() {
   const dailyVar = Number(value) * Number(sigma) / 100 * z;
   const multiDayVar = dailyVar * Math.sqrt(Number(days));
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <CalcHeader num="31" title="VaR 추정" desc="주어진 신뢰수준에서 예상 최대 손실을 추정합니다." color="#4F7E7C" />
-      <div className="grid md:grid-cols-2 gap-5 mb-8">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <NumInput label="포트폴리오 가치" value={value} onChange={setValue} unit="원" placeholder="100,000,000" />
         <NumInput label="일일 변동성" value={sigma} onChange={setSigma} unit="%" placeholder="1.5" />
         <div>
@@ -4068,8 +3780,8 @@ function VaRCalc() {
         </div>
         <NumInput label="기간" value={days} onChange={setDays} unit="일" placeholder="1" />
       </div>
-      <div className="grid md:grid-cols-2 border" style={{ borderColor: _BORDER }}>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="1일 VaR" value={fmt(dailyVar, 0)} unit="원" /></div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
+        <ResultBox label="1일 VaR" value={fmt(dailyVar, 0)} unit="원" />
         <ResultBox label={`${days}일 VaR`} value={fmt(multiDayVar, 0)} unit="원" highlight color="#A63D33" />
       </div>
       <CalcNote
@@ -4107,16 +3819,16 @@ function FXCalc() {
   const pnl = krwReceived - krwSpent;
   const pnlPct = krwSpent ? (pnl / krwSpent) * 100 : 0;
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <CalcHeader num="32" title="환차손익 계산" desc="외화 매수·매도 시 원화 기준 손익을 산출합니다." color="#7C6A9B" />
-      <div className="grid md:grid-cols-3 gap-5 mb-8">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <NumInput label="외화 금액" value={amount} onChange={setAmount} unit="USD" placeholder="10,000" />
         <NumInput label="매수 환율" value={buyRate} onChange={setBuyRate} unit="KRW" placeholder="1,300" />
         <NumInput label="매도 환율" value={sellRate} onChange={setSellRate} unit="KRW" placeholder="1,380" />
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-3 border" style={{ borderColor: _BORDER }}>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="매수 시 원화" value={fmt(krwSpent, 0)} unit="원" /></div>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="매도 시 원화" value={fmt(krwReceived, 0)} unit="원" /></div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
+        <ResultBox label="매수 시 원화" value={fmt(krwSpent, 0)} unit="원" />
+        <ResultBox label="매도 시 원화" value={fmt(krwReceived, 0)} unit="원" />
         <ResultBox label={`환차${pnl >= 0 ? '익' : '손'}`} value={fmt(pnl, 0)} unit={`원 (${fmt(pnlPct)}%)`} highlight color={pnl >= 0 ? '#C89650' : '#A63D33'} />
       </div>
       <CalcNote
@@ -4153,14 +3865,14 @@ function RealRateCalc() {
     : 0;
   const simpleReal = nominal && inflation ? Number(nominal) - Number(inflation) : 0;
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <CalcHeader num="33" title="실질금리 계산" desc="명목금리에서 인플레이션을 차감한 실질 구매력을 계산합니다." color="#7C6A9B" />
-      <div className="grid md:grid-cols-2 gap-5 mb-8">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <NumInput label="명목금리" value={nominal} onChange={setNominal} unit="%" placeholder="5" />
         <NumInput label="인플레이션 (CPI)" value={inflation} onChange={setInflation} unit="%" placeholder="3" />
       </div>
-      <div className="grid md:grid-cols-2 border" style={{ borderColor: _BORDER }}>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="실질금리 (Fisher)" value={fmt(real, 3)} unit="%" highlight color="#7C6A9B" /></div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
+        <ResultBox label="실질금리 (Fisher)" value={fmt(real, 3)} unit="%" highlight color="#7C6A9B" />
         <ResultBox label="간이 계산" value={fmt(simpleReal)} unit="%" />
       </div>
       <CalcNote
@@ -4205,16 +3917,16 @@ function BondPriceCalc() {
   const premium = F ? ((pv - F) / F) * 100 : 0;
 
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <CalcHeader num="34" title="채권 가격 계산" desc="액면가 · 쿠폰 · YTM으로 채권의 현재가격을 계산합니다." color="#7C6A9B" />
-      <div className="grid md:grid-cols-2 gap-5 mb-8">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <NumInput label="액면가" value={face} onChange={setFace} unit="원" placeholder="1,000,000" />
         <NumInput label="쿠폰금리 (연)" value={coupon} onChange={setCoupon} unit="%" placeholder="4" />
         <NumInput label="만기수익률 (YTM)" value={ytm} onChange={setYtm} unit="%" placeholder="5" />
         <NumInput label="잔존만기" value={years} onChange={setYears} unit="년" placeholder="5" />
       </div>
-      <div className="grid md:grid-cols-2 border" style={{ borderColor: _BORDER }}>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="채권 가격 (PV)" value={fmt(pv, 0)} unit="원" highlight color="#7C6A9B" /></div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
+        <ResultBox label="채권 가격 (PV)" value={fmt(pv, 0)} unit="원" highlight color="#7C6A9B" />
         <ResultBox label="액면 대비" value={fmt(premium, 2)} unit="%" />
       </div>
       <CalcNote
@@ -4291,22 +4003,22 @@ function CapitalGainCalc() {
   const netProceeds = saleAmount - purchaseAmount - taxAmount;
 
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <CalcHeader num="38" title="양도소득세" desc="국내 대주주·해외·비상장주식 양도소득세를 계산합니다. 2026년 기준. ※ 국내 상장주식 소액주주 장내거래는 양도세 비과세." color="#5B8DB8" />
       <div className="flex mb-5 border" style={{ borderColor: _BORDER }}>
         <button onClick={() => setType('domestic')} className="flex-1 py-3 text-sm font-medium transition-all border-r" style={{ borderColor: _BORDER, background: type === 'domestic' ? '#4A7045' : 'transparent', color: type === 'domestic' ? _T.textPrimary : _T.textMuted }}>국내대주주</button>
         <button onClick={() => setType('foreign')} className="flex-1 py-3 text-sm font-medium transition-all border-r" style={{ borderColor: _BORDER, background: type === 'foreign' ? '#5B8DB8' : 'transparent', color: type === 'foreign' ? _T.textPrimary : _T.textMuted }}>해외주식</button>
         <button onClick={() => setType('unlisted')} className="flex-1 py-3 text-sm font-medium transition-all" style={{ background: type === 'unlisted' ? '#C89650' : 'transparent', color: type === 'unlisted' ? _T.textPrimary : _T.textMuted }}>비상장</button>
       </div>
-      <div className="grid md:grid-cols-2 gap-5 mb-8">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <NumInput label="매수가" value={buyPrice} onChange={setBuyPrice} unit="원" placeholder="50,000" />
         <NumInput label="수량" value={qty} onChange={setQty} unit="주" placeholder="100" />
         <NumInput label="매도가" value={sellPrice} onChange={setSellPrice} unit="원" placeholder="70,000" />
         <NumInput label="취득비용 (수수료 등)" value={tradeCost} onChange={setTradeCost} unit="원" placeholder="50,000" />
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-3 border" style={{ borderColor: _BORDER }}>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="양도차익" value={fmt(gain, 0)} unit="원" /></div>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="세율" value={fmt(taxRate)} unit="%" /></div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
+        <ResultBox label="양도차익" value={fmt(gain, 0)} unit="원" />
+        <ResultBox label="세율" value={fmt(taxRate)} unit="%" />
         <ResultBox label="산출세액" value={fmt(taxAmount, 0)} unit="원" highlight color="#5B8DB8" />
       </div>
       <CalcNote
@@ -4357,7 +4069,7 @@ function HealthInsuranceCalc() {
   const isGrossIncome = fi > EXTRA_THRESHOLD; // 종합과세 여부
 
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <CalcHeader num="39" title="건강보험료 (금융소득 영향)" desc="금융소득이 건강보험료에 미치는 영향을 계산합니다. 2026년 기준. ※ 지역가입자는 별도 계산 구조로 이 계산기 결과가 맞지 않습니다." color="#5B8DB8" />
       <div className="flex mb-5 border" style={{ borderColor: _BORDER }}>
         <button onClick={() => setMemberType('employee')} className="flex-1 py-3 text-sm font-medium transition-all border-r"
@@ -4365,9 +4077,7 @@ function HealthInsuranceCalc() {
         <button onClick={() => setMemberType('dependent')} className="flex-1 py-3 text-sm font-medium transition-all"
           style={{ background: memberType === 'dependent' ? '#8A8A8A' : 'transparent', color: memberType === 'dependent' ? '#fff' : _T.textMuted }}>피부양자</button>
       </div>
-      <div className="mb-8">
-        <NumInput label="연간 금융소득 (이자+배당)" value={financialIncome} onChange={setFinancialIncome} unit="원" placeholder="30,000,000" />
-      </div>
+      <NumInput label="연간 금융소득 (이자+배당)" value={financialIncome} onChange={setFinancialIncome} unit="원" placeholder="30,000,000" />
 
       {memberType === 'employee' ? (
         <>
@@ -4376,9 +4086,9 @@ function HealthInsuranceCalc() {
               ? `⚠ 금융소득 ${fmt(fi/10000,0)}만원 — 2,000만원 초과분 ${fmt(extraAnnual/10000,0)}만원에 보수외소득 보험료 부과`
               : `✓ 금융소득 ${fmt(fi/10000,0)}만원 — 2,000만원 이하로 추가 보험료 없음`}
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 border" style={{ borderColor: _BORDER }}>
-            <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="보수외 월 건강보험료" value={fmt(employeeExtra, 0)} unit="원/월" /></div>
-            <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="장기요양보험료" value={fmt(employeeLtc, 0)} unit="원/월" /></div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <ResultBox label="보수외 월 건강보험료" value={fmt(employeeExtra, 0)} unit="원/월" />
+            <ResultBox label="장기요양보험료" value={fmt(employeeLtc, 0)} unit="원/월" />
             <ResultBox label="추가 월 보험료 합계" value={fmt(employeeTotal, 0)} unit="원/월" highlight color="#5B8DB8" />
           </div>
         </>
@@ -4389,9 +4099,7 @@ function HealthInsuranceCalc() {
               ? `⚠ 금융소득 ${fmt(fi/10000,0)}만원 — 2,000만원 초과로 피부양자 자격 탈락`
               : `✓ 금융소득 ${fmt(fi/10000,0)}만원 — 2,000만원 이하로 피부양자 유지`}
           </div>
-          <div className="border" style={{ borderColor: _BORDER }}>
-            <ResultBox label="피부양자 탈락 여부" value={isDependentLost ? '탈락 (지역가입자 전환)' : '유지'} unit="" highlight={isDependentLost} color="#A63D33" />
-          </div>
+          <ResultBox label="피부양자 탈락 여부" value={isDependentLost ? '탈락 (지역가입자 전환)' : '유지'} unit="" highlight={isDependentLost} color="#A63D33" />
           {isDependentLost && (
             <div className="mt-3 px-4 py-3 border text-sm" style={{ borderColor: _BORDER, color: _T.textMuted }}>
               탈락 후 지역가입자 보험료는 소득·재산·자동차를 종합 산정하며, 단순 세율 계산이 불가합니다. 국민건강보험공단 모의계산기를 이용하세요.
@@ -4477,17 +4185,17 @@ function IncomeTaxCalc() {
   const effectiveRate = income > 0 ? (totalTax / income) * 100 : 0;
 
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <CalcHeader num="40" title="종합소득세 간이" desc="근로소득 기준 연간 소득세를 추정합니다. 2024년 기준." color="#5B8DB8" />
-      <div className="grid md:grid-cols-2 gap-5 mb-8">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <NumInput label="연소득" value={annualIncome} onChange={setAnnualIncome} unit="원" placeholder="50,000,000" />
         <NumInput label="부양가족 수 (본인제외)" value={dependents} onChange={setDependents} unit="명" placeholder="2" />
         <NumInput label="기타공제액" value={otherDeductions} onChange={setOtherDeductions} unit="원" placeholder="0" />
       </div>
-      <div className={`grid ${incomeType === 'employment' ? 'md:grid-cols-3' : 'md:grid-cols-2'} border`} style={{ borderColor: _BORDER }}>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="과세표준" value={fmt(taxableIncome, 0)} unit="원" /></div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
+        <ResultBox label="과세표준" value={fmt(taxableIncome, 0)} unit="원" />
         <div className={incomeType === 'employment' ? 'border-r' : ''} style={{ borderColor: _BORDER }}><ResultBox label="산출세액" value={fmt(tax, 0)} unit="원" /></div>
-        {incomeType === 'employment' && <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="지방소득세" value={fmt(localTax, 0)} unit="원" /></div>}
+        {incomeType === 'employment' && <ResultBox label="지방소득세" value={fmt(localTax, 0)} unit="원" />}
         <ResultBox label="세율" value={fmt(bracket)} unit="%" highlight color="#5B8DB8" />
       </div>
       <div className="mt-5 border" style={{ borderColor: _BORDER }}>
@@ -4560,9 +4268,9 @@ function GiftTaxCalc() {
   const payableTax = Math.max(0, tax - creditTax);
 
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <CalcHeader num="41" title="증여세" desc="배우자·직계존속·직계비속별 공제 및 세율을 적용합니다. 2024년 기준." color="#5B8DB8" />
-      <div className="grid md:grid-cols-2 gap-5 mb-8">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <NumInput label="증여재산가액" value={giftAmount} onChange={setGiftAmount} unit="원" placeholder="200,000,000" />
         <NumInput label="10년 내 기증여액" value={priorGifts} onChange={setPriorGifts} unit="원" placeholder="0" />
       </div>
@@ -4584,9 +4292,9 @@ function GiftTaxCalc() {
           </label>
         </div>
       )}
-      <div className="grid grid-cols-1 md:grid-cols-3 border" style={{ borderColor: _BORDER }}>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="공제후 과세표준" value={fmt(taxableGift, 0)} unit="원" /></div>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="세율" value={fmt(taxRate)} unit="%" /></div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
+        <ResultBox label="공제후 과세표준" value={fmt(taxableGift, 0)} unit="원" />
+        <ResultBox label="세율" value={fmt(taxRate)} unit="%" />
         <ResultBox label="산출세액" value={fmt(tax, 0)} unit="원" highlight color="#5B8DB8" />
       </div>
       <div className="mt-5 border" style={{ borderColor: _BORDER }}>
@@ -4652,26 +4360,26 @@ function PensionCalc() {
   }
 
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <CalcHeader num="42" title="연금 수령액" desc="국민연금 또는 퇴직·개인연금의 예상 월 수령액을 계산합니다." color="#5B8DB8" />
       <div className="flex mb-5 border" style={{ borderColor: _BORDER }}>
         <button onClick={() => setPensionType('national')} className="flex-1 py-3 text-sm font-medium transition-all border-r" style={{ borderColor: _BORDER, background: pensionType === 'national' ? '#5B8DB8' : 'transparent', color: pensionType === 'national' ? _T.textPrimary : _T.textMuted }}>국민연금</button>
         <button onClick={() => setPensionType('retirement')} className="flex-1 py-3 text-sm font-medium transition-all" style={{ background: pensionType === 'retirement' ? '#C89650' : 'transparent', color: pensionType === 'retirement' ? _T.textPrimary : _T.textMuted }}>퇴직·개인연금</button>
       </div>
       {pensionType === 'national' ? (
-        <div className="grid md:grid-cols-2 gap-5 mb-8">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           <NumInput label="현재 월소득" value={monthlyIncome} onChange={setMonthlyIncome} unit="원" placeholder="3,000,000" />
           <NumInput label="가입기간" value={yearsContributed} onChange={setYearsContributed} unit="년" placeholder="30" />
         </div>
       ) : (
-        <div className="grid md:grid-cols-2 gap-5 mb-8">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           <NumInput label="납입총액" value={principalAmount} onChange={setPrincipalAmount} unit="원" placeholder="300,000,000" />
           <NumInput label="예상수익률" value={expectedReturn} onChange={setExpectedReturn} unit="%" placeholder="3" />
           <NumInput label="수령기간" value={withdrawalYears} onChange={setWithdrawalYears} unit="년" placeholder="20" />
         </div>
       )}
-      <div className="grid md:grid-cols-2 border" style={{ borderColor: _BORDER }}>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="예상 월 연금액" value={fmt(monthlyPension, 0)} unit="원" highlight color="#5B8DB8" /></div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
+        <ResultBox label="예상 월 연금액" value={fmt(monthlyPension, 0)} unit="원" highlight color="#5B8DB8" />
         <ResultBox label="연간 수령액" value={fmt(monthlyPension * 12, 0)} unit="원" />
       </div>
       <CalcNote
@@ -4730,14 +4438,14 @@ function TaxSavingCalc() {
   }
 
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <CalcHeader num="43" title="ISA · IRP · 연금저축 절세" desc="2024년 기준 절세 효과와 실제 수익률을 비교합니다." color="#5B8DB8" />
       <div className="flex mb-5 border" style={{ borderColor: _BORDER }}>
         <button onClick={() => setSavingType('isa')} className="flex-1 py-3 text-sm font-medium transition-all border-r" style={{ borderColor: _BORDER, background: savingType === 'isa' ? '#5B8DB8' : 'transparent', color: savingType === 'isa' ? _T.textPrimary : _T.textMuted }}>ISA</button>
         <button onClick={() => setSavingType('irp')} className="flex-1 py-3 text-sm font-medium transition-all" style={{ background: savingType === 'irp' ? '#C89650' : 'transparent', color: savingType === 'irp' ? _T.textPrimary : _T.textMuted }}>IRP + 연금저축</button>
       </div>
       {savingType === 'isa' ? (
-        <div className="grid md:grid-cols-2 gap-5 mb-8">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           <NumInput label="예상 수익" value={expectedProfit} onChange={setExpectedProfit} unit="원" placeholder="10,000,000" />
           <div className="flex gap-2 items-end">
             <div className="flex-1">
@@ -4750,15 +4458,15 @@ function TaxSavingCalc() {
           </div>
         </div>
       ) : (
-        <div className="grid md:grid-cols-2 gap-5 mb-8">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           <NumInput label="연소득" value={annualIncome} onChange={setAnnualIncome} unit="원" placeholder="50,000,000" />
           <NumInput label="IRP 납입" value={irpContribution} onChange={setIrpContribution} unit="원" placeholder="5,000,000" />
           <NumInput label="연금저축 납입" value={pensionContribution} onChange={setPensionContribution} unit="원" placeholder="4,000,000" />
         </div>
       )}
-      <div className={`grid ${savingType === 'isa' ? 'md:grid-cols-2' : 'md:grid-cols-3'} border`} style={{ borderColor: _BORDER }}>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="절세액" value={fmt(taxSavings, 0)} unit="원" /></div>
-        {savingType === 'isa' && <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="일반계좌 대비 절약" value={fmt((Number(expectedProfit)||0) > 0 ? ((Number(expectedProfit)||0) * 0.154 - (Number(expectedProfit)||0) * 0.099) : 0, 0)} unit="원" /></div>}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
+        <ResultBox label="절세액" value={fmt(taxSavings, 0)} unit="원" />
+        {savingType === 'isa' && <ResultBox label="일반계좌 대비 절약" value={fmt((Number(expectedProfit)||0) > 0 ? ((Number(expectedProfit)||0) * 0.154 - (Number(expectedProfit)||0) * 0.099) : 0, 0)} unit="원" />}
         <ResultBox label={savingType === 'isa' ? '실효수익률' : '세액공제율'} value={fmt(effectiveReturn, 2)} unit="%" highlight color="#5B8DB8" />
       </div>
       <CalcNote
@@ -4804,7 +4512,7 @@ function FxConvertCalc() {
     ? amt * appliedRate - amt * baseRate
     : amt - amt * (1 - sp);
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <CalcHeader num="19" title="환전 수수료 계산" desc="기준환율 대비 실제 환전 비용을 계산합니다." color="#8A8A8A" />
       <div className="flex mb-5 border" style={{ borderColor: _BORDER }}>
         <button onClick={() => setDir('buy')} className="flex-1 py-3 text-sm font-medium transition-all border-r"
@@ -4816,14 +4524,14 @@ function FxConvertCalc() {
           달러 매도 (달러→원)
         </button>
       </div>
-      <div className="grid md:grid-cols-3 gap-5 mb-8">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <NumInput label={dir === 'buy' ? '환전할 원화' : '환전할 달러'} value={amount} onChange={setAmount} unit={dir === 'buy' ? '원' : '$'} placeholder={dir === 'buy' ? '1,000,000' : '1,000'} />
         <NumInput label="기준환율 (매매기준율)" value={rate} onChange={setRate} unit="원/$" placeholder="1,350" />
         <NumInput label="스프레드 (환전 우대 전)" value={spread} onChange={setSpread} unit="%" hint="일반 1.75%, 우대 시 더 낮음" />
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-3 border" style={{ borderColor: _BORDER }}>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="적용 환율" value={fmt(appliedRate, 2)} unit="원/$" /></div>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="스프레드 비용" value={fmt(spreadCost, 0)} unit={dir === 'buy' ? '원' : '$'} /></div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
+        <ResultBox label="적용 환율" value={fmt(appliedRate, 2)} unit="원/$" />
+        <ResultBox label="스프레드 비용" value={fmt(spreadCost, 0)} unit={dir === 'buy' ? '원' : '$'} />
         <ResultBox label={dir === 'buy' ? '수령 달러' : '수령 원화'} value={dir === 'buy' ? fmt(usdResult, 2) : fmt(krwResult, 0)} unit={dir === 'buy' ? '$' : '원'} highlight color="#8A8A8A" />
       </div>
       <CalcNote
@@ -4855,19 +4563,19 @@ function ShortSellCalc() {
   const netPnl = pnl - borrowCost - sellTax;
   const retPct = ep * q ? (netPnl / (ep * q)) * 100 : 0;
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <CalcHeader num="20" title="공매도 손익 계산" desc="대차료·거래세 반영 후 실제 공매도 순손익을 계산합니다." color="#8A8A8A" />
-      <div className="grid md:grid-cols-2 gap-5 mb-8">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <NumInput label="진입가 (숏 진입)" value={entry} onChange={setEntry} unit="원" placeholder="50,000" />
         <NumInput label="청산가 (숏 청산)" value={exit} onChange={setExit} unit="원" placeholder="45,000" hint="낮을수록 이익" />
         <NumInput label="수량" value={qty} onChange={setQty} unit="주" placeholder="100" />
         <NumInput label="보유 일수" value={days} onChange={setDays} unit="일" placeholder="10" />
         <NumInput label="대차금리 (연)" value={borrowRate} onChange={setBorrowRate} unit="%" hint="종목별 상이, 일반 1~5%" />
       </div>
-      <div className="grid md:grid-cols-4 border" style={{ borderColor: _BORDER }}>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="주가차익" value={fmt(pnl, 0)} unit="원" /></div>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="대차료" value={fmt(-borrowCost, 0)} unit="원" /></div>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="증권거래세" value={fmt(-sellTax, 0)} unit="원" /></div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
+        <ResultBox label="주가차익" value={fmt(pnl, 0)} unit="원" />
+        <ResultBox label="대차료" value={fmt(-borrowCost, 0)} unit="원" />
+        <ResultBox label="증권거래세" value={fmt(-sellTax, 0)} unit="원" />
         <ResultBox label="순손익" value={fmt(netPnl, 0)} unit="원" highlight color="#8A8A8A" />
       </div>
       <div className="border border-t-0" style={{ borderColor: _BORDER }}>
@@ -4910,7 +4618,7 @@ function SplitOrderCalc() {
   const avgPrice = totalQty ? totalSpent / totalQty : 0;
 
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <CalcHeader num="21" title="분할매수 · 분할매도 전략" desc="단계별 진입/청산 가격과 수량을 자동으로 계산합니다." color="#8A8A8A" />
       <div className="flex mb-5 border" style={{ borderColor: _BORDER }}>
         <button onClick={() => setMode('buy')} className="flex-1 py-3 text-sm font-medium transition-all border-r"
@@ -4922,7 +4630,7 @@ function SplitOrderCalc() {
           분할매도
         </button>
       </div>
-      <div className="grid md:grid-cols-2 gap-5 mb-8">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <NumInput label={mode === 'buy' ? '1차 매수가' : '1차 매도가'} value={basePrice} onChange={setBasePrice} unit="원" placeholder="50,000" />
         <NumInput label="총 투자금액" value={totalAmt} onChange={setTotalAmt} unit="원" placeholder="10,000,000" />
         <NumInput label="분할 횟수" value={steps} onChange={setSteps} unit="회" hint="최대 5회" placeholder="3" />
@@ -4972,17 +4680,17 @@ function RolloverCalc() {
   const rollCost = basis * c * m;               // 롤오버 비용 (원)
   const rollPct = near ? (basis / near) * 100 : 0;
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <CalcHeader num="26" title="롤오버 비용 계산" desc="선물 월물 교체(롤오버) 시 베이시스 비용을 계산합니다." color="#6B6B6B" />
-      <div className="grid md:grid-cols-2 gap-5 mb-8">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <NumInput label="근월물 가격" value={nearPrice} onChange={setNearPrice} unit="pt" placeholder="350.50" />
         <NumInput label="원월물 가격" value={farPrice} onChange={setFarPrice} unit="pt" placeholder="352.20" hint="원월물이 높으면 콘탱고 (비용 발생)" />
         <NumInput label="계약 수" value={contracts} onChange={setContracts} unit="계약" placeholder="5" />
         <NumInput label="계약 승수" value={multiplier} onChange={setMultiplier} unit="원/pt" hint="코스피200선물 250,000원/pt" />
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-3 border" style={{ borderColor: _BORDER }}>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="베이시스" value={fmt(basis, 2)} unit="pt" /></div>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="롤오버 비용" value={fmt(rollCost, 0)} unit="원" highlight color="#6B6B6B" /></div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
+        <ResultBox label="베이시스" value={fmt(basis, 2)} unit="pt" />
+        <ResultBox label="롤오버 비용" value={fmt(rollCost, 0)} unit="원" highlight color="#6B6B6B" />
         <ResultBox label="베이시스율" value={fmt(rollPct, 3)} unit="%" />
       </div>
       <CalcNote
@@ -5010,7 +4718,7 @@ function OptionBEPCalc() {
   const maxProfit = type === 'call' ? Infinity : (K - prem) * m;
 
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <CalcHeader num="27" title="옵션 손익분기 계산" desc="프리미엄 반영 실제 BEP와 최대손실을 계산합니다." color="#6B6B6B" />
       <div className="flex mb-5 border" style={{ borderColor: _BORDER }}>
         <button onClick={() => setType('call')} className="flex-1 py-3 text-sm font-medium transition-all border-r"
@@ -5022,14 +4730,14 @@ function OptionBEPCalc() {
           풋 옵션 매수
         </button>
       </div>
-      <div className="grid md:grid-cols-3 gap-5 mb-8">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <NumInput label="행사가 (Strike)" value={strike} onChange={setStrike} unit="pt" placeholder="350.00" />
         <NumInput label="프리미엄 (옵션가)" value={premium} onChange={setPremium} unit="pt" placeholder="2.50" />
         <NumInput label="계약 승수" value={multiplier} onChange={setMultiplier} unit="원/pt" hint="코스피200 250,000원" />
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-3 border" style={{ borderColor: _BORDER }}>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="손익분기 (BEP)" value={fmt(bep, 2)} unit="pt" highlight color="#6B6B6B" /></div>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="최대 손실" value={fmt(-maxLoss, 0)} unit="원" /></div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
+        <ResultBox label="손익분기 (BEP)" value={fmt(bep, 2)} unit="pt" highlight color="#6B6B6B" />
+        <ResultBox label="최대 손실" value={fmt(-maxLoss, 0)} unit="원" />
         <ResultBox label={type === 'call' ? '최대 이익' : `최대 이익 (지수 0 시)`} value={type === 'call' ? '이론상 무한' : fmt(maxProfit, 0)} unit={type === 'call' ? '' : '원'} />
       </div>
       <CalcNote
@@ -5054,7 +4762,7 @@ function SectorWeightCalc() {
   const rows = nums.map(r => ({ ...r, pct: total ? (r.val / total) * 100 : 0 })).filter(r => r.val > 0);
 
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <CalcHeader num="35" title="섹터별 비중" desc="보유 종목의 섹터별 금액과 비중을 한눈에 확인합니다." color="#6B9B6B" />
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         {SECTORS.map(s => (
@@ -5112,18 +4820,18 @@ function FxHedgeCalc() {
   const hedgeCost = hedgeAmt * fp;
 
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <CalcHeader num="36" title="환헷지 비율 계산" desc="해외 투자 포지션의 환헷지 규모와 비용을 계산합니다." color="#6B9B6B" />
-      <div className="grid md:grid-cols-2 gap-5 mb-8">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <NumInput label="해외 투자금액" value={foreignAmt} onChange={setForeignAmt} unit="$" placeholder="100,000" />
         <NumInput label="현재 환율" value={fxRate} onChange={setFxRate} unit="원/$" placeholder="1,350" />
         <NumInput label="헷지 비율" value={hedgeRatio} onChange={setHedgeRatio} unit="%" hint="0%=무헷지, 100%=완전헷지" />
         <NumInput label="선물환 프리미엄 (연)" value={fwdPremium} onChange={setFwdPremium} unit="%" hint="한미 금리차 반영, 약 1~2% 수준" />
       </div>
-      <div className="grid md:grid-cols-4 border" style={{ borderColor: _BORDER }}>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="원화 환산 총액" value={fmt(krwValue, 0)} unit="원" /></div>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="헷지 금액" value={fmt(hedgeAmt, 0)} unit="원" /></div>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="비헷지 금액" value={fmt(unhedgedAmt, 0)} unit="원" /></div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
+        <ResultBox label="원화 환산 총액" value={fmt(krwValue, 0)} unit="원" />
+        <ResultBox label="헷지 금액" value={fmt(hedgeAmt, 0)} unit="원" />
+        <ResultBox label="비헷지 금액" value={fmt(unhedgedAmt, 0)} unit="원" />
         <ResultBox label="연간 헷지 비용" value={fmt(hedgeCost, 0)} unit="원" highlight color="#6B9B6B" />
       </div>
       <CalcNote
@@ -5165,7 +4873,7 @@ function RebalanceCalc() {
   const removeRow = (i: number) => setRows(prev => prev.filter((_, idx) => idx !== i));
 
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <CalcHeader num="37" title="리밸런싱 계산기" desc="목표 비중과 현재 비중 차이를 계산해 매수/매도 금액을 안내합니다." color="#6B9B6B" />
       <div className="mb-6">
         <NumInput label="총 포트폴리오 금액" value={totalAsset} onChange={setTotalAsset} unit="원" placeholder="100,000,000" />
@@ -5240,9 +4948,9 @@ function FinIncomeTaxCalc() {
   const effectiveRate = totalIncome ? ((isComprehensive ? comprehensiveTax : separateTax) / totalIncome) * 100 : 0;
 
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <CalcHeader num="44" title="금융소득 종합과세 시뮬레이터" desc="금융소득 2,000만원 초과 시 추가 세금 부담을 시뮬레이션합니다." color="#5B8DB8" />
-      <div className="grid md:grid-cols-3 gap-5 mb-8">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <NumInput label="이자소득 (연)" value={interest} onChange={setInterest} unit="원" placeholder="10,000,000" />
         <NumInput label="배당소득 (연)" value={dividend} onChange={setDividend} unit="원" placeholder="15,000,000" />
         <NumInput label="기타 종합소득 (근로·사업 등)" value={otherIncome} onChange={setOtherIncome} unit="원" placeholder="50,000,000" />
@@ -5252,18 +4960,14 @@ function FinIncomeTaxCalc() {
           ? `⚠ 금융소득 ${fmt(fin/10000, 0)}만원 — 2,000만원 초과로 종합과세 대상입니다.`
           : `✓ 금융소득 ${fmt(fin/10000, 0)}만원 — 2,000만원 이하로 분리과세(15.4%) 적용됩니다.`}
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-3 border" style={{ borderColor: _BORDER }}>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="금융소득 합계" value={fmt(fin, 0)} unit="원" /></div>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}>
-          <ResultBox label={isComprehensive ? '종합과세 세액' : '분리과세 세액'} value={fmt(isComprehensive ? comprehensiveTax : separateTax, 0)} unit="원" highlight color="#5B8DB8" />
-        </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
+        <ResultBox label="금융소득 합계" value={fmt(fin, 0)} unit="원" />
+        <ResultBox label={isComprehensive ? '종합과세 세액' : '분리과세 세액'} value={fmt(isComprehensive ? comprehensiveTax : separateTax, 0)} unit="원" highlight color="#5B8DB8" />
         <ResultBox label="실효세율" value={fmt(effectiveRate, 1)} unit="%" />
-      </div>
-      {isComprehensive && (
-        <div className="border border-t-0" style={{ borderColor: _BORDER }}>
+        {isComprehensive && (
           <ResultBox label="분리과세 대비 추가 세부담" value={fmt(additionalTax, 0)} unit="원" />
-        </div>
-      )}
+        )}
+      </div>
       <CalcNote
         how={['이자·배당소득 입력 → 합산 2,000만원 초과 여부 자동 판정', '초과 시 다른 종합소득과 합산해 누진세율 적용', '기타소득은 종합과세 시 합산 기준']}
         example={['이자 1,000만 + 배당 1,500만 = 2,500만 → 종합과세', '기타소득(근로) 5,000만 포함 시 총 7,500만원 종합과세', '세율 24% 구간 적용 → 분리과세 대비 세부담 증가']}
@@ -5334,9 +5038,9 @@ function TaxAccountCalc() {
   };
 
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <CalcHeader num="45" title="절세 계좌 우선순위 추천기" desc="소득 수준과 투자 성향에 맞는 절세 계좌 활용 순서를 안내합니다." color="#5B8DB8" />
-      <div className="grid md:grid-cols-2 gap-5 mb-6">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <NumInput label="연간 총소득 (근로+사업+금융)" value={income} onChange={setIncome} unit="원" placeholder="60,000,000" />
         <div>
           <div className="text-[13px] mono uppercase tracking-[0.15em] mb-3" style={{ color: _T.textFaint }}>투자 성향</div>
@@ -5559,9 +5263,9 @@ function GapCalc() {
   }));
 
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <CalcHeader num="46" title="갭 상하한가 계산" desc="전일 종가 기준 상하한가 및 구간별 갭 가격을 계산합니다." color="#8A8A8A" />
-      <div className="grid md:grid-cols-2 gap-5 mb-6">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <NumInput label="전일 종가" value={prevClose} onChange={setPrevClose} unit="원" placeholder="50,000" />
         <div>
           <div className="text-[11px] mono uppercase tracking-[0.15em] mb-2" style={{ color: _T.textFaint }}>시장</div>
@@ -5575,7 +5279,7 @@ function GapCalc() {
         </div>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 border mb-6" style={{ borderColor: _BORDER }}>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label={`상한가 (+${limitPct}%)`} value={fmt(upperLimit, 0)} unit="원" highlight color="#A63D33" /></div>
+        <ResultBox label={`상한가 (+${limitPct}%)`} value={fmt(upperLimit, 0)} unit="원" highlight color="#A63D33" />
         <ResultBox label={`하한가 (−${limitPct}%)`} value={fmt(lowerLimit, 0)} unit="원" highlight color="#4F7E7C" />
       </div>
       {prev > 0 && (
@@ -5635,19 +5339,19 @@ function MarginLiquidCalc() {
   }));
 
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <CalcHeader num="47" title="반대매매 가격" desc="신용·미수 거래 시 반대매매(강제청산) 발생 가격을 계산합니다." color="#8A8A8A" />
-      <div className="grid md:grid-cols-2 gap-5 mb-6">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <NumInput label="매수 단가" value={buyPrice} onChange={setBuyPrice} unit="원" placeholder="50,000" />
         <NumInput label="수량" value={qty} onChange={setQty} unit="주" placeholder="100" />
       </div>
-      <div className="grid md:grid-cols-2 gap-5 mb-6">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <NumInput label="개시 증거금률" value={marginRate} onChange={setMarginRate} unit="%" placeholder="40" />
         <NumInput label="유지 증거금률" value={maintRate} onChange={setMaintRate} unit="%" placeholder="20" />
       </div>
       <div className="grid grid-cols-1 md:grid-cols-3 border mb-6" style={{ borderColor: _BORDER }}>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="총 매수금액" value={fmt(totalValue, 0)} unit="원" /></div>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="대출금 (융자)" value={fmt(loan, 0)} unit="원" /></div>
+        <ResultBox label="총 매수금액" value={fmt(totalValue, 0)} unit="원" />
+        <ResultBox label="대출금 (융자)" value={fmt(loan, 0)} unit="원" />
         <ResultBox label="반대매매 가격" value={fmt(liquidPrice, 0)} unit="원" highlight color="#A63D33" />
       </div>
       <div className="border mb-4" style={{ borderColor: _BORDER }}>
@@ -5698,20 +5402,20 @@ function FuturesFairCalc() {
     : '차익거래 기회 없음';
 
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <CalcHeader num="48" title="선물 이론가 · 괴리율" desc="Cost of Carry 모델로 KOSPI200 선물 이론가와 괴리율을 계산합니다." color="#6B6B6B" />
-      <div className="grid md:grid-cols-2 gap-5 mb-6">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <NumInput label="현물지수 (KOSPI200)" value={spotIndex} onChange={setSpotIndex} unit="pt" placeholder="350.00" />
         <NumInput label="선물 현재가" value={futuresPrice} onChange={setFuturesPrice} unit="pt" placeholder="351.50" />
       </div>
-      <div className="grid md:grid-cols-3 gap-5 mb-6">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <NumInput label="무위험이자율" value={riskFreeRate} onChange={setRiskFreeRate} unit="%" placeholder="3.5" />
         <NumInput label="배당수익률" value={dividendYield} onChange={setDividendYield} unit="%" placeholder="1.5" />
         <NumInput label="만기까지 잔존일수" value={daysToExp} onChange={setDaysToExp} unit="일" placeholder="30" />
       </div>
       <div className="grid grid-cols-1 md:grid-cols-3 border mb-4" style={{ borderColor: _BORDER }}>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="선물 이론가 (F*)" value={fairValue > 0 ? fmt(fairValue, 2) : '—'} unit="pt" /></div>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="베이시스 (F−S)" value={S > 0 ? fmt(basis, 2) : '—'} unit={`pt (${fmt(basisRate, 2)}%)`} /></div>
+        <ResultBox label="선물 이론가 (F*)" value={fairValue > 0 ? fmt(fairValue, 2) : '—'} unit="pt" />
+        <ResultBox label="베이시스 (F−S)" value={S > 0 ? fmt(basis, 2) : '—'} unit={`pt (${fmt(basisRate, 2)}%)`} />
         <ResultBox label="괴리율 (F−F*)" value={fairValue > 0 ? fmt(mispricingPct, 3) : '—'} unit="%" highlight color="#6B6B6B" />
       </div>
       <div className="border mb-6 px-4 py-3 text-sm" style={{ borderColor: Math.abs(mispricingPct) > 0.1 ? '#C89650' : _BORDER, color: Math.abs(mispricingPct) > 0.1 ? '#C89650' : _T.textMuted }}>
@@ -5794,7 +5498,7 @@ function OptionSpreadCalc() {
   const prem2Label = strategy === 'straddle' ? '풋 프리미엄' : strategy === 'strangle' ? '콜 프리미엄 (K2)' : 'K2 콜 프리미엄';
 
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <CalcHeader num="49" title="옵션 스프레드 전략" desc="스트래들·스트랭글·콜 스프레드의 BEP와 최대손익을 계산합니다." color="#6B6B6B" />
       <div className="flex flex-wrap gap-1 mb-5">
         {strategies.map(s => (
@@ -5803,17 +5507,17 @@ function OptionSpreadCalc() {
           </button>
         ))}
       </div>
-      <div className="grid md:grid-cols-2 gap-5 mb-5">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <NumInput label="행사가 K1" value={strike1} onChange={setStrike1} unit="pt" placeholder="350.00" />
         {needsK2 && <NumInput label="행사가 K2" value={strike2} onChange={setStrike2} unit="pt" placeholder="360.00" />}
       </div>
-      <div className="grid md:grid-cols-2 gap-5 mb-6">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <NumInput label={prem1Label} value={prem1} onChange={setPrem1} unit="pt" placeholder="3.50" />
         <NumInput label={prem2Label} value={prem2} onChange={setPrem2} unit="pt" placeholder="3.50" />
       </div>
       <div className="grid grid-cols-1 md:grid-cols-3 border mb-4" style={{ borderColor: _BORDER }}>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label={label1 || 'BEP'} value={bep1 > 0 ? fmt(bep1, 2) : '—'} unit="pt" /></div>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="최대 손실" value={isFinite(maxLoss) ? fmt(maxLoss, 0) : '—'} unit="원" highlight color="#A63D33" /></div>
+        <ResultBox label={label1 || 'BEP'} value={bep1 > 0 ? fmt(bep1, 2) : '—'} unit="pt" />
+        <ResultBox label="최대 손실" value={isFinite(maxLoss) ? fmt(maxLoss, 0) : '—'} unit="원" highlight color="#A63D33" />
         <ResultBox label="최대 이익" value={isFinite(maxProfit) ? fmt(maxProfit, 0) : '무제한'} unit={isFinite(maxProfit) ? '원' : ''} highlight color="#4A7045" />
       </div>
       {label2 && <div className="border border-t-0 mb-4" style={{ borderColor: _BORDER }}><ResultBox label={label2} value={bep2 > 0 ? fmt(bep2, 2) : '—'} unit="pt" /></div>}
@@ -5855,19 +5559,19 @@ function WinRateCalc() {
   }));
 
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <CalcHeader num="50" title="승률 · 기대값 계산기" desc="매매 승률과 손익비로 기대값·손익비·연속 손실 확률을 계산합니다." color="#4F7E7C" />
-      <div className="grid md:grid-cols-2 gap-5 mb-5">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <NumInput label="승률" value={winRate} onChange={setWinRate} unit="%" placeholder="45" />
         <NumInput label="평균 수익 (1회)" value={avgWin} onChange={setAvgWin} unit="원" placeholder="150,000" />
       </div>
-      <div className="grid md:grid-cols-2 gap-5 mb-6">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <NumInput label="평균 손실 (1회)" value={avgLoss} onChange={setAvgLoss} unit="원" placeholder="100,000" />
         <NumInput label="총 거래 횟수 (선택)" value={trades} onChange={setTrades} unit="회" placeholder="100" />
       </div>
       <div className="grid grid-cols-1 md:grid-cols-3 border mb-4" style={{ borderColor: _BORDER }}>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="1회 기대값" value={fmt(expectedValue, 0)} unit="원" highlight color={expectedValue >= 0 ? '#4F7E7C' : '#A63D33'} /></div>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="손익비 (R:R)" value={fmt(rr, 2)} unit=":1" /></div>
+        <ResultBox label="1회 기대값" value={fmt(expectedValue, 0)} unit="원" highlight color={expectedValue >= 0 ? '#4F7E7C' : '#A63D33'} />
+        <ResultBox label="손익비 (R:R)" value={fmt(rr, 2)} unit=":1" />
         <ResultBox label="손익분기 최소 승률" value={fmt(bepWinRate, 1)} unit="%" />
       </div>
       {n > 0 && (
@@ -5930,7 +5634,7 @@ function MarginCheckCalc() {
   const isMarginCall = maintRatio < 100 && totalMargin > 0;
 
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <CalcHeader num="51" title="선물 증거금 유지율" desc="KOSPI200 선물 포지션의 증거금 유지율과 마진콜 여부를 확인합니다." color="#4F7E7C" />
       <div className="border mb-4" style={{ borderColor: _BORDER }}>
         <div className="grid grid-cols-5 px-3 py-2 border-b text-[11px] mono uppercase tracking-[0.1em]" style={{ borderColor: _BORDER, color: _T.textFaint, background: _T.bgCard }}>
@@ -5951,8 +5655,8 @@ function MarginCheckCalc() {
         {positions.length > 1 && <button onClick={() => removePos(positions.length - 1)} className="text-[12px] mono px-3 py-1.5 border" style={{ borderColor: _BORDER, color: _T.textFaint }}>− 삭제</button>}
       </div>
       <div className="grid grid-cols-1 md:grid-cols-3 border mb-4" style={{ borderColor: _BORDER }}>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="총 평가손익" value={fmt(totalPnl, 0)} unit="원" highlight color={totalPnl >= 0 ? '#4A7045' : '#A63D33'} /></div>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="증거금 유지율" value={totalMargin > 0 ? fmt(maintRatio, 1) : '—'} unit="%" /></div>
+        <ResultBox label="총 평가손익" value={fmt(totalPnl, 0)} unit="원" highlight color={totalPnl >= 0 ? '#4A7045' : '#A63D33'} />
+        <ResultBox label="증거금 유지율" value={totalMargin > 0 ? fmt(maintRatio, 1) : '—'} unit="%" />
         <ResultBox label="마진콜 여부" value={totalMargin > 0 ? (isMarginCall ? '⚠ 마진콜' : '✓ 정상') : '—'} unit="" highlight color={isMarginCall ? '#A63D33' : '#4A7045'} />
       </div>
       <CalcNote
@@ -5990,9 +5694,9 @@ function DerivTaxCalc() {
   const effectiveRate = netGain > 0 ? (totalTax / netGain) * 100 : 0;
 
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <CalcHeader num="52" title="파생상품 양도소득세" desc="선물·옵션 연간 손익 합산 후 250만원 공제를 적용한 양도세를 계산합니다. 2026년 기준." color="#5B8DB8" />
-      <div className="grid md:grid-cols-2 gap-5 mb-5">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <NumInput label="연간 총 이익 합계" value={totalProfit} onChange={setTotalProfit} unit="원" placeholder="10,000,000" />
         <NumInput label="연간 총 손실 합계" value={totalLoss} onChange={setTotalLoss} unit="원" placeholder="3,000,000" />
       </div>
@@ -6000,8 +5704,8 @@ function DerivTaxCalc() {
         <NumInput label="전년도 이월결손금 (있는 경우)" value={prevCarryover} onChange={setPrevCarryover} unit="원" placeholder="0" />
       </div>
       <div className="grid grid-cols-1 md:grid-cols-3 border mb-4" style={{ borderColor: _BORDER }}>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="순손익 (이익−손실)" value={fmt(netGain, 0)} unit="원" /></div>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="과세표준 (공제 후)" value={fmt(taxableGain, 0)} unit="원" /></div>
+        <ResultBox label="순손익 (이익−손실)" value={fmt(netGain, 0)} unit="원" />
+        <ResultBox label="과세표준 (공제 후)" value={fmt(taxableGain, 0)} unit="원" />
         <ResultBox label="납부세액 (국세+지방)" value={fmt(totalTax, 0)} unit="원" highlight color="#5B8DB8" />
       </div>
       {taxableGain > 0 && (
@@ -6041,9 +5745,9 @@ function StockPnLCalc() {
   const retPct = bp && q ? (netPnl / (bp * q)) * 100 : 0;
   const marketLabels = { kospi: 'KOSPI', kosdaq: 'KOSDAQ·K-OTC', konex: 'KONEX', unlisted: '비상장·장외' };
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <CalcHeader num="10" title="주식 총손익" desc="수수료·증권거래세 차감 후 실제 순손익과 수익률을 계산합니다." color="#8A8A8A" />
-      <div className="grid md:grid-cols-2 gap-5 mb-4">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <NumInput label="매수가" value={buyPrice} onChange={setBuyPrice} unit="원" placeholder="50,000" />
         <NumInput label="매도가" value={sellPrice} onChange={setSellPrice} unit="원" placeholder="55,000" />
         <NumInput label="수량" value={qty} onChange={setQty} unit="주" placeholder="100" />
@@ -6059,9 +5763,9 @@ function StockPnLCalc() {
         ))}
       </div>
       <div className="grid grid-cols-2 md:grid-cols-4 border" style={{ borderColor: _BORDER }}>
-        <div className="border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="총수수료+세금" value={fmt(totalFee, 0)} unit="원" /></div>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="세전 손익" value={fmt(grossPnl, 0)} unit="원" /></div>
-        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="순손익" value={fmt(netPnl, 0)} unit="원" highlight color="#8A8A8A" /></div>
+        <ResultBox label="총수수료+세금" value={fmt(totalFee, 0)} unit="원" />
+        <ResultBox label="세전 손익" value={fmt(grossPnl, 0)} unit="원" />
+        <ResultBox label="순손익" value={fmt(netPnl, 0)} unit="원" highlight color="#8A8A8A" />
         <ResultBox label="실수익률" value={fmt(retPct, 2)} unit="%" />
       </div>
       <CalcNote
@@ -6089,16 +5793,16 @@ function RRMultipleCalc() {
   // 최소 기대값: 승률 p에서 기대값 양수 조건
   const minWinRate = rrRatio ? (1 / (1 + rrRatio)) * 100 : 0;
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <CalcHeader num="11" title="R-멀티플" desc="진입가·손절가·목표가 기반으로 리스크 대비 보상 비율(RR)을 계산합니다." color="#8A8A8A" />
-      <div className="grid md:grid-cols-3 gap-5 mb-8">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <NumInput label="진입가" value={entry} onChange={setEntry} unit="원" placeholder="50,000" />
         <NumInput label="손절가 (Stop Loss)" value={stop} onChange={setStop} unit="원" placeholder="47,000" />
         <NumInput label="목표가 (Take Profit)" value={target} onChange={setTarget} unit="원" placeholder="59,000" />
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-3 border" style={{ borderColor: _BORDER }}>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="리스크 (R)" value={fmt(risk, 0)} unit="원/주" /></div>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="보상" value={fmt(reward, 0)} unit="원/주" /></div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
+        <ResultBox label="리스크 (R)" value={fmt(risk, 0)} unit="원/주" />
+        <ResultBox label="보상" value={fmt(reward, 0)} unit="원/주" />
         <ResultBox label="RR 비율" value={fmt(rrRatio, 2)} unit=":1" highlight color="#8A8A8A" />
       </div>
       <div className="border border-t-0" style={{ borderColor: _BORDER }}>
@@ -6130,17 +5834,17 @@ function StopPriceCalc() {
   const stopPrice = q && ep ? ep - riskAmt / q : 0;
   const stopPct = ep ? ((ep - stopPrice) / ep) * 100 : 0;
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <CalcHeader num="12" title="손절가 역산" desc="총자본과 허용 리스크 비율을 입력하면 반드시 지켜야 할 손절가를 역산합니다." color="#8A8A8A" />
-      <div className="grid md:grid-cols-2 gap-5 mb-8">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <NumInput label="총 투자자본" value={capital} onChange={setCapital} unit="원" placeholder="100,000,000" />
         <NumInput label="1회 허용 리스크" value={riskPct} onChange={setRiskPct} unit="%" placeholder="2" hint="보통 1~2%" />
         <NumInput label="진입가" value={entry} onChange={setEntry} unit="원" placeholder="50,000" />
         <NumInput label="보유 수량" value={qty} onChange={setQty} unit="주" placeholder="200" />
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-3 border" style={{ borderColor: _BORDER }}>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="허용 손실액" value={fmt(riskAmt, 0)} unit="원" /></div>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="손절가" value={fmt(stopPrice, 0)} unit="원" highlight color="#8A8A8A" /></div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
+        <ResultBox label="허용 손실액" value={fmt(riskAmt, 0)} unit="원" />
+        <ResultBox label="손절가" value={fmt(stopPrice, 0)} unit="원" highlight color="#8A8A8A" />
         <ResultBox label="하락 허용 폭" value={fmt(stopPct, 2)} unit="%" />
       </div>
       <CalcNote
@@ -6170,7 +5874,7 @@ function TickValueCalc() {
     { name: '달러선물(KRX)', tick: '0.1', mult: '10000' },
   ];
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <CalcHeader num="26" title="틱가치·틱손익" desc="선물·옵션 계약의 틱당 손익과 보유 계약 총손익을 계산합니다." color="#6B6B6B" />
       <div className="flex gap-2 mb-5 flex-wrap">
         {presets.map(p => (
@@ -6181,14 +5885,14 @@ function TickValueCalc() {
           </button>
         ))}
       </div>
-      <div className="grid md:grid-cols-2 gap-5 mb-8">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <NumInput label="틱 크기 (Tick Size)" value={tickSize} onChange={setTickSize} unit="" placeholder="0.05" />
         <NumInput label="계약 승수 (Multiplier)" value={multiplier} onChange={setMultiplier} unit="원" placeholder="250000" />
         <NumInput label="이동 틱 수" value={ticks} onChange={setTicks} unit="틱" placeholder="10" hint="음수 = 손실 방향" />
         <NumInput label="보유 계약 수" value={contracts} onChange={setContracts} unit="계약" placeholder="1" />
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 border" style={{ borderColor: _BORDER }}>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="틱당 손익 (1계약)" value={fmt(tv, 0)} unit="원/틱" /></div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
+        <ResultBox label="틱당 손익 (1계약)" value={fmt(tv, 0)} unit="원/틱" />
         <ResultBox label="총손익" value={fmt(pnl, 0)} unit="원" highlight color="#6B6B6B" />
       </div>
       <CalcNote
@@ -6231,7 +5935,7 @@ function OptionPayoffCalc() {
     ? prem * mult
     : (optType === 'call' ? Infinity : (K - prem) * mult);
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <CalcHeader num="27" title="옵션 만기손익표" desc="콜·풋 옵션의 만기 시 기초자산 가격별 손익을 표로 보여줍니다." color="#6B6B6B" />
       <div className="flex gap-2 mb-4 flex-wrap">
         <div className="flex gap-2">
@@ -6253,7 +5957,7 @@ function OptionPayoffCalc() {
           ))}
         </div>
       </div>
-      <div className="grid md:grid-cols-3 gap-5 mb-6">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <NumInput label="행사가 (Strike)" value={strike} onChange={setStrike} unit="" placeholder="400.00" />
         <NumInput label="프리미엄" value={premium} onChange={setPremium} unit="" placeholder="5.00" />
         <NumInput label="계약 승수" value={multiplier} onChange={setMultiplier} unit="원" placeholder="100000" />
@@ -6261,8 +5965,8 @@ function OptionPayoffCalc() {
       {K > 0 && (
         <div className="mb-6">
           <div className="grid grid-cols-3 border mb-0" style={{ borderColor: _BORDER }}>
-            <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="손익분기" value={fmt(bepPrice, 2)} unit="" /></div>
-            <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="최대이익" value={maxProfit === Infinity ? '무한대' : fmt(maxProfit, 0)} unit={maxProfit !== Infinity ? '원' : ''} highlight color="#6B6B6B" /></div>
+            <ResultBox label="손익분기" value={fmt(bepPrice, 2)} unit="" />
+            <ResultBox label="최대이익" value={maxProfit === Infinity ? '무한대' : fmt(maxProfit, 0)} unit={maxProfit !== Infinity ? '원' : ''} highlight color="#6B6B6B" />
             <ResultBox label="최대손실" value={maxLoss === Infinity ? '무한대' : fmt(maxLoss, 0)} unit={maxLoss !== Infinity ? '원' : ''} />
           </div>
           <div className="border border-t-0 overflow-x-auto" style={{ borderColor: _BORDER }}>
@@ -6318,9 +6022,9 @@ function ATRSizeCalc() {
   const posValue = shares * ep;
   const posPct = cap ? (posValue / cap) * 100 : 0;
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <CalcHeader num="36" title="ATR 포지션 사이징" desc="ATR(평균진폭) 기반으로 변동성에 맞는 적정 수량을 계산합니다." color="#4F7E7C" />
-      <div className="grid md:grid-cols-2 gap-5 mb-8">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <NumInput label="총 투자자본" value={capital} onChange={setCapital} unit="원" placeholder="100,000,000" />
         <NumInput label="1회 허용 리스크" value={riskPct} onChange={setRiskPct} unit="%" placeholder="2" hint="1~2% 권장" />
         <NumInput label="ATR (평균진폭)" value={atr} onChange={setAtr} unit="원" placeholder="1,500" hint="14일 ATR 권장" />
@@ -6328,9 +6032,9 @@ function ATRSizeCalc() {
         <NumInput label="진입가" value={entry} onChange={setEntry} unit="원" placeholder="50,000" />
       </div>
       <div className="grid grid-cols-2 md:grid-cols-4 border" style={{ borderColor: _BORDER }}>
-        <div className="border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="ATR 손절폭" value={fmt(stopDist, 0)} unit="원" /></div>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="손절가" value={fmt(stopPrice, 0)} unit="원" /></div>
-        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="매수 수량" value={fmt(shares, 0)} unit="주" highlight color="#4F7E7C" /></div>
+        <ResultBox label="ATR 손절폭" value={fmt(stopDist, 0)} unit="원" />
+        <ResultBox label="손절가" value={fmt(stopPrice, 0)} unit="원" />
+        <ResultBox label="매수 수량" value={fmt(shares, 0)} unit="주" highlight color="#4F7E7C" />
         <ResultBox label="포지션 비중" value={fmt(posPct, 1)} unit="%" />
       </div>
       <CalcNote
@@ -6363,17 +6067,17 @@ function LoseStreakCalc() {
   // 한도 내 최대 연속손실
   const maxStreak = Math.floor(Math.log(1 - ddLimit / 100) / Math.log(1 - rp / 100));
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <CalcHeader num="37" title="연속손실 한도" desc="연속 손절 시 자본 감소를 시뮬레이션하고 한도 초과 여부를 확인합니다." color="#4F7E7C" />
-      <div className="grid md:grid-cols-2 gap-5 mb-8">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <NumInput label="총 투자자본" value={capital} onChange={setCapital} unit="원" placeholder="100,000,000" />
         <NumInput label="1회 리스크" value={riskPct} onChange={setRiskPct} unit="%" placeholder="2" />
         <NumInput label="연속 손절 횟수 시뮬레이션" value={streak} onChange={setStreak} unit="회" placeholder="5" />
         <NumInput label="MDD 허용 한도" value={drawdownLimit} onChange={setDrawdownLimit} unit="%" placeholder="20" hint="이 이상이면 매매 중단" />
       </div>
       <div className="grid grid-cols-2 md:grid-cols-3 border mb-4" style={{ borderColor: _BORDER }}>
-        <div className="border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label={`${n}연패 후 잔고`} value={fmt(remainAmt, 0)} unit="원" highlight color="#4F7E7C" /></div>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="손실률" value={fmt(drawdownPct, 2)} unit="%" /></div>
+        <ResultBox label={`${n}연패 후 잔고`} value={fmt(remainAmt, 0)} unit="원" highlight color="#4F7E7C" />
+        <ResultBox label="손실률" value={fmt(drawdownPct, 2)} unit="%" />
         <ResultBox label={`한도 내 최대 연패`} value={String(maxStreak)} unit="회" />
       </div>
       {exceeded && (
@@ -6415,9 +6119,9 @@ function ForeignStockPnLCalc() {
   const stockEffect = (sp - bp) * q * sfx; // 주가 손익
   const retPct = buyKRW ? (netPnl / buyKRW) * 100 : 0;
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <CalcHeader num="38" title="해외주식 원화 총손익" desc="매수·매도 시 환율 차이를 반영한 실제 원화 기준 순손익을 계산합니다." color="#7C6A9B" />
-      <div className="grid md:grid-cols-2 gap-5 mb-4">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <NumInput label="매수가 (외화)" value={buyPrice} onChange={setBuyPrice} unit="" placeholder="100.00" />
         <NumInput label="매도가 (외화)" value={sellPrice} onChange={setSellPrice} unit="" placeholder="120.00" />
         <NumInput label="수량" value={qty} onChange={setQty} unit="주" placeholder="10" />
@@ -6426,9 +6130,9 @@ function ForeignStockPnLCalc() {
         <NumInput label="매도 시 환율" value={sellFx} onChange={setSellFx} unit="원" placeholder="1,380.00" hint="매도 당시 적용 환율" />
       </div>
       <div className="grid grid-cols-2 md:grid-cols-4 border" style={{ borderColor: _BORDER }}>
-        <div className="border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="매수 원화비용" value={fmt(buyKRW+buyFeeKRW, 0)} unit="원" /></div>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="주가 손익(원화)" value={fmt(stockEffect, 0)} unit="원" /></div>
-        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="환차 손익" value={fmt(fxEffect, 0)} unit="원" /></div>
+        <ResultBox label="매수 원화비용" value={fmt(buyKRW+buyFeeKRW, 0)} unit="원" />
+        <ResultBox label="주가 손익(원화)" value={fmt(stockEffect, 0)} unit="원" />
+        <ResultBox label="환차 손익" value={fmt(fxEffect, 0)} unit="원" />
         <ResultBox label="순손익" value={fmt(netPnl, 0)} unit="원" highlight color="#7C6A9B" />
       </div>
       <div className="border border-t-0" style={{ borderColor: _BORDER }}>
@@ -6458,17 +6162,16 @@ function DurationImpactCalc() {
   const priceChangeAmt = fv * priceChangePct / 100;
   const modDuration = D; // 수정 듀레이션 직접 입력 방식
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <CalcHeader num="39" title="채권 듀레이션 민감도" desc="수정 듀레이션과 금리 변화 폭으로 채권 가격 변동률을 추정합니다." color="#7C6A9B" />
-      <div className="grid md:grid-cols-3 gap-5 mb-8">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <NumInput label="수정 듀레이션 (Modified Duration)" value={duration} onChange={setDuration} unit="년" placeholder="5.0" />
         <NumInput label="금리 변화" value={yieldChange} onChange={setYieldChange} unit="bp" placeholder="25" hint="+25 = 0.25% 상승" />
         <NumInput label="채권 평가액 (원)" value={faceValue} onChange={setFaceValue} unit="원" placeholder="100,000,000" />
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 border" style={{ borderColor: _BORDER }}>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
+        
           <ResultBox label="가격 변동률" value={fmt(priceChangePct, 3)} unit="%" highlight color="#7C6A9B" />
-        </div>
         <ResultBox label="평가손익 (추정)" value={fmt(priceChangeAmt, 0)} unit="원" />
       </div>
       <CalcNote
@@ -6491,9 +6194,9 @@ function ETFPremiumCalc() {
   const premium = navVal ? ((priceVal - navVal) / navVal) * 100 : 0;
   const isPremium = premium > 0;
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <CalcHeader num="50" title="ETF 괴리율" desc="시장가와 순자산가치(NAV)의 괴리율을 계산합니다." color="#6B9B6B" />
-      <div className="grid md:grid-cols-2 gap-5 mb-8">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <NumInput label="NAV (순자산가치)" value={nav} onChange={setNav} unit="원" placeholder="10,500" hint="전일 종가 NAV 사용 가능" />
         <NumInput label="현재 시장가 (ETF 가격)" value={price} onChange={setPrice} unit="원" placeholder="10,480" />
       </div>
@@ -6527,17 +6230,16 @@ function TrackingDiffCalc() {
   const trackingDiff = er - ir;
   const annualized = y > 0 ? trackingDiff / y : trackingDiff;
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <CalcHeader num="51" title="ETF 추적차이" desc="ETF 수익률과 추종 지수 수익률의 차이를 계산합니다." color="#6B9B6B" />
-      <div className="grid md:grid-cols-3 gap-5 mb-8">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <NumInput label="ETF 수익률" value={etfReturn} onChange={setEtfReturn} unit="%" placeholder="12.5" />
         <NumInput label="기초지수 수익률" value={indexReturn} onChange={setIndexReturn} unit="%" placeholder="13.0" />
         <NumInput label="측정 기간" value={period} onChange={setPeriod} unit="년" placeholder="1" />
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 border" style={{ borderColor: _BORDER }}>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
+        
           <ResultBox label="추적차이 (Tracking Difference)" value={fmt(trackingDiff, 3)} unit="%" highlight color="#6B9B6B" />
-        </div>
         <ResultBox label="연환산 추적차이" value={fmt(annualized, 3)} unit="%/년" />
       </div>
       <CalcNote
@@ -6572,7 +6274,7 @@ function ISATaxCalc() {
   const isaEffRate = totalReturn ? (isaTax / totalReturn) * 100 : 0;
   const typeLabels = { general: '일반형 (비과세 200만)', youth: '청년형 (비과세 400만)', service: '서민·농어민형 (비과세 400만)' };
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <CalcHeader num="53" title="ISA 절세효과" desc="ISA 계좌의 비과세·분리과세 혜택으로 절약되는 세금을 계산합니다." color="#5B8DB8" />
       <div className="flex gap-2 mb-5 flex-wrap">
         {(Object.keys(typeLabels) as (keyof typeof typeLabels)[]).map(t => (
@@ -6583,15 +6285,15 @@ function ISATaxCalc() {
           </button>
         ))}
       </div>
-      <div className="grid md:grid-cols-3 gap-5 mb-8">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <NumInput label="투자원금" value={principal} onChange={setPrincipal} unit="원" placeholder="50,000,000" />
         <NumInput label="연 수익률" value={annualReturn} onChange={setAnnualReturn} unit="%" placeholder="5" />
         <NumInput label="운용 기간" value={years} onChange={setYears} unit="년" placeholder="5" hint="최소 3년 유지 필요" />
       </div>
       <div className="grid grid-cols-2 md:grid-cols-4 border" style={{ borderColor: _BORDER }}>
-        <div className="border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="총수익" value={fmt(totalReturn, 0)} unit="원" /></div>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="ISA 세금" value={fmt(isaTax, 0)} unit="원" /></div>
-        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="일반 계좌 세금" value={fmt(generalTax, 0)} unit="원" /></div>
+        <ResultBox label="총수익" value={fmt(totalReturn, 0)} unit="원" />
+        <ResultBox label="ISA 세금" value={fmt(isaTax, 0)} unit="원" />
+        <ResultBox label="일반 계좌 세금" value={fmt(generalTax, 0)} unit="원" />
         <ResultBox label="절세 효과" value={fmt(saving, 0)} unit="원" highlight color="#5B8DB8" />
       </div>
       <div className="border border-t-0" style={{ borderColor: _BORDER }}>
@@ -6623,16 +6325,16 @@ function ISAPensionCalc() {
   const extraCredit = Math.min(transferAmt * 0.10, 3000000);
   const taxCredit = extraCredit * creditRate;
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <CalcHeader num="54" title="ISA 만기 연금 전환" desc="ISA 만기 자금을 IRP/연금저축으로 이전 시 추가 세액공제 혜택을 계산합니다." color="#5B8DB8" />
-      <div className="grid md:grid-cols-3 gap-5 mb-8">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <NumInput label="ISA 만기 잔액" value={isaBalance} onChange={setIsaBalance} unit="원" placeholder="60,000,000" />
         <NumInput label="연금 이전 비율" value={transferPct} onChange={setTransferPct} unit="%" placeholder="100" hint="이전 금액의 10%, 최대 300만 공제" />
         <NumInput label="연간 총소득" value={income} onChange={setIncome} unit="원" placeholder="60,000,000" hint="세액공제율 결정" />
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-3 border" style={{ borderColor: _BORDER }}>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="연금 이전 금액" value={fmt(transferAmt, 0)} unit="원" /></div>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="추가 세액공제 한도" value={fmt(extraCredit, 0)} unit="원" /></div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
+        <ResultBox label="연금 이전 금액" value={fmt(transferAmt, 0)} unit="원" />
+        <ResultBox label="추가 세액공제 한도" value={fmt(extraCredit, 0)} unit="원" />
         <ResultBox label="환급 세액" value={fmt(taxCredit, 0)} unit="원" highlight color="#5B8DB8" />
       </div>
       <CalcNote
@@ -6664,9 +6366,9 @@ function OverseaCGTaxCalc() {
   const totalTax = tax + localTax;
   const effectiveRate = netGain > 0 ? (totalTax / netGain) * 100 : 0;
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <CalcHeader num="55" title="해외주식 양도소득세" desc="해외주식 연간 손익 합산 후 250만원 공제를 적용한 양도세를 계산합니다. 2026년 기준." color="#5B8DB8" />
-      <div className="grid md:grid-cols-2 gap-5 mb-5">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <NumInput label="연간 총 이익 합계" value={totalProfit} onChange={setTotalProfit} unit="원" placeholder="10,000,000" />
         <NumInput label="연간 총 손실 합계" value={totalLoss} onChange={setTotalLoss} unit="원" placeholder="3,000,000" />
       </div>
@@ -6674,8 +6376,8 @@ function OverseaCGTaxCalc() {
         <NumInput label="전년도 이월결손금 (있는 경우)" value={prevCarryover} onChange={setPrevCarryover} unit="원" placeholder="0" />
       </div>
       <div className="grid grid-cols-1 md:grid-cols-3 border mb-4" style={{ borderColor: _BORDER }}>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="순손익" value={fmt(netGain, 0)} unit="원" /></div>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="과세표준 (공제 후)" value={fmt(taxableGain, 0)} unit="원" /></div>
+        <ResultBox label="순손익" value={fmt(netGain, 0)} unit="원" />
+        <ResultBox label="과세표준 (공제 후)" value={fmt(taxableGain, 0)} unit="원" />
         <ResultBox label="납부세액 (국세+지방)" value={fmt(totalTax, 0)} unit="원" highlight color="#5B8DB8" />
       </div>
       {taxableGain > 0 && (
@@ -6715,7 +6417,7 @@ function DividendTaxCalc() {
   const usKrTax = Math.max(0, div * 0.14 - usTax); // 외국납부세액공제 후 추가 납부
   const usTotalTax = usTax + usKrTax;
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <CalcHeader num="56" title="배당소득세" desc="국내외 배당소득에 대한 원천징수세와 실수령액을 계산합니다." color="#5B8DB8" />
       <div className="flex gap-2 mb-5">
         {(['domestic','us','other'] as const).map(c => (
@@ -6726,20 +6428,18 @@ function DividendTaxCalc() {
           </button>
         ))}
       </div>
-      <div className="mb-8">
-        <NumInput label="배당금 (세전)" value={dividend} onChange={setDividend} unit="원" placeholder="1,000,000" />
-      </div>
+      <NumInput label="배당금 (세전)" value={dividend} onChange={setDividend} unit="원" placeholder="1,000,000" />
       {country === 'domestic' && (
-        <div className="grid grid-cols-1 md:grid-cols-3 border" style={{ borderColor: _BORDER }}>
-          <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="원천징수세 (15.4%)" value={fmt(domesticTax, 0)} unit="원" /></div>
-          <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="실수령 배당금" value={fmt(domesticNetDiv, 0)} unit="원" highlight color="#5B8DB8" /></div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
+          <ResultBox label="원천징수세 (15.4%)" value={fmt(domesticTax, 0)} unit="원" />
+          <ResultBox label="실수령 배당금" value={fmt(domesticNetDiv, 0)} unit="원" highlight color="#5B8DB8" />
           <ResultBox label="실효세율" value="15.4" unit="%" />
         </div>
       )}
       {country === 'us' && (
-        <div className="grid grid-cols-1 md:grid-cols-3 border" style={{ borderColor: _BORDER }}>
-          <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="미국 원천세 (15%)" value={fmt(usTax, 0)} unit="원" /></div>
-          <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="추가 납부 (한국)" value={fmt(usKrTax, 0)} unit="원" /></div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
+          <ResultBox label="미국 원천세 (15%)" value={fmt(usTax, 0)} unit="원" />
+          <ResultBox label="추가 납부 (한국)" value={fmt(usKrTax, 0)} unit="원" />
           <ResultBox label="실수령 배당금" value={fmt(div - usTotalTax, 0)} unit="원" highlight color="#5B8DB8" />
         </div>
       )}
@@ -6778,9 +6478,9 @@ function PrivatePensionTaxCalc() {
   const netPension = amount - pensionTax;
   const separateTax15 = amount * 0.165; // 종합과세 회피 시 16.5%
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <CalcHeader num="57" title="사적연금 세후수령액" desc="IRP·연금저축 연금 수령 시 나이별 세율을 적용한 실수령액을 계산합니다." color="#5B8DB8" />
-      <div className="grid md:grid-cols-2 gap-5 mb-4">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <NumInput label="연간 수령 예정액" value={annualPension} onChange={setAnnualPension} unit="원" placeholder="12,000,000" />
         <NumInput label="수령 시작 나이" value={age} onChange={setAge} unit="세" placeholder="65" hint="55~69세 5.5%, 70~79세 4.4%, 80세+ 3.3%" />
       </div>
@@ -6802,9 +6502,9 @@ function PrivatePensionTaxCalc() {
           ⚠ 사적연금 연수령 합계 {fmt(totalPension/10000, 0)}만원 — 1,500만원 초과로 종합과세 또는 16.5% 분리과세를 선택해야 합니다.
         </div>
       )}
-      <div className="grid grid-cols-1 md:grid-cols-3 border" style={{ borderColor: _BORDER }}>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label={`연금소득세 (${pensionTaxRate}%)`} value={fmt(pensionTax, 0)} unit="원" /></div>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="실수령액" value={fmt(netPension, 0)} unit="원" highlight color="#5B8DB8" /></div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
+        <ResultBox label={`연금소득세 (${pensionTaxRate}%)`} value={fmt(pensionTax, 0)} unit="원" />
+        <ResultBox label="실수령액" value={fmt(netPension, 0)} unit="원" highlight color="#5B8DB8" />
         <ResultBox label={isComprehensive ? '16.5% 분리과세 선택 시' : '실효세율'} value={isComprehensive ? fmt(separateTax15, 0) : fmt(pensionTaxRate, 1)} unit={isComprehensive ? '원' : '%'} />
       </div>
       <CalcNote
@@ -6832,18 +6532,16 @@ function HighDivTaxCalc() {
   const currentNet = div - currentTax;
   const policyNet = div - policyTax;
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <CalcHeader num="58" title="고배당 분리과세 시뮬레이터" desc="고배당주 투자 시 현행 세율 vs 분리과세 정책 적용 시 세금 차이를 비교합니다." color="#5B8DB8" />
       <div className="mb-4 border px-4 py-3 text-[13px]" style={{ borderColor: '#A63D33', color: '#A63D33', background: '#A63D3318' }}>
         ⚠ 고배당 분리과세 정책은 입법 논의 중으로, 실제 세율·적용 대상은 확정 법령을 확인하세요. 이 계산기는 시뮬레이션 목적입니다.
       </div>
-      <div className="mb-8">
         <NumInput label="연간 배당소득 (세전)" value={dividend} onChange={setDividend} unit="원" placeholder="10,000,000" />
-      </div>
       <div className="grid grid-cols-2 md:grid-cols-4 border" style={{ borderColor: _BORDER }}>
-        <div className="border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="현행 세금 (15.4%)" value={fmt(currentTax, 0)} unit="원" /></div>
-        <div className="md:border-r border-b md:border-b-0" style={{ borderColor: _BORDER }}><ResultBox label="정책 세금 (9.9%)" value={fmt(policyTax, 0)} unit="원" /></div>
-        <div className="border-r" style={{ borderColor: _BORDER }}><ResultBox label="절세 효과" value={fmt(saving, 0)} unit="원" highlight color="#5B8DB8" /></div>
+        <ResultBox label="현행 세금 (15.4%)" value={fmt(currentTax, 0)} unit="원" />
+        <ResultBox label="정책 세금 (9.9%)" value={fmt(policyTax, 0)} unit="원" />
+        <ResultBox label="절세 효과" value={fmt(saving, 0)} unit="원" highlight color="#5B8DB8" />
         <ResultBox label="정책 시행 시 실수령" value={fmt(policyNet, 0)} unit="원" />
       </div>
       <CalcNote
