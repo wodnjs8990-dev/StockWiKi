@@ -938,41 +938,42 @@ export default function StockWiki({ features, customEvents }: { features?: Featu
 // ─────────────────────────────────────────────
 // 용어 사전 뷰
 // ─────────────────────────────────────────────
-function GlossaryView({ terms, termsHasMore, termsLoading, onLoadMore, searchQuery, setSearchQuery, searchRef, categories, selectedCategory, setSelectedCategory, selectedTerm, setSelectedTerm, closeTerm, totalCount, categoryColors, favorites, toggleFav, favMemos, updateFavMemo, recent, T, isDark, showToast, setActiveTab, selectedFamily, setSelectedFamily: setSelectedFamilyProp, termsMap }: any) {
-  // ── 2단 카테고리 필터: family(1단) + sub(2단)
-  const [familyOpen, setFamilyOpen] = React.useState(false); // 모바일 접기/펼치기
 
+function MiniSparkGlos({ color = '#C89650', seed = 1, h = 26 }: { color?: string; seed?: number; h?: number }) {
+  const pts = useMemo(() => {
+    let v = 0.5, r = seed * 9301 + 49297;
+    const arr: number[] = [];
+    for (let i = 0; i < 18; i++) { r = (r * 9301 + 49297) % 233280; v = Math.max(0.05, Math.min(0.95, v + (r / 233280 - 0.5) * 0.28)); arr.push(v); }
+    return arr;
+  }, [seed]);
+  const w = 80;
+  const path = pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${(i / (pts.length - 1)) * w},${h - p * h}`).join(' ');
+  return (
+    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} style={{ overflow: 'visible' }}>
+      <path d={path} fill="none" stroke={color} strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" opacity={0.7} />
+    </svg>
+  );
+}
+
+function GlossaryView({ terms, termsHasMore, termsLoading, onLoadMore, searchQuery, setSearchQuery, searchRef, categories, selectedCategory, setSelectedCategory, selectedTerm, setSelectedTerm, closeTerm, totalCount, categoryColors, favorites, toggleFav, favMemos, updateFavMemo, recent, T, isDark, showToast, setActiveTab, selectedFamily, setSelectedFamily: setSelectedFamilyProp, termsMap }: any) {
   const FAMILY_LIST = [
-    { id: 'fundamental', name: '펀더멘털',    en: 'FUNDAMENTAL' },
-    { id: 'market',      name: '시장·상품',   en: 'MARKET'      },
-    { id: 'macro',       name: '경제·거시',   en: 'ECON'        },
-    { id: 'risk',        name: '리스크·퀀트', en: 'RISK'        },
-    { id: 'derivatives', name: '파생·헤지',   en: 'DERIV'       },
-    { id: 'trading',     name: '매매실전',    en: 'TRADING'     },
-    { id: 'industry',    name: '산업·섹터',   en: 'INDUSTRY'    },
-    { id: 'digital',     name: '디지털자산',  en: 'DIGITAL'     },
-    { id: 'tax',         name: '세금·제도',   en: 'TAX'         },
+    { id: 'fundamental', name: '펀더멘털',    en: 'FUNDAMENTAL', color: '#6b9e5c' },
+    { id: 'market',      name: '시장·상품',   en: 'MARKET',      color: '#5a8fbc' },
+    { id: 'macro',       name: '경제·거시',   en: 'ECON',        color: '#c89650' },
+    { id: 'risk',        name: '리스크·퀀트', en: 'RISK',        color: '#c45555' },
+    { id: 'derivatives', name: '파생·헤지',   en: 'DERIV',       color: '#9b6ba8' },
+    { id: 'trading',     name: '매매실전',    en: 'TRADING',     color: '#4a8f6f' },
+    { id: 'industry',    name: '산업·섹터',   en: 'INDUSTRY',    color: '#a67d4f' },
+    { id: 'digital',     name: '디지털자산',  en: 'DIGITAL',     color: '#689db0' },
+    { id: 'tax',         name: '세금·제도',   en: 'TAX',         color: '#6b8a6f' },
   ];
 
-  // family 선택 시 sub-category 초기화
   const handleFamilyClick = (fid: string | null) => {
-    setSelectedFamilyProp(fid); // 부모 state 업데이트 (API 재쿼리 트리거)
-    setFamilyOpen(false); // 선택 후 모바일 패널 닫기
+    setSelectedFamilyProp(fid);
   };
 
-  // 현재 family의 sub-categories (UI 전용)
-  const subCategories = React.useMemo(() => {
-    if (!selectedFamily) return [];
-    return categories.filter((cat: string) =>
-      cat !== '전체' && cat !== '★ 즐겨찾기' &&
-      CATEGORY_FAMILY[cat]?.family === selectedFamily
-    );
-  }, [selectedFamily, categories]);
-
-  // 무한스크롤 로더 ref
   const loaderRef = React.useRef<HTMLDivElement>(null);
 
-  // IntersectionObserver로 무한스크롤 — onLoadMore 호출
   React.useEffect(() => {
     const el = loaderRef.current;
     if (!el) return;
@@ -988,355 +989,436 @@ function GlossaryView({ terms, termsHasMore, termsLoading, onLoadMore, searchQue
     return () => observer.disconnect();
   }, [termsHasMore, termsLoading, onLoadMore]);
 
+  const activeFam = FAMILY_LIST.find(f => f.id === selectedFamily);
+
   return (
-    <div>
-      <div className="mb-6 border-y" style={{ borderColor: T.border }}>
-        <div className="flex items-center justify-end gap-3 py-2 border-b mono text-[12px] uppercase tracking-[0.2em] whitespace-nowrap" style={{ borderColor: T.border, color: T.textFaint }}>
-          <span>§ Glossary</span>
-          <span className="w-4 h-px" style={{ background: T.borderMid }}></span>
-          <span>Index / 001</span>
-        </div>
-        <div className="grid grid-cols-4 gap-2 md:gap-6 py-2 mono text-[12px] uppercase tracking-[0.2em]">
-          <div className="flex items-baseline gap-1 md:gap-2"><span style={{ color: T.textDimmer }}>Total</span><span style={{ color: T.textPrimary }}>{String(totalCount).padStart(3, '0')}</span></div>
-          <div className="flex items-baseline gap-1 md:gap-2 min-w-0"><span style={{ color: T.textDimmer }}>Filter</span><span className="truncate" style={{ color: T.textPrimary }}>{selectedCategory === '전체' ? 'ALL' : selectedCategory.replace('★ ', '')}</span></div>
-          <div className="flex items-baseline gap-1 md:gap-2"><span style={{ color: T.textDimmer }}>Shown</span><span style={{ color: T.textPrimary }}>{String(terms.length).padStart(3, '0')}</span></div>
-          <div className="flex items-baseline gap-1 md:gap-2"><span style={{ color: T.textDimmer }}>Fav</span><span style={{ color: T.accent }}>{String(favorites.size).padStart(3, '0')}</span></div>
-        </div>
-      </div>
-
-      {/* 최근 본 용어 */}
-      {recent.length > 0 && !searchQuery && selectedCategory === '전체' && (
-        <div className="mb-6 border" style={{ borderColor: T.border, background: T.bgSurface }}>
-          <div className="flex items-center gap-2 px-4 py-2 border-b" style={{ borderColor: T.border }}>
-            <Clock size={12} style={{ color: T.textFaint }} />
-            <span className="text-[12px] mono uppercase tracking-[0.2em]" style={{ color: T.textFaint }}>최근 본 용어</span>
-          </div>
-          <div className="flex flex-wrap p-2 gap-1">
-            {recent.map(t => {
-              const color = categoryColors[t.category];
-              return (
-                <button
-                  key={t.id}
-                  onClick={() => setSelectedTerm(t)}
-                  className="flex items-center gap-2 px-3 py-1.5 text-xs border transition-all hover:bg-white/5"
-                  style={{ borderColor: T.border, color: T.textSecondary }}
-                >
-                  <span className="w-1.5 h-1.5 rounded-full" style={{ background: color?.bg }}></span>
-                  <span className="font-medium">{t.name}</span>
-                  <span style={{ color: T.textFaint }}>{t.fullName}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* 검색 */}
-      <div className="mb-4 md:mb-6 flex border" style={{ borderColor: T.border }}>
-        <div className="px-4 md:px-5 py-3 md:py-4 border-r flex items-center gap-2" style={{ borderColor: T.border, background: T.bgTabActive, color: T.textTabActive }}>
-          <Search size={16} />
-          <span className="hidden md:inline text-xs mono uppercase tracking-wider">Search</span>
-        </div>
-        <input
-          ref={searchRef}
-          type="text"
-          value={searchQuery}
-          onChange={e => setSearchQuery(e.target.value)}
-          placeholder="검색 — 용어명 · 영문 · 설명"
-          className="flex-1 px-4 md:px-5 py-3.5 md:py-4 bg-transparent text-sm md:text-base"
-          style={{ color: T.textPrimary, fontSize: '16px' }}
-        />
-        {searchQuery && (
-          <button onClick={() => setSearchQuery('')} className="px-4 md:px-5 border-l" style={{ borderColor: T.border, color: T.textMuted }}>
-            <X size={16} />
-          </button>
-        )}
-      </div>
-
-      {/* ── 2단 카테고리 필터 ── */}
-      <div className="mb-6 md:mb-10 border-y" style={{ borderColor: T.border }}>
-
-        {/* ── 모바일: 토글 헤더 ── */}
-        <div className="flex md:hidden items-center justify-between px-4 py-2.5 border-b" style={{ borderColor: T.border }}>
-          <span className="mono text-[11px] uppercase tracking-[0.2em]" style={{ color: T.textMuted }}>
-            {selectedFamily
-              ? `${FAMILY_LIST.find(f => f.id === selectedFamily)?.name ?? selectedFamily}${selectedCategory !== '전체' ? ' · ' + selectedCategory : ''}`
-              : selectedCategory === '★ 즐겨찾기' ? '★ 즐겨찾기' : '전체 그룹'}
-          </span>
-          <button
-            onClick={() => setFamilyOpen(o => !o)}
-            className="mono text-[10px] uppercase tracking-[0.2em] flex items-center gap-1.5 px-3 py-1 border"
-            style={{ borderColor: T.border, color: T.textMuted }}
-          >
-            {familyOpen ? '닫기 ↑' : '필터 ↓'}
-          </button>
+    <div style={{ display: 'flex', overflow: 'hidden', flex: 1, height: '100%' }} className="glos-split">
+      
+      {/* ── LEFT FAMILY SIDEBAR ── */}
+      <div className="hide-mobile sc" style={{
+        width: 195,
+        flexShrink: 0,
+        background: 'rgba(0,0,0,.55)',
+        borderRight: '1px solid rgba(255,255,255,.05)',
+        padding: '10px 6px'
+      }}>
+        <div style={{
+          fontFamily: 'var(--mono)',
+          fontSize: '7.5px',
+          letterSpacing: '.26em',
+          textTransform: 'uppercase',
+          color: 'var(--t3)',
+          padding: '4px 10px 10px'
+        }}>FAMILY · {FAMILY_LIST.length}개</div>
+        
+        {/* 전체 */}
+        <div
+          className={`fam-item${!selectedFamily ? ' active' : ''}`}
+          onClick={() => handleFamilyClick(null)}
+          style={{
+            background: !selectedFamily ? 'rgba(255,255,255,.07)' : 'transparent'
+          }}
+        >
+          <span style={{
+            width: 3,
+            height: 14,
+            borderRadius: 2,
+            background: !selectedFamily ? 'var(--gold)' : 'rgba(255,255,255,.1)',
+            flexShrink: 0,
+            transition: 'background .15s'
+          }} />
+          <span style={{
+            fontSize: 12,
+            color: !selectedFamily ? '#fff' : 'var(--t2)',
+            flex: 1,
+            fontWeight: !selectedFamily ? 500 : 400
+          }}>전체</span>
+          <span style={{
+            fontFamily: 'var(--mono)',
+            fontSize: '8.5px',
+            color: 'var(--t3)'
+          }}>{totalCount}</span>
         </div>
 
-        {/* ── 모바일 펼침 패널 ── */}
-        {familyOpen && (
-          <div className="flex md:hidden flex-col border-b" style={{ borderColor: T.border, background: T.bgSurface }}>
-            {/* 전체 + 즐겨찾기 */}
-            <div className="flex border-b" style={{ borderColor: T.border }}>
-              <button
-                onClick={() => { handleFamilyClick(null); setSelectedCategory('전체'); }}
-                className="flex-1 px-4 py-2.5 text-xs mono uppercase tracking-[0.18em] border-r transition-all"
-                style={{
-                  borderColor: T.border,
-                  background: !selectedFamily && selectedCategory === '전체' ? T.bgTabActive : 'transparent',
-                  color: !selectedFamily && selectedCategory === '전체' ? T.textTabActive : T.textMuted,
-                }}
-              >전체</button>
-              {categories.includes('★ 즐겨찾기') && (
-                <button
-                  onClick={() => { handleFamilyClick(null); setSelectedCategory('★ 즐겨찾기'); }}
-                  className="flex-1 px-4 py-2.5 text-xs mono uppercase tracking-[0.18em] transition-all"
-                  style={{
-                    background: selectedCategory === '★ 즐겨찾기' ? T.accent : 'transparent',
-                    color: selectedCategory === '★ 즐겨찾기' ? '#0a0a0a' : T.textMuted,
-                  }}
-                >★ 즐겨찾기</button>
-              )}
-            </div>
-            {/* 그룹 버튼들 — 2열 그리드 */}
-            <div className="grid grid-cols-2 divide-x divide-y" style={{ borderColor: T.border }}>
-              {FAMILY_LIST.map(fam => {
-                const ft = HUE_FAMILIES[fam.id as keyof typeof HUE_FAMILIES];
-                const active = selectedFamily === fam.id;
-                return (
-                  <button
-                    key={fam.id}
-                    onClick={() => handleFamilyClick(active ? null : fam.id)}
-                    className="flex items-center gap-2 px-4 py-3 text-xs mono uppercase tracking-[0.15em] transition-all"
-                    style={{
-                      borderColor: T.border,
-                      background: active ? ft.bg : 'transparent',
-                      color: active ? ft.text : T.textMuted,
-                    }}
-                  >
-                    <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: active ? ft.text : ft.base }} />
-                    <span>{fam.name}</span>
-                    <span className="opacity-40 text-[9px]">{fam.en}</span>
-                  </button>
-                );
-              })}
-            </div>
-            {/* 모바일 sub-category (family 선택 시) */}
-            {selectedFamily && subCategories.length > 0 && (
-              <div className="flex flex-wrap gap-0 border-t" style={{ borderColor: T.border, background: T.bgPage }}>
-                <button
-                  onClick={() => setSelectedCategory('전체')}
-                  className="px-4 py-2 text-[11px] mono tracking-[0.15em] border-r border-b transition-all"
-                  style={{
-                    borderColor: T.border,
-                    color: selectedCategory === '전체' ? HUE_FAMILIES[selectedFamily as keyof typeof HUE_FAMILIES].base : T.textDimmer,
-                  }}
-                >전체</button>
-                {subCategories.map(cat => {
-                  const active = selectedCategory === cat;
-                  const ft = HUE_FAMILIES[selectedFamily as keyof typeof HUE_FAMILIES];
-                  return (
-                    <button
-                      key={cat}
-                      onClick={() => setSelectedCategory(active ? '전체' : cat)}
-                      className="px-4 py-2 text-[11px] mono tracking-[0.12em] border-r border-b transition-all"
-                      style={{
-                        borderColor: T.border,
-                        color: active ? ft.base : T.textDimmer,
-                        background: active ? `${ft.base}15` : 'transparent',
-                      }}
-                    >{cat}</button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* ── 데스크탑: 2줄 wrap ── */}
-        <div className="hidden md:block">
-          {/* 1단: family — flex-wrap 2줄 */}
-          <div className="flex flex-wrap border-b" style={{ borderColor: T.border }}>
-            <button
-              onClick={() => handleFamilyClick(null)}
-              className="shrink-0 px-4 py-2.5 text-xs mono uppercase tracking-[0.18em] border-r border-b transition-all"
-              style={{
-                borderColor: T.border,
-                background: !selectedFamily && selectedCategory === '전체' ? T.bgTabActive : 'transparent',
-                color: !selectedFamily && selectedCategory === '전체' ? T.textTabActive : T.textMuted,
-              }}
-            >전체</button>
-            {FAMILY_LIST.map(fam => {
-              const ft = HUE_FAMILIES[fam.id as keyof typeof HUE_FAMILIES];
-              const active = selectedFamily === fam.id;
-              return (
-                <button
-                  key={fam.id}
-                  onClick={() => handleFamilyClick(active ? null : fam.id)}
-                  className="shrink-0 flex items-center gap-2 px-4 py-2.5 text-xs mono uppercase tracking-[0.18em] border-r border-b transition-all whitespace-nowrap"
-                  style={{
-                    borderColor: T.border,
-                    background: active ? ft.bg : 'transparent',
-                    color: active ? ft.text : T.textMuted,
-                  }}
-                >
-                  <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: active ? ft.text : ft.base }} />
-                  {fam.name}
-                  <span className="opacity-50 text-[10px]">{fam.en}</span>
-                </button>
-              );
-            })}
-            {/* 즐겨찾기 */}
-            {categories.includes('★ 즐겨찾기') && (
-              <button
-                onClick={() => { handleFamilyClick(null); setSelectedCategory('★ 즐겨찾기'); }}
-                className="shrink-0 px-4 py-2.5 text-xs mono uppercase tracking-[0.18em] border-r border-b transition-all"
-                style={{
-                  borderColor: T.border,
-                  background: selectedCategory === '★ 즐겨찾기' ? T.accent : 'transparent',
-                  color: selectedCategory === '★ 즐겨찾기' ? '#0a0a0a' : T.textMuted,
-                }}
-              >★ 즐겨찾기</button>
-            )}
-          </div>
-
-          {/* 2단: sub-categories (family 선택 시만 노출) */}
-          {selectedFamily && subCategories.length > 0 && (
-            <div className="flex flex-wrap" style={{ background: T.bgSurface }}>
-              <button
-                onClick={() => setSelectedCategory('전체')}
-                className="shrink-0 px-4 py-2 text-[11px] mono uppercase tracking-[0.2em] border-r border-b transition-all"
-                style={{
-                  borderColor: T.border,
-                  color: selectedCategory === '전체' ? HUE_FAMILIES[selectedFamily as keyof typeof HUE_FAMILIES].base : T.textDimmer,
-                  borderBottom: selectedCategory === '전체' ? `2px solid ${HUE_FAMILIES[selectedFamily as keyof typeof HUE_FAMILIES].base}` : undefined,
-                }}
-              >전체</button>
-              {subCategories.map(cat => {
-                const active = selectedCategory === cat;
-                const ft = HUE_FAMILIES[selectedFamily as keyof typeof HUE_FAMILIES];
-                return (
-                  <button
-                    key={cat}
-                    onClick={() => setSelectedCategory(active ? '전체' : cat)}
-                    className="shrink-0 px-4 py-2 text-[11px] mono uppercase tracking-[0.15em] border-r border-b transition-all"
-                    style={{
-                      borderColor: T.border,
-                      color: active ? ft.base : T.textDimmer,
-                      borderBottom: active ? `2px solid ${ft.base}` : undefined,
-                    }}
-                  >{cat}</button>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* 용어 그리드 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 border-t border-l" style={{ borderColor: T.borderSoft }}>
-        {terms.map((term: any) => {
-          const color = categoryColors[term.category];
-          const isFav = favorites.has(term.id);
+        {/* Family items */}
+        {FAMILY_LIST.map(fam => {
+          const active = selectedFamily === fam.id;
           return (
             <div
-              key={term.id}
-              className="border-r border-b transition-all group relative overflow-hidden"
-              style={{ borderColor: T.borderSoft, background: T.bgPage }}
-              onMouseEnter={e => e.currentTarget.style.background = isDark ? '#202020' : '#ece0d0'}
-              onMouseLeave={e => e.currentTarget.style.background = T.bgPage}
+              key={fam.id}
+              className={`fam-item${active ? ' active' : ''}`}
+              onClick={() => handleFamilyClick(active ? null : fam.id)}
+              style={{
+                background: active ? 'rgba(255,255,255,.07)' : 'transparent'
+              }}
             >
-              {/* 즐겨찾기 버튼 — 절대 위치 */}
-              <button
-                onClick={(e) => { e.stopPropagation(); toggleFav(term.id); }}
-                className="absolute top-3 md:top-5 right-3 md:right-5 z-10 p-1.5"
-                style={{ color: isFav ? T.accent : T.textDimmer }}
-              >
-                <Star size={14} fill={isFav ? T.accent : 'none'} />
-              </button>
-              {/* 전체 클릭 가능 영역 */}
-              <button
-                onClick={() => setSelectedTerm(term)}
-                className="w-full text-left px-4 md:px-6 pt-4 md:pt-6 pb-4 md:pb-6"
-              >
-                <div className="flex items-center gap-2 mb-3">
-                  <span className="text-[11px] md:text-[12px] mono uppercase tracking-wider px-2 py-1" style={{ background: color?.bg, color: color?.text }}>
-                    {term.category}
-                  </span>
-                  {term.detailed && (
-                    <span className="text-[11px] mono uppercase tracking-wider px-1.5 py-0.5 border" style={{ borderColor: T.borderMid, color: T.textFaint }}>
-                      심화
-                    </span>
-                  )}
-                </div>
-                <div className="text-xl md:text-2xl font-medium tracking-tight leading-tight mb-1 pr-8" style={{ color: T.textPrimary }}>
-                  <Highlight text={term.name} query={searchQuery} color={T.accent + '55'} />
-                </div>
-                <div className="text-xs mono italic mb-3" style={{ color: T.textFaint }}>{term.en}</div>
-                <div className="text-sm leading-relaxed line-clamp-2" style={{ color: T.textMuted }}>{term.description}</div>
-                {/* 공식 strip */}
-                {term.formula && (
-                  <div className="mt-3 mono text-[11px] px-2 py-1.5 border-l-2 truncate" style={{ background: T.bgCard, borderColor: color?.bg || T.accent, color: T.textFaint }}>
-                    ƒ {term.formula}
-                  </div>
-                )}
-                {/* KPI 3칸 — example 파싱 인라인 예시 */}
-                {(() => {
-                  const kpi = parseExampleKPI(term.example, term.formula);
-                  if (!kpi || kpi.length < 2) return null;
-                  const items = kpi.slice(0, 3);
-                  return (
-                    <div className="mt-2 grid gap-px border" style={{ gridTemplateColumns: `repeat(${items.length},1fr)`, borderColor: T.border, background: T.border }}>
-                      {items.map((item, ki) => (
-                        <div key={ki} className="flex flex-col gap-0.5 px-2 py-1.5" style={{ background: T.bgCard }}>
-                          <span className="mono text-[9px] uppercase tracking-[0.15em] truncate" style={{ color: T.textDimmer }}>{item.label}</span>
-                          <span className="mono text-[12px] font-medium leading-none truncate" style={{ color: ki === items.length - 1 ? (color?.bg || T.accent) : T.textSecondary }}>
-                            {item.value}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  );
-                })()}
-                {/* 관련 용어 chips */}
-                {term.related && term.related.length > 0 && (
-                  <div className="mt-2 flex flex-wrap gap-1">
-                    {term.related.slice(0, 3).map((relId: string) => {
-                      const relTerm = termsMap?.get(relId);
-                      if (!relTerm) return null;
-                      return (
-                        <span key={relId} className="text-[10px] mono px-1.5 py-0.5 border" style={{ borderColor: T.border, color: T.textDimmer }}>
-                          {relTerm.name}
-                        </span>
-                      );
-                    })}
-                  </div>
-                )}
-                <div className="mt-3 md:mt-4 flex items-center gap-1 text-[12px] mono uppercase tracking-wider" style={{ color: T.textDimmer }}>
-                  <span>자세히</span>
-                  <ArrowUpRight size={12} className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
-                </div>
-              </button>
+              <span style={{
+                width: 3,
+                height: 14,
+                borderRadius: 2,
+                background: active ? fam.color : 'rgba(255,255,255,.08)',
+                flexShrink: 0,
+                transition: 'background .15s',
+                boxShadow: active ? `0 0 8px ${fam.color}99` : undefined
+              }} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{
+                  fontSize: '11.5px',
+                  color: active ? fam.color : 'var(--t2)',
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  fontWeight: active ? 500 : 400
+                }}>{fam.name}</div>
+                <div style={{
+                  fontFamily: 'var(--mono)',
+                  fontSize: '8px',
+                  color: 'var(--t3)'
+                }}>{fam.en.slice(0, 8)}</div>
+              </div>
+              <span style={{
+                fontFamily: 'var(--mono)',
+                fontSize: '8.5px',
+                color: 'var(--t3)',
+                flexShrink: 0
+              }}>{terms.filter(t => !selectedFamily || categoryColors[t.category]?.family === selectedFamily).length}</span>
             </div>
           );
         })}
       </div>
 
-      {/* 무한스크롤 로더 */}
-      {termsHasMore && (
-        <div ref={loaderRef} className="flex items-center justify-center py-8 border-x border-b" style={{ borderColor: T.borderSoft }}>
-          <span className="mono text-[11px] uppercase tracking-widest animate-pulse" style={{ color: T.textFaint }}>
-            {termsLoading ? 'Loading…' : 'Load more'}
-          </span>
-        </div>
-      )}
+      {/* ── MAIN CONTENT ── */}
+      <div className="sc glos-main" style={{
+        flex: 1,
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
+        background: '#080808'
+      }}>
 
-      {terms.length === 0 && (
-        <div className="text-center py-16 md:py-20 border-x border-b" style={{ borderColor: T.borderSoft }}>
-          <div className="text-xl md:text-2xl font-light italic" style={{ color: T.textDimmer }}>검색 결과 없음</div>
-          <div className="text-xs mono mt-2 uppercase tracking-wider" style={{ color: T.textFaint }}>No Results Found</div>
-        </div>
-      )}
+        {/* ── HERO SEARCH SECTION ── */}
+        <div style={{
+          background: 'linear-gradient(180deg,rgba(200,150,80,.06) 0%,transparent 100%)',
+          borderBottom: '1px solid rgba(255,255,255,.05)',
+          padding: '28px 24px 20px',
+          flexShrink: 0,
+          position: 'relative',
+          overflow: 'hidden'
+        }}>
+          {/* Ambient glow */}
+          <div style={{
+            position: 'absolute',
+            top: -60,
+            right: -60,
+            width: 300,
+            height: 200,
+            borderRadius: '50%',
+            background: 'radial-gradient(ellipse,rgba(200,150,80,.08) 0%,transparent 70%)',
+            pointerEvents: 'none'
+          }} />
+          
+          <div style={{ position: 'relative' }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'baseline',
+              gap: 10,
+              marginBottom: 6
+            }}>
+              <div style={{
+                fontSize: 24,
+                fontWeight: 300,
+                color: '#fff',
+                letterSpacing: '-.03em'
+              }}>
+                {activeFam ? <span style={{ color: activeFam.color }}>{activeFam.name}</span> : '금융 용어 사전'}
+              </div>
+              <div style={{
+                fontFamily: 'var(--mono)',
+                fontSize: '10px',
+                color: 'var(--t3)'
+              }}>{terms.length.toLocaleString()}개 · {totalCount.toLocaleString()} TOTAL</div>
+            </div>
+            <div style={{
+              fontFamily: 'var(--mono)',
+              fontSize: '10px',
+              color: 'var(--t3)',
+              marginBottom: 18,
+              letterSpacing: '.06em'
+            }}>
+              {activeFam ? `${activeFam.en} · ${terms.filter(t => categoryColors[t.category]?.family === selectedFamily).length}개 용어` : '9 FAMILIES · 108 CATEGORIES · 전업투자자를 위한 금융 책상'}
+            </div>
 
+            {/* Search input */}
+            <div style={{ position: 'relative' }}>
+              <svg style={{
+                position: 'absolute',
+                left: 18,
+                top: '50%',
+                transform: 'translateY(-50%)',
+                pointerEvents: 'none',
+                zIndex: 2
+              }} viewBox="0 0 18 18" width="15" height="15" fill="none">
+                <circle cx="7.5" cy="7.5" r="5.5" stroke="rgba(200,150,80,.5)" strokeWidth="1.3"/>
+                <line x1="11.5" y1="11.5" x2="15.5" y2="15.5" stroke="rgba(200,150,80,.5)" strokeWidth="1.3" strokeLinecap="round"/>
+              </svg>
+              <input
+                ref={searchRef}
+                type="text"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                placeholder="용어 검색 — PER, VaR, 블랙-숄즈, DCF..."
+                className="inp inp-search"
+                style={{
+                  paddingLeft: 46,
+                  paddingTop: 14,
+                  paddingBottom: 14,
+                  fontSize: 14,
+                  borderRadius: 14,
+                  background: 'rgba(0,0,0,.4)',
+                  border: '1px solid rgba(255,255,255,.1)',
+                  backdropFilter: 'blur(10px)'
+                }}
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  style={{
+                    position: 'absolute',
+                    right: 14,
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--t3)',
+                    cursor: 'pointer',
+                    fontSize: 16
+                  }}
+                >×</button>
+              )}
+            </div>
+          </div>
+
+          {/* Family filter pills */}
+          <div className="scx" style={{
+            display: 'flex',
+            gap: 6,
+            marginTop: 16,
+            paddingBottom: 2
+          }}>
+            <div
+              onClick={() => handleFamilyClick(null)}
+              style={{
+                padding: '6px 14px',
+                borderRadius: 20,
+                fontFamily: 'var(--mono)',
+                fontSize: '10px',
+                cursor: 'pointer',
+                transition: 'all .15s',
+                flexShrink: 0,
+                background: !selectedFamily ? 'rgba(200,150,80,.15)' : 'rgba(255,255,255,.04)',
+                border: !selectedFamily ? '1px solid rgba(200,150,80,.35)' : '1px solid rgba(255,255,255,.07)',
+                color: !selectedFamily ? 'var(--gold)' : 'var(--t2)'
+              }}
+            >
+              전체 {terms.length}
+            </div>
+            {FAMILY_LIST.map(f => (
+              <div
+                key={f.id}
+                onClick={() => handleFamilyClick(selectedFamily === f.id ? null : f.id)}
+                style={{
+                  padding: '6px 14px',
+                  borderRadius: 20,
+                  fontFamily: 'var(--mono)',
+                  fontSize: '10px',
+                  cursor: 'pointer',
+                  transition: 'all .15s',
+                  flexShrink: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  background: selectedFamily === f.id ? `${f.color}14` : 'rgba(255,255,255,.04)',
+                  border: selectedFamily === f.id ? `1px solid ${f.color}40` : '1px solid rgba(255,255,255,.07)',
+                  color: selectedFamily === f.id ? f.color : 'var(--t2)'
+                }}
+              >
+                <span style={{
+                  width: 5,
+                  height: 5,
+                  borderRadius: '50%',
+                  background: f.color,
+                  display: 'inline-block',
+                  boxShadow: selectedFamily === f.id ? `0 0 5px ${f.color}` : undefined
+                }} />
+                {f.name}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* ── TERM GRID ── */}
+        <div className="sc term-grid" style={{
+          flex: 1,
+          padding: '16px',
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fill,minmax(220px,1fr))',
+          gap: 10,
+          alignContent: 'start'
+        }}>
+          {terms.length === 0 ? (
+            <div style={{
+              gridColumn: '1 / -1',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              minHeight: 240,
+              gap: 14,
+              textAlign: 'center'
+            }}>
+              <div style={{
+                fontSize: 48,
+                fontWeight: 200,
+                color: 'rgba(255,255,255,.04)',
+                letterSpacing: '-.05em'
+              }}>검색 결과 없음</div>
+              <div style={{
+                fontFamily: 'var(--mono)',
+                fontSize: '10px',
+                color: 'var(--t4)'
+              }}>다른 검색어를 시도해보세요</div>
+            </div>
+          ) : (
+            terms.map((term: any) => {
+              const color = categoryColors[term.category];
+              const isFav = favorites.has(term.id);
+              const isSel = selectedTerm?.id === term.id;
+              const famColor = FAMILY_LIST.find(f => f.id === selectedFamily)?.color || color?.bg || '#C89650';
+              
+              return (
+                <div
+                  key={term.id}
+                  className={`term-card${isSel ? ' selected' : ''}`}
+                  onClick={() => setSelectedTerm(term)}
+                  style={{
+                    background: isSel ? `${famColor}08` : 'rgba(255,255,255,.032)'
+                  }}
+                >
+                  {/* Color top bar */}
+                  <div style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    height: 2.5,
+                    background: famColor,
+                    borderRadius: '14px 14px 0 0',
+                    opacity: isSel ? 1 : 0.3,
+                    transition: 'opacity .2s',
+                    boxShadow: isSel ? `0 0 10px ${famColor}88` : undefined
+                  }} />
+
+                  {/* Category badge */}
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'flex-start',
+                    marginBottom: 10
+                  }}>
+                    <span style={{
+                      fontFamily: 'var(--mono)',
+                      fontSize: '8px',
+                      letterSpacing: '.14em',
+                      textTransform: 'uppercase',
+                      color: famColor,
+                      padding: '3px 8px',
+                      borderRadius: 4,
+                      background: `${famColor}14`,
+                      border: `1px solid ${famColor}25`
+                    }}>{term.category}</span>
+                    {isFav && <span style={{ fontSize: 12, color: 'var(--gold)' }}>★</span>}
+                  </div>
+
+                  {/* Term name */}
+                  <div style={{
+                    fontSize: 20,
+                    fontWeight: 500,
+                    color: '#fff',
+                    marginBottom: 2,
+                    letterSpacing: '-.02em',
+                    lineHeight: 1.1
+                  }}>{term.name}</div>
+                  
+                  <div style={{
+                    fontSize: 12,
+                    color: 'var(--t2)',
+                    marginBottom: 10,
+                    fontStyle: 'italic'
+                  }}>{term.fullName}</div>
+
+                  {/* Description */}
+                  <div style={{
+                    fontSize: '11.5px',
+                    color: 'var(--t3)',
+                    lineHeight: 1.65,
+                    display: '-webkit-box',
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: 'vertical',
+                    overflow: 'hidden',
+                    marginBottom: 12
+                  }}>{term.description}</div>
+
+                  {/* Sparkline footer */}
+                  <div style={{
+                    borderTop: '1px solid rgba(255,255,255,.05)',
+                    paddingTop: 10,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 8
+                  }}>
+                    <div className="tc-spark">
+                      <MiniSparkGlos color={famColor} seed={term.id.charCodeAt(0) % 7 + 1} h={26} />
+                    </div>
+                    <div style={{
+                      textAlign: 'right',
+                      flexShrink: 0
+                    }}>
+                      <span style={{
+                        fontFamily: 'var(--mono)',
+                        fontSize: '8px',
+                        color: 'var(--t3)'
+                      }}>{FAMILY_LIST.find(f => f.id === selectedFamily)?.en.slice(0, 5) || ''}</span>
+                    </div>
+                  </div>
+
+                  {/* Hover arrow */}
+                  <span className="tc-arrow" style={{
+                    position: 'absolute',
+                    top: 14,
+                    right: 14,
+                    fontSize: 12,
+                    color: 'var(--t3)',
+                    opacity: 0,
+                    transition: 'opacity .14s'
+                  }}>↗</span>
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        {/* 무한스크롤 로더 */}
+        {termsHasMore && (
+          <div ref={loaderRef} className="flex items-center justify-center py-8" style={{ borderTop: '1px solid rgba(255,255,255,.05)' }}>
+            <span className="mono text-[11px] uppercase tracking-widest animate-pulse" style={{ color: 'var(--t3)' }}>
+              {termsLoading ? 'Loading…' : 'Load more'}
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* ── TERM MODAL ── */}
       {selectedTerm && (
         <TermModal
           term={selectedTerm}
@@ -2231,404 +2313,171 @@ function CalculatorView({ selectedCalc, setSelectedCalc, T, isDark }) {
     }
   };
 
+
+  const MARKET_REF: Record<string, {label:string;val:string;unit:string}[]> = {
+    per:    [{label:'코스피 평균',val:'12.4',unit:'배'},{label:'S&P500 평균',val:'24.8',unit:'배'},{label:'저평가 기준',val:'< 10',unit:'배'}],
+    pbr:    [{label:'코스피 평균',val:'1.0',unit:'배'},{label:'청산가치',val:'1.0',unit:'배'},{label:'성장주 기준',val:'3~10',unit:'배'}],
+    roe:    [{label:'버핏 최소기준',val:'15',unit:'%'},{label:'S&P500 평균',val:'18',unit:'%'},{label:'한국 우량주',val:'10~15',unit:'%'}],
+    kelly:  [{label:'하프켈리 권장',val:'50',unit:'% 적용'},{label:'실전 최대',val:'25',unit:'%'},{label:'단일 베팅',val:'< 5',unit:'%'}],
+    sharpe: [{label:'우수 기준',val:'> 1.0',unit:''},{label:'탁월 기준',val:'> 2.0',unit:''},{label:'버핏 장기',val:'0.76',unit:''}],
+    var:    [{label:'은행 규제',val:'99%',unit:'신뢰수준'},{label:'헤지펀드',val:'95%',unit:'신뢰수준'},{label:'개인 권장',val:'< 2',unit:'%/일'}],
+  };
+  const marketRefs = MARKET_REF[selectedCalc] || [];
+  const activeGroup = CALC_CATEGORIES.find(cat => cat.calcs.some(c => c.id === selectedCalc));
+
   return (
-    <div>
-      <MarketPulseRail T={T} totalTerms={TERMS_TOTAL} />
-      {/* 상단 메타 바 */}
-      <div className="mb-6 border-y" style={{ borderColor: T.border }}>
-        <div className="flex items-center justify-between gap-3 py-2 border-b mono text-[12px] uppercase tracking-[0.2em] whitespace-nowrap" style={{ borderColor: T.border, color: T.textFaint }}>
-          <div className="flex items-center gap-3">
-            <span>§ Calculator</span>
-            <span className="w-4 h-px hidden md:inline-block" style={{ background: T.borderMid }}></span>
-            <span className="hidden md:inline">Index / 002</span>
-          </div>
-          <div className="flex items-center gap-2">
-            {/* 히스토리 버튼 */}
-            {calcHistory.length > 0 && (
-              <button
-                onClick={() => setShowHistory(h => !h)}
-                className="flex items-center gap-1.5 px-2 py-1 border transition-all hover:bg-white/5"
-                style={{ borderColor: T.border, color: showHistory ? T.accent : T.textMuted }}
-                title="계산 히스토리"
-              >
-                <Clock size={10} />
-                <span>히스토리 {calcHistory.length}</span>
-              </button>
-            )}
-            {selectedCalc && (
-              <button
-                onClick={handleShareUrl}
-                className="flex items-center gap-1.5 px-2 py-1 border transition-all hover:bg-white/5"
-                style={{ borderColor: T.border, color: urlCopied ? T.accent : T.textMuted }}
-                title="이 계산기 링크 복사"
-              >
-                {urlCopied ? (
-                  <><Check size={10} /><span>링크 복사됨</span></>
-                ) : (
-                  <><Share2 size={10} /><span>링크 공유</span></>
-                )}
-              </button>
-            )}
-          </div>
+    <div className="calc-split" style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+
+      {/* ── LEFT SIDEBAR ── */}
+      <div className="sc hide-mobile" style={{ width: 250, flexShrink: 0, background: 'rgba(0,0,0,.55)', borderRight: '1px solid rgba(255,255,255,.05)', padding: '10px 0', overflowY: 'auto' }}>
+        <div style={{ padding: '4px 14px 10px', fontFamily: 'var(--mono)', fontSize: 7.5, letterSpacing: '.26em', textTransform: 'uppercase', color: 'var(--t3)' }}>
+          CALCULATORS · {allCalcs.length}종
         </div>
-        <div className="grid grid-cols-3 gap-2 md:gap-6 py-2 mono text-[12px] uppercase tracking-[0.2em]">
-          <div className="flex items-baseline gap-1 md:gap-2"><span style={{ color: T.textDimmer }}>Groups</span><span style={{ color: T.textPrimary }}>{String(CALC_CATEGORIES.length).padStart(3, '0')}</span></div>
-          <div className="flex items-baseline gap-1 md:gap-2"><span style={{ color: T.textDimmer }}>Modules</span><span style={{ color: T.textPrimary }}>{String(allCalcs.length).padStart(3, '0')}</span></div>
-          <div className="flex items-baseline gap-1 md:gap-2"><span style={{ color: T.textDimmer }}>Active</span><span style={{ color: currentCalc?.color || T.textPrimary }}>M—{currentCalc?.num || '—'}</span></div>
-        </div>
+        {CALC_CATEGORIES.map(cat => (
+          <div key={cat.name} style={{ marginBottom: 2 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '7px 14px 4px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ width: 3, height: 10, borderRadius: 2, background: cat.color, display: 'inline-block', boxShadow: `0 0 5px ${cat.color}66` }} />
+                <span style={{ fontFamily: 'var(--mono)', fontSize: 8.5, letterSpacing: '.1em', color: cat.color }}>{cat.name}</span>
+              </div>
+              <span style={{ fontFamily: 'var(--mono)', fontSize: 8, color: 'var(--t3)' }}>{cat.calcs.length}</span>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1, padding: '0 8px 6px', borderBottom: '1px solid rgba(255,255,255,.03)' }}>
+              {cat.calcs.map(c => {
+                const isSel = selectedCalc === c.id;
+                return (
+                  <div key={c.id} onClick={() => setSelectedCalc(c.id)}
+                    className={`calc-item${isSel ? ' active' : ''}`}
+                    style={{ padding: '7px 9px', borderRadius: 7, cursor: 'pointer', transition: 'all .15s', background: isSel ? `${cat.color}14` : undefined, border: isSel ? `1px solid ${cat.color}35` : '1px solid transparent' }}>
+                    <div style={{ fontFamily: 'var(--mono)', fontSize: 7.5, color: isSel ? cat.color : 'var(--t3)', letterSpacing: '.08em', marginBottom: 2 }}>{c.num}</div>
+                    <div style={{ fontSize: 11, fontWeight: isSel ? 500 : 400, color: isSel ? '#fff' : 'var(--t2)', lineHeight: 1.3 }}>{c.name}</div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </div>
 
-      {/* PC: 좌측 목록 + 우측 계산기 패널 / 모바일: 세로 스택 */}
-      <div className="flex flex-col lg:flex-row gap-0 lg:gap-6 lg:items-start">
+      {/* ── RIGHT PANEL ── */}
+      <div className="sc" style={{ flex: 1, background: '#080808', overflow: 'auto', padding: '0 0 40px' }}>
 
-        {/* ── 좌측: 항목 목록 ── */}
-        <div className="w-full lg:w-[320px] xl:w-[360px] lg:shrink-0">
-
-          {/* 즐겨찾기 섹션 */}
-          {favCalcList.length > 0 && (
-            <div className="mb-4 border" style={{ borderColor: T.border }}>
-              <div className="px-4 py-2.5 flex items-center gap-3 border-b" style={{ background: T.bgCard, borderColor: T.border }}>
-                <Star size={11} fill={T.accent} stroke={T.accent} />
-                <span className="text-[13px] mono uppercase tracking-[0.2em]" style={{ color: T.accent }}>즐겨찾기</span>
-                <span className="ml-auto text-[12px] mono" style={{ color: T.textDimmer }}>{String(favCalcList.length).padStart(2, '0')} PINNED</span>
-              </div>
-              <div className="grid grid-cols-2">
-                {favCalcList.map((calc, i) => {
-                  const active = selectedCalc === calc.id;
-                  return (
-                    <button
-                      key={`fav-${calc.id}`}
-                      onClick={() => setSelectedCalc(active ? '' : calc.id)}
-                      className="flex items-center gap-2 px-3 py-2.5 text-xs transition-all text-left border-r border-b"
-                      style={{
-                        borderColor: T.commandKSelected,
-                        background: active ? calc.color : 'transparent',
-                        color: active ? '#0a0a0a' : T.textSecondary,
-                      }}
-                    >
-                      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: active ? '#0a0a0a' : calc.color }}></span>
-                      <span className="font-medium truncate">{calc.name}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* 카테고리별 계산기 목록 */}
-          <div className="border" style={{ borderColor: T.border }}>
-            {CALC_CATEGORIES.map((cat, ci) => {
-              // 이 카테고리에 선택된 계산기가 있는지
-              const activeCatCalc = cat.calcs.find(c => c.id === selectedCalc);
-              return (
-                <div key={cat.name} className={ci !== CALC_CATEGORIES.length - 1 ? 'border-b' : ''} style={{ borderColor: T.border }}>
-                  {/* 카테고리 헤더 */}
-                  <div className="px-4 py-2.5 flex items-center gap-2.5" style={{ background: T.bgCard }}>
-                    <span className="w-1.5 h-1.5 rounded-full" style={{ background: cat.color }}></span>
-                    <span className="text-[13px] mono uppercase tracking-[0.2em]" style={{ color: T.textMuted }}>{cat.name}</span>
-                    <span className="ml-auto text-[12px] mono" style={{ color: T.textDimmer }}>{String(cat.calcs.length).padStart(2, '0')}</span>
-                  </div>
-                  {/* 계산기 버튼 — 2열 */}
-                  <div className="grid grid-cols-2 border-t" style={{ borderColor: T.border }}>
-                    {cat.calcs.map((calc) => {
-                      const active = selectedCalc === calc.id;
-                      const isFav = favCalcs.has(calc.id);
-                      return (
-                        <div key={calc.id} id={`calc-btn-${calc.id}`} className="relative group flex items-stretch border-r border-b" style={{ borderColor: T.commandKSelected }}>
-                          <button
-                            onClick={() => setSelectedCalc(active ? '' : calc.id)}
-                            className="flex-1 flex items-center gap-2 px-3 py-2.5 text-xs transition-all text-left"
-                            style={{
-                              background: active ? cat.color : 'transparent',
-                              color: active ? '#0a0a0a' : T.textSecondary,
-                            }}
-                          >
-                            <span className="text-[12px] mono opacity-50 w-4 shrink-0">{calc.num}</span>
-                            <span className="font-medium truncate">{calc.name}</span>
-                          </button>
-                          {/* 즐겨찾기 별 */}
-                          <button
-                            onClick={(e) => toggleFavCalc(calc.id, e)}
-                            className="absolute top-1/2 right-1 -translate-y-1/2 p-1 transition-opacity group-hover:opacity-100"
-                            style={{ opacity: isFav ? 1 : 0, color: active ? '#0a0a0a' : (isFav ? T.accent : T.textFaint) }}
-                            title={isFav ? '즐겨찾기 해제' : '즐겨찾기 추가'}
-                          >
-                            <Star size={10} fill={isFav ? 'currentColor' : 'none'} />
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </div>
-
-                  {/* ── 모바일: 선택된 계산기가 이 카테고리에 속하면 바로 아래 인라인 패널 ── */}
-                  {activeCatCalc && (
-                    <div className="lg:hidden border-t" style={{ borderColor: T.border, background: T.bgSurface }}>
-                      {/* 패널 헤더 */}
-                      <div className="px-4 py-3 border-b flex items-center gap-2 sticky top-[56px] z-10"
-                        style={{ borderColor: T.border, background: T.bgCard }}>
-                        <span className="w-2 h-2 rounded-full shrink-0" style={{ background: cat.color }}></span>
-                        <span className="text-[11px] mono uppercase tracking-[0.2em]" style={{ color: cat.color }}>
-                          {activeCatCalc.num}
-                        </span>
-                        <span className="text-sm font-medium flex-1 truncate" style={{ color: T.textPrimary }}>{activeCatCalc.name}</span>
-                        {/* 결과 저장 */}
-                        <button
-                          onClick={() => {
-                            const panel = document.getElementById(`calc-panel-mobile-${selectedCalc}`);
-                            if (!panel) return;
-                            const boxes = panel.querySelectorAll('[data-result-label]');
-                            const results: { label: string; value: string; unit?: string }[] = [];
-                            boxes.forEach(box => {
-                              const label = box.getAttribute('data-result-label') || '';
-                              const value = box.getAttribute('data-result-value') || '';
-                              const unit = box.getAttribute('data-result-unit') || undefined;
-                              if (value && value !== '—' && value !== '') results.push({ label, value, unit });
-                            });
-                            if (results.length > 0) {
-                              dispatchCalcHistory(selectedCalc, activeCatCalc.name, results);
-                              setShowHistory(true);
-                            }
-                          }}
-                          className="flex items-center gap-1 text-[11px] mono px-2 py-1 border"
-                          style={{ borderColor: T.border, color: T.textFaint }}
-                        >
-                          <Clock size={10} />
-                          <span>저장</span>
-                        </button>
-                        <button onClick={() => setSelectedCalc('')} className="p-1.5" style={{ color: T.textDimmer }}>
-                          <X size={14} />
-                        </button>
-                      </div>
-                      <div id={`calc-panel-mobile-${selectedCalc}`} className="p-5">
-                        {renderCalcComponent(selectedCalc)}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+        {/* Breadcrumb */}
+        <div style={{ padding: '14px 20px 0', fontFamily: 'var(--mono)', fontSize: 9, color: 'var(--t3)', letterSpacing: '.1em' }}>
+          CALCULATORS › {activeGroup?.name?.toUpperCase() || 'INDEX'} › {currentCalc?.num || '—'}
         </div>
 
-        {/* ── 우측: 계산기 패널 (PC 전용 sticky) ── */}
-        <div className="hidden lg:block flex-1 min-w-0 sticky top-[90px] self-start">
-          {selectedCalc ? (
-            <div
-              id={`calc-panel-${selectedCalc}`}
-              className="border overflow-y-auto"
-              style={{
-                borderColor: T.border,
-                background: T.bgSurface,
-                maxHeight: 'calc(100vh - 110px)',
-              }}
-            >
-              {/* 패널 헤더 */}
-              <div className="px-6 py-3 border-b flex items-center gap-3" style={{ borderColor: T.border, background: T.bgCard }}>
-                <span className="text-[12px] mono uppercase tracking-[0.2em]" style={{ color: currentCalc?.color || T.textMuted }}>
-                  M—{currentCalc?.num}
-                </span>
-                <span className="text-sm font-medium" style={{ color: T.textPrimary }}>{currentCalc?.name}</span>
-                {/* 시나리오 비교 버튼 */}
-                <button
-                  onClick={() => { setCompareCalcMode(m => !m); setCompareCalcId(selectedCalc); }}
-                  className="flex items-center gap-1.5 text-[11px] mono px-3 py-1.5 border transition-all"
-                  style={{
-                    marginLeft: 'auto',
-                    borderColor: compareCalcMode ? T.accent : T.border,
-                    color: compareCalcMode ? '#0f0f0f' : T.textSecondary,
-                    background: compareCalcMode ? T.accent : 'transparent',
-                    fontWeight: compareCalcMode ? 700 : 400,
-                    letterSpacing: '0.08em',
-                  }}
-                  title="A/B 시나리오 비교"
-                >
-                  <span style={{ fontSize: 10 }}>⇄</span>
-                  <span>A/B 비교</span>
-                </button>
-                {/* 결과 저장 버튼 */}
-                <button
-                  onClick={() => {
-                    const panel = document.getElementById(`calc-panel-${selectedCalc}`);
-                    if (!panel) return;
-                    const boxes = panel.querySelectorAll('[data-result-label]');
-                    const results: { label: string; value: string; unit?: string }[] = [];
-                    boxes.forEach(box => {
-                      const label = box.getAttribute('data-result-label') || '';
-                      const value = box.getAttribute('data-result-value') || '';
-                      const unit = box.getAttribute('data-result-unit') || undefined;
-                      if (value && value !== '—' && value !== '') results.push({ label, value, unit });
-                    });
-                    if (results.length > 0 && currentCalc) {
-                      dispatchCalcHistory(selectedCalc, currentCalc.name, results);
-                      setShowHistory(true);
-                    }
-                  }}
-                  className="flex items-center gap-1 text-[11px] mono px-3 py-1.5 border transition-all hover:bg-white/5"
-                  style={{ borderColor: T.border, color: T.textSecondary, letterSpacing: '0.08em' }}
-                  title="현재 결과를 히스토리에 저장"
-                >
-                  <Clock size={10} />
-                  <span>저장</span>
-                </button>
-                <button
-                  onClick={() => setSelectedCalc('')}
-                  className="p-1 hover:bg-white/5 transition-colors"
-                  style={{ color: T.textDimmer }}
-                  title="닫기"
-                >
-                  <X size={14} />
-                </button>
-              </div>
+        <div style={{ padding: '16px 20px', display: 'grid', gridTemplateColumns: '1fr 420px', gap: 16, alignItems: 'start' }}>
 
-              {/* A/B 비교 모드 */}
-              {compareCalcMode ? (
-                <div className="grid overflow-y-auto" style={{ gridTemplateColumns: '1fr 180px 1fr', borderColor: T.border, maxHeight: 'calc(100vh - 160px)' }}>
-                  {/* ── 시나리오 A ── */}
-                  <div className="p-5" ref={panelARef} style={{ borderRight: `1px solid ${T.border}` }}>
-                    <div className="text-[12px] mono uppercase tracking-[0.2em] mb-4 flex items-center gap-2" style={{ color: T.textFaint }}>
-                      <span className="px-1.5 py-0.5 text-[11px]" style={{ background: T.accent, color: '#0a0a0a' }}>A</span>
-                      <span>시나리오 A</span>
+          {/* ── INPUT CARD ── */}
+          <div style={{ position: 'relative', background: 'rgba(255,255,255,.032)', border: '1px solid rgba(255,255,255,.07)', borderRadius: 16, overflow: 'hidden' }}>
+            {/* Color top bar */}
+            {currentCalc && (
+              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: currentCalc.color, boxShadow: `0 0 12px ${currentCalc.color}99` }} />
+            )}
+            <div style={{ padding: '20px 22px 22px', marginTop: 2 }}>
+              {/* Calc header */}
+              {currentCalc && (
+                <div style={{ marginBottom: 20 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <span style={{ fontFamily: 'var(--mono)', fontSize: 8.5, letterSpacing: '.14em', textTransform: 'uppercase', color: currentCalc.color, padding: '3px 10px', borderRadius: 5, background: `${currentCalc.color}14`, border: `1px solid ${currentCalc.color}30` }}>{currentCalc.num}</span>
+                      <span style={{ fontFamily: 'var(--mono)', fontSize: 8.5, color: 'var(--t3)' }}>{activeGroup?.name}</span>
                     </div>
-                    <CalcPrefixContext.Provider value="scenarioA">
-                      {renderCalcComponent(selectedCalc)}
-                    </CalcPrefixContext.Provider>
-                  </div>
-
-                  {/* ── Diff 컬럼 ── */}
-                  <div className="flex flex-col border-r" style={{ borderColor: T.border, background: T.bgWell ?? T.bgCard }}>
-                    <div className="px-3 py-3 border-b text-center" style={{ borderColor: T.border }}>
-                      <span className="mono text-[10px] uppercase tracking-[0.3em]" style={{ color: T.textFaint }}>§ Δ Diff</span>
-                    </div>
-                    <div className="flex-1 overflow-y-auto">
-                      {diffRows.length === 0 ? (
-                        <div className="px-3 py-8 text-center mono text-[10px]" style={{ color: T.textDimmer }}>
-                          입력 후<br/>자동 갱신
-                        </div>
-                      ) : diffRows.map((row, i) => {
-                        const isUp = row.diff > 0;
-                        const isDown = row.diff < 0;
-                        const diffColor = isUp ? '#6f9c6a' : isDown ? '#b94040' : T.textDimmer;
-                        const hasNum = row.aNum !== 0 || row.bNum !== 0;
-                        return (
-                          <div key={i} className="px-3 py-3 border-b" style={{ borderColor: T.border }}>
-                            <div className="mono text-[9px] uppercase tracking-[0.18em] mb-1.5 truncate" style={{ color: T.textFaint }}>{row.label}</div>
-                            {hasNum ? (
-                              <>
-                                <div className="mono font-medium text-center" style={{ fontSize: 15, color: diffColor }}>
-                                  {isUp ? '+' : ''}{row.diff % 1 === 0 ? row.diff.toLocaleString() : row.diff.toFixed(2)}
-                                  {row.unit && <span className="text-[10px] ml-0.5" style={{ color: T.textDimmer }}>{row.unit}</span>}
-                                </div>
-                                {row.aNum !== 0 && (
-                                  <div className="mono text-[10px] text-center mt-0.5" style={{ color: diffColor, opacity: 0.7 }}>
-                                    {isUp ? '▲' : isDown ? '▼' : '—'} {Math.abs(row.pct).toFixed(1)}%
-                                  </div>
-                                )}
-                                {/* 미니 게이지 */}
-                                <div className="mt-2 h-0.5 rounded-full overflow-hidden" style={{ background: T.border }}>
-                                  <div style={{
-                                    height: '100%',
-                                    width: `${Math.min(Math.abs(row.pct), 100)}%`,
-                                    background: diffColor,
-                                    marginLeft: isDown ? `${100 - Math.min(Math.abs(row.pct), 100)}%` : 0,
-                                    transition: 'width 0.3s ease',
-                                  }} />
-                                </div>
-                              </>
-                            ) : (
-                              <div className="mono text-[10px] text-center" style={{ color: T.textDimmer }}>—</div>
-                            )}
-                          </div>
-                        );
-                      })}
+                    <div style={{ display: 'flex', gap: 5 }}>
+                      {['A', 'B'].map(m => (
+                        <button key={m} onClick={() => setCompareCalcMode(m === 'B')}
+                          style={{ width: 28, height: 28, borderRadius: 7, background: (m === 'A' && !compareCalcMode) || (m === 'B' && compareCalcMode) ? `${currentCalc.color}20` : 'rgba(255,255,255,.04)', border: `1px solid ${(m === 'A' && !compareCalcMode) || (m === 'B' && compareCalcMode) ? currentCalc.color + '50' : 'rgba(255,255,255,.08)'}`, color: (m === 'A' && !compareCalcMode) || (m === 'B' && compareCalcMode) ? currentCalc.color : 'var(--t3)', fontFamily: 'var(--mono)', fontSize: 10, cursor: 'pointer', fontWeight: 600 }}>
+                          {m}
+                        </button>
+                      ))}
                     </div>
                   </div>
-
-                  {/* ── 시나리오 B ── */}
-                  <div className="p-5" ref={panelBRef}>
-                    <div className="text-[12px] mono uppercase tracking-[0.2em] mb-4 flex items-center gap-2" style={{ color: T.textFaint }}>
-                      <span className="px-1.5 py-0.5 text-[11px]" style={{ background: T.accentGreen, color: '#fff' }}>B</span>
-                      <span>시나리오 B</span>
-                      <span className="ml-auto text-[11px]" style={{ color: T.textDimmer }}>독립 입력</span>
-                    </div>
-                    <CalcPrefixContext.Provider value="scenarioB">
-                      {renderCalcComponent(selectedCalc)}
-                    </CalcPrefixContext.Provider>
-                  </div>
+                  <div style={{ fontSize: 22, fontWeight: 300, color: '#fff', letterSpacing: '-.03em', marginBottom: 5 }}>{currentCalc.name}</div>
+                  <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--t3)' }}>{(currentCalc as any).desc ?? ''}</div>
                 </div>
-              ) : (
-              <div className="p-6 md:p-10">
-                {renderCalcComponent(selectedCalc)}
-              </div>
               )}
-            </div>
-          ) : (
-            <div className="border flex flex-col items-center justify-center py-24" style={{ borderColor: T.border, background: T.bgCard }}>
-              <span className="text-[12px] mono uppercase tracking-[0.3em]" style={{ color: T.borderMid }}>No Module Selected</span>
-              <span className="mt-3 text-xs" style={{ color: T.textDimmer }}>← 좌측에서 계산기를 선택하세요</span>
-            </div>
-          )}
-        </div>
 
-      </div>
-
-      {/* 히스토리 패널 */}
-      {showHistory && calcHistory.length > 0 && (
-        <div className="mt-6 border" style={{ borderColor: T.border, background: T.bgSurface }}>
-          <div className="px-5 py-3 border-b flex items-center gap-3" style={{ borderColor: T.border, background: T.bgCard }}>
-            <Clock size={12} style={{ color: T.accent }} />
-            <span className="text-[13px] mono uppercase tracking-[0.2em]" style={{ color: T.textMuted }}>계산 히스토리 · Calculation History</span>
-            <button
-              onClick={() => {
-                setCalcHistory([]);
-                try { localStorage.removeItem('stockwiki_calc_history'); } catch {}
-                setShowHistory(false);
-              }}
-              className="ml-auto text-[12px] mono px-2 py-1 border transition-all hover:bg-white/5"
-              style={{ borderColor: T.border, color: T.textFaint }}
-            >
-              전체 삭제
-            </button>
-            <button onClick={() => setShowHistory(false)} style={{ color: T.textFaint }}>
-              <X size={14} />
-            </button>
+              {/* Calc component (actual inputs) */}
+              <CalcPrefixContext.Provider value={compareCalcMode ? 'B' : 'A'}>
+                <div ref={panelARef}>
+                  {renderCalcComponent(selectedCalc)}
+                </div>
+              </CalcPrefixContext.Provider>
+            </div>
           </div>
-          <div style={{ borderColor: T.border }}>
-            {calcHistory.map((entry, i) => {
-              const calcInfo = allCalcs.find(c => c.id === entry.id);
-              return (
-                <div key={i} className="px-5 py-4 transition-colors" style={{ borderTop: i > 0 ? `1px solid ${T.border}` : 'none', background: 'transparent' }}
-                  onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = T.bgHover}
-                  onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
-                >
-                  <div className="flex items-center gap-3 mb-2">
-                    <span className="w-1.5 h-1.5 rounded-full" style={{ background: calcInfo?.color || T.accent }}></span>
-                    <span className="text-xs font-medium" style={{ color: T.textPrimary }}>{entry.label}</span>
-                    <span className="ml-auto text-[12px] mono" style={{ color: T.textFaint }}>
-                      {new Date(entry.ts).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                    </span>
-                    <button
-                      onClick={() => setSelectedCalc(entry.id)}
-                      className="text-[12px] mono px-2 py-0.5 border"
-                      style={{ borderColor: T.border, color: T.textMuted }}
-                    >
-                      다시 열기
-                    </button>
+
+          {/* ── RESULT / REFERENCE PANEL ── */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+
+            {/* Market reference card */}
+            {marketRefs.length > 0 && (
+              <div style={{ background: 'rgba(255,255,255,.025)', border: '1px solid rgba(255,255,255,.06)', borderRadius: 14, padding: '16px 18px' }}>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 8, letterSpacing: '.2em', textTransform: 'uppercase', color: 'var(--t3)', marginBottom: 12 }}>시장 기준 참고</div>
+                {marketRefs.map((ref, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 0', borderBottom: i < marketRefs.length - 1 ? '1px solid rgba(255,255,255,.04)' : 'none' }}>
+                    <span style={{ fontSize: 12, color: 'var(--t2)' }}>{ref.label}</span>
+                    <span style={{ fontFamily: 'var(--mono)', fontSize: 13, color: '#fff', fontWeight: 500 }}>{ref.val}<span style={{ fontSize: 10, color: 'var(--t3)', marginLeft: 3 }}>{ref.unit}</span></span>
                   </div>
-                  <div className="flex flex-wrap gap-3">
-                    {entry.results.map((r, j) => (
-                      <div key={j} className="flex items-baseline gap-1.5">
-                        <span className="text-[12px] mono" style={{ color: T.textFaint }}>{r.label}:</span>
-                        <span className="text-sm mono font-medium" style={{ color: T.accent }}>{r.value}</span>
-                        {r.unit && <span className="text-[12px] mono" style={{ color: T.textDimmer }}>{r.unit}</span>}
+                ))}
+              </div>
+            )}
+
+            {/* Compare mode panel B */}
+            {compareCalcMode && (
+              <div style={{ background: 'rgba(255,255,255,.025)', border: '1px solid rgba(255,255,255,.06)', borderRadius: 14, padding: '16px 18px' }}>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 8, letterSpacing: '.2em', color: 'var(--t3)', marginBottom: 10 }}>SCENARIO B</div>
+                <CalcPrefixContext.Provider value="B">
+                  <div ref={panelBRef}>
+                    {renderCalcComponent(selectedCalc)}
+                  </div>
+                </CalcPrefixContext.Provider>
+              </div>
+            )}
+
+            {/* Calc history */}
+            {calcHistory.length > 0 && (
+              <div style={{ background: 'rgba(255,255,255,.025)', border: '1px solid rgba(255,255,255,.06)', borderRadius: 14, padding: '16px 18px' }}>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 8, letterSpacing: '.2em', textTransform: 'uppercase', color: 'var(--t3)', marginBottom: 12 }}>최근 계산</div>
+                {calcHistory.slice(0, 5).map((entry, i) => (
+                  <div key={i} onClick={() => setSelectedCalc(entry.id)}
+                    className="hist-item"
+                    style={{ marginBottom: 6, cursor: 'pointer' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                      <span style={{ fontFamily: 'var(--mono)', fontSize: 9, color: 'var(--t3)' }}>{entry.label}</span>
+                      <span style={{ fontFamily: 'var(--mono)', fontSize: 9, color: 'var(--t3)' }}>{new Date(entry.ts).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}</span>
+                    </div>
+                    {entry.results.slice(0, 2).map((r, j) => (
+                      <div key={j} style={{ display: 'flex', gap: 6 }}>
+                        <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--t3)' }}>{r.label}:</span>
+                        <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--gold)', fontWeight: 500 }}>{r.value}</span>
                       </div>
                     ))}
                   </div>
-                </div>
-              );
-            })}
+                ))}
+              </div>
+            )}
           </div>
         </div>
-      )}
+
+        {/* Mobile: calc list */}
+        <div className="hide-desktop" style={{ padding: '0 16px' }}>
+          <div style={{ fontFamily: 'var(--mono)', fontSize: 8, letterSpacing: '.2em', color: 'var(--t3)', marginBottom: 10 }}>계산기 목록</div>
+          {CALC_CATEGORIES.map(cat => (
+            <div key={cat.name} style={{ marginBottom: 12 }}>
+              <div style={{ fontFamily: 'var(--mono)', fontSize: 8.5, color: cat.color, marginBottom: 6 }}>{cat.name}</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {cat.calcs.map(c => (
+                  <button key={c.id} onClick={() => setSelectedCalc(c.id)}
+                    style={{ padding: '6px 12px', borderRadius: 8, background: selectedCalc === c.id ? `${cat.color}14` : 'rgba(255,255,255,.04)', border: `1px solid ${selectedCalc === c.id ? cat.color + '40' : 'rgba(255,255,255,.08)'}`, color: selectedCalc === c.id ? cat.color : 'var(--t2)', fontFamily: 'var(--mono)', fontSize: 10, cursor: 'pointer' }}>
+                    {c.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
