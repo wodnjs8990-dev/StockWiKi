@@ -10,6 +10,9 @@ type CalcResult = { label: string; value: string; unit: string; highlight?: bool
 type CalcResultsSink = (results: CalcResult[]) => void;
 const CalcResultsContext = createContext<{ sink: CalcResultsSink; color: string } | null>(null);
 
+// CalcColorContext — 현재 계산기의 카테고리 색상을 CalcNote 등에 전달
+const CalcColorContext = createContext<string>('#C89650');
+
 import { Search, Calculator, BookOpen, ChevronRight, ChevronLeft, X, ArrowUpRight, Star, Clock, Menu, Link as LinkIcon, Copy, Check, Share2, CalendarDays, Info, Keyboard, LayoutDashboard, TrendingUp } from 'lucide-react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -1998,7 +2001,7 @@ function CalculatorView({ selectedCalc, setSelectedCalc, T, isDark }) {
           CALCULATORS › {activeGroup?.name?.toUpperCase() || 'INDEX'} › {currentCalc?.num || '—'}
         </div>
 
-        <div style={{ padding: '12px 20px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, alignItems: 'start' }}>
+        <div style={{ padding: '12px 20px', display: 'grid', gridTemplateColumns: '380px 1fr', gap: 12, alignItems: 'start' }}>
 
           {/* ── LEFT COL: A/B 버튼 + CalcHeader + Inputs + CalcNote ── */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
@@ -2015,11 +2018,13 @@ function CalculatorView({ selectedCalc, setSelectedCalc, T, isDark }) {
                 })}
               </div>
             )}
-            <CalcPrefixContext.Provider value={compareCalcMode ? 'B' : 'A'}>
-              <div ref={panelARef}>
-                {renderCalcComponent(selectedCalc)}
-              </div>
-            </CalcPrefixContext.Provider>
+            <CalcColorContext.Provider value={currentCalc?.color || '#C89650'}>
+              <CalcPrefixContext.Provider value={compareCalcMode ? 'B' : 'A'}>
+                <div ref={panelARef}>
+                  {renderCalcComponent(selectedCalc)}
+                </div>
+              </CalcPrefixContext.Provider>
+            </CalcColorContext.Provider>
           </div>
 
           {/* ── RIGHT COL: 결과 패널 (HTML 프로토타입 그대로) ── */}
@@ -2054,11 +2059,13 @@ function CalculatorView({ selectedCalc, setSelectedCalc, T, isDark }) {
             {compareCalcMode && (
               <div className="card" style={{ padding: '16px 18px' }}>
                 <div style={{ fontFamily: 'var(--mono)', fontSize: 8, letterSpacing: '.22em', textTransform: 'uppercase', color: 'var(--t3)', marginBottom: 10 }}>SCENARIO B</div>
-                <CalcPrefixContext.Provider value="B">
-                  <div ref={panelBRef}>
-                    {renderCalcComponent(selectedCalc)}
-                  </div>
-                </CalcPrefixContext.Provider>
+                <CalcColorContext.Provider value={currentCalc?.color || '#C89650'}>
+                  <CalcPrefixContext.Provider value="B">
+                    <div ref={panelBRef}>
+                      {renderCalcComponent(selectedCalc)}
+                    </div>
+                  </CalcPrefixContext.Provider>
+                </CalcColorContext.Provider>
               </div>
             )}
 
@@ -2176,7 +2183,9 @@ function formatKoreanUnit(value: string | number): string {
   return '';
 }
 
-function NumInput({ label, value, onChange, unit, placeholder, hint, color = '#C89650' }: any) {
+function NumInput({ label, value, onChange, unit, placeholder, hint, color: colorProp }: any) {
+  const ctxColor = useContext(CalcColorContext);
+  const color = colorProp || ctxColor;
   const [isFocused, setIsFocused] = useState(false);
 
   const displayValue = (() => {
@@ -2209,7 +2218,18 @@ function NumInput({ label, value, onChange, unit, placeholder, hint, color = '#C
         onFocus={() => setIsFocused(true)}
         onBlur={() => setIsFocused(false)}
         placeholder={placeholder}
-        style={{ fontSize: 22, fontFamily: 'var(--mono)', fontWeight: 300, letterSpacing: '-.02em', color: '#ffffff', background: 'rgba(0,0,0,.3)', border: '1px solid rgba(255,255,255,.1)', borderRadius: 10, padding: '12px 16px', width: '100%' }}
+        style={{
+          fontSize: 22, fontFamily: 'var(--mono)', fontWeight: 300, letterSpacing: '-.02em',
+          color: '#ffffff', borderRadius: 10, padding: '12px 16px', width: '100%', outline: 'none',
+          background: isFocused
+            ? `linear-gradient(135deg, ${color}06, rgba(255,255,255,.03))`
+            : 'linear-gradient(135deg, rgba(255,255,255,.05), rgba(255,255,255,.02))',
+          border: isFocused ? `1px solid ${color}8c` : '1px solid rgba(255,255,255,.08)',
+          boxShadow: isFocused
+            ? `0 0 0 3px ${color}1a, 0 0 20px ${color}1f, inset 0 0 20px ${color}08`
+            : 'none',
+          transition: 'border-color .2s, box-shadow .25s, background .2s',
+        }}
       />
       {koreanUnit && (
         <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: color, marginTop: 6 }}>≈ {koreanUnit}</div>
@@ -2231,7 +2251,9 @@ function dispatchCalcHistory(calcId: string, calcName: string, results: { label:
   }));
 }
 
-function ResultBox({ label, value, unit, highlight, color = '#C89650', bands, interpret }: any) {
+function ResultBox({ label, value, unit, highlight, color: colorProp, bands, interpret }: any) {
+  const ctxColor = useContext(CalcColorContext);
+  const color = colorProp || ctxColor;
   const ctx = useContext(CalcResultsContext);
   const [copied, setCopied] = useState(false);
 
@@ -2249,6 +2271,7 @@ function ResultBox({ label, value, unit, highlight, color = '#C89650', bands, in
         data-result-value={value}
         data-result-unit={unit || ''}
         data-result-highlight={highlight ? '1' : ''}
+        data-result-bands={bands ? bands.join(',') : ''}
         style={{ display: 'none' }}
       />
     );
@@ -2348,7 +2371,9 @@ function ResultBox({ label, value, unit, highlight, color = '#C89650', bands, in
   );
 }
 
-function CalcHeader({ num, title, desc, color = '#C89650', calcId, results }: any) {
+function CalcHeader({ num, title, desc, color: colorProp, calcId, results }: any) {
+  const ctxColor = useContext(CalcColorContext);
+  const color = colorProp || ctxColor;
   const [saved, setSaved] = useState(false);
 
   const handleSave = () => {
@@ -2399,7 +2424,9 @@ function CalcResultsReader({ containerRef, calcColor, mode }: { containerRef: Re
         const value = el.getAttribute('data-result-value') || '';
         const unit = el.getAttribute('data-result-unit') || '';
         const highlight = el.getAttribute('data-result-highlight') === '1';
-        if (label) arr.push({ label, value, unit, highlight, color: calcColor });
+        const bandsRaw = el.getAttribute('data-result-bands') || '';
+        const bands = bandsRaw ? bandsRaw.split(',').map(Number) : null;
+        if (label) arr.push({ label, value, unit, highlight, color: calcColor, bands });
       });
       setResults(arr);
     };
@@ -2438,13 +2465,34 @@ function CalcResultsReader({ containerRef, calcColor, mode }: { containerRef: Re
                   <div style={{ fontFamily: 'var(--mono)', fontSize: 9, letterSpacing: '.22em', textTransform: 'uppercase' as const, color: calcColor, marginBottom: 10, textShadow: `0 0 10px ${calcColor}88` }}>
                     {r.label} · SCENARIO {mode}
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 8 }}>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 8, animation: 'resultFadeIn .4s cubic-bezier(.16,1,.3,1) both' }}>
                     <span style={{ fontFamily: 'var(--mono)', fontSize: r.highlight ? 64 : 36, fontWeight: 200, color: '#fff', letterSpacing: '-.06em', lineHeight: 1, textShadow: r.highlight ? `0 0 30px ${calcColor}cc, 0 0 60px ${calcColor}55` : `0 0 20px ${calcColor}88` }}>
                       {r.value}
                     </span>
                     <span style={{ fontFamily: 'var(--mono)', fontSize: r.highlight ? 22 : 14, color: 'rgba(255,255,255,.35)', lineHeight: 1 }}>{r.unit}</span>
                   </div>
                   {koreanUnit && <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--t3)', marginBottom: 4 }}>≈ {koreanUnit}</div>}
+                  {/* 게이지 바 — bands가 있는 highlight 결과에만 */}
+                  {r.highlight && r.bands && r.bands.length >= 2 && (() => {
+                    const rNum = parseFloat((r.value || '').replace(/,/g,''));
+                    if (!isFinite(rNum)) return null;
+                    const [low, high, ...labels] = r.bands;
+                    const pct = Math.min(Math.max((rNum - low) / (high - low), 0), 1);
+                    const gc = pct < .33 ? '#4A7045' : pct < .67 ? calcColor : '#c87a8b';
+                    const ll = labels[0]||'저평가', ml = labels[1]||'적정', hl2 = labels[2]||'고평가';
+                    const judgeLabel = pct < .33 ? '▼ '+ll : pct < .67 ? '◆ '+ml : '▲ '+hl2;
+                    return (
+                      <div style={{ marginTop: 16 }} key={r.value}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                          {[ll, ml, hl2].map((l, i) => <span key={i} style={{ fontFamily: 'var(--mono)', fontSize: 8, color: 'var(--t3)' }}>{l}</span>)}
+                        </div>
+                        <div style={{ position: 'relative', height: 10, borderRadius: 5, background: 'rgba(255,255,255,.05)', overflow: 'hidden' }}>
+                          <div key={r.value} style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${pct * 100}%`, borderRadius: 5, background: `linear-gradient(90deg, ${gc}88, ${gc})`, animation: 'gaugeIn .9s cubic-bezier(.16,1,.3,1) both', boxShadow: `0 0 16px ${gc}88` }} />
+                        </div>
+                        <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: gc, marginTop: 6, textShadow: `0 0 10px ${gc}88` }}>{judgeLabel} 수준</div>
+                      </div>
+                    );
+                  })()}
                 </div>
               )}
             </div>
@@ -2456,34 +2504,35 @@ function CalcResultsReader({ containerRef, calcColor, mode }: { containerRef: Re
 }
 
 
-function CalcNote({ lines, how, example, tip }: any) {
-  // lines 단독: HOW TO USE 표시
+function CalcNote({ lines, how, example, tip, color: colorProp }: any) {
+  const ctxColor = useContext(CalcColorContext);
+  const color = colorProp || ctxColor;
   const items = how || lines;
   return (
     <div className="card" style={{ padding: '18px 20px' }}>
       <div style={{ fontFamily: 'var(--mono)', fontSize: 8, letterSpacing: '.22em', textTransform: 'uppercase' as const, color: 'var(--t3)', marginBottom: 14 }}>HOW TO USE</div>
       {items && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {items.map((tip: string, i: number) => (
+          {items.map((item: string, i: number) => (
             <div key={i} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-              <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: '#C89650', flexShrink: 0, textShadow: '0 0 8px #C89650aa', minWidth: 18 }}>0{i + 1}.</span>
-              <span style={{ fontSize: 12.5, color: 'var(--t2)', lineHeight: 1.7 }}>{tip}</span>
+              <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: color, flexShrink: 0, textShadow: `0 0 8px ${color}aa`, minWidth: 18 }}>0{i + 1}.</span>
+              <span style={{ fontSize: 12.5, color: 'var(--t2)', lineHeight: 1.7 }}>{item}</span>
             </div>
           ))}
         </div>
       )}
       {example && (
-        <div style={{ marginTop: 14, padding: '12px 14px', borderRadius: 10, background: 'rgba(200,150,80,.07)', border: '1px solid rgba(200,150,80,.2)', borderLeft: '3px solid rgba(200,150,80,.5)' }}>
-          <div style={{ fontFamily: 'var(--mono)', fontSize: 12, color: '#fff', lineHeight: 1.7 }}>
-            {typeof example === 'string' ? example : example.map((l: string, i: number) => <div key={i}>{l}</div>)}
+        <div style={{ marginTop: 14, padding: '14px 16px', borderRadius: 10, background: `${color}0a`, border: `1px solid ${color}22`, borderLeft: `3px solid ${color}55` }}>
+          <div style={{ fontFamily: 'var(--mono)', fontSize: 12.5, color: '#fff', lineHeight: 1.7 }}>
+            {typeof example === 'string' ? example : (example as string[]).map((l: string, i: number) => <div key={i}>{l}</div>)}
           </div>
         </div>
       )}
-      {tip && !how && !lines && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 10 }}>
-          {tip.map((t: string, i: number) => (
+      {tip && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 14 }}>
+          {(tip as string[]).map((t: string, i: number) => (
             <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-              <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: '#C89650', flexShrink: 0, minWidth: 18 }}>—</span>
+              <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: color, flexShrink: 0, minWidth: 18, textShadow: `0 0 6px ${color}66` }}>—</span>
               <span style={{ fontSize: 12, color: 'var(--t2)', lineHeight: 1.6 }}>{t}</span>
             </div>
           ))}
