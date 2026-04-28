@@ -16,67 +16,48 @@ const CalcColorContext = createContext<string>('#C89650');
 import { Search, Calculator, BookOpen, ChevronRight, ChevronLeft, X, ArrowUpRight, Star, Clock, Menu, Link as LinkIcon, Copy, Check, Share2, CalendarDays, Info, Keyboard, LayoutDashboard, TrendingUp } from 'lucide-react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { CATEGORIES, CATEGORY_COLORS, HUE_FAMILIES, CATEGORY_FAMILY } from '@/data/terms';
+import { TERMS, CATEGORIES, CATEGORY_COLORS, HUE_FAMILIES, CATEGORY_FAMILY } from '@/data/terms';
 import type { Term } from '@/data/terms';
 import { CALC_CATEGORIES } from '@/data/calcs';
 import { CURRENT_VERSION } from '@/data/changelog';
 
-// TERMS는 ~15MB 대용량 — 모듈 레벨 import 제거, lazy singleton으로 분리
-const TERMS_TOTAL = 16323; // 용어 총 개수 (하드코딩 — 번들에서 TERMS 제외)
+const TERMS_TOTAL = TERMS.length;
 
-// ── Lazy Terms Store ──────────────────────────────────────────────────────────
-// 금융사전 탭 최초 접근 시에만 dynamic import로 로드, 이후 캐시
-let _termsReady = false;
-let _termsLoading: Promise<void> | null = null;
-let _TERMS_MAP = new Map<string, Term>();
-let _SEARCH_IDX: { id: string; n: string; f: string; e: string; c: string; family: string }[] = [];
-
-function ensureTerms(): Promise<void> {
-  if (_termsReady) return Promise.resolve();
-  if (_termsLoading) return _termsLoading;
-  _termsLoading = import('@/data/terms').then(mod => {
-    const terms: Term[] = mod.TERMS;
-    _TERMS_MAP = new Map(terms.map(t => [t.id, t]));
-    _SEARCH_IDX = terms.map(t => ({
-      id: t.id,
-      n: t.name.toLowerCase(),
-      f: (t.fullName || '').toLowerCase(),
-      e: (t.en || '').toLowerCase(),
-      c: t.category.toLowerCase(),
-      family: CATEGORY_FAMILY[t.category]?.family ?? '',
-    }));
-    _termsReady = true;
-  });
-  return _termsLoading;
-}
+// ── 클라이언트 사이드 검색 인덱스 — 모듈 로드 시 1회 생성
+const _TERMS_MAP = new Map(TERMS.map(t => [t.id, t]));
+const _SEARCH_IDX = TERMS.map(t => ({
+  id: t.id,
+  n: t.name.toLowerCase(),
+  f: (t.fullName || '').toLowerCase(),
+  e: (t.en || '').toLowerCase(),
+  c: t.category.toLowerCase(),
+  family: CATEGORY_FAMILY[t.category]?.family ?? '',
+}));
 
 const PAGE_SIZE = 40;
 
 function fetchTerms(q: string, cat: string, favs: string[], page: number, family?: string): Promise<{ items: Term[]; total: number; hasMore: boolean }> {
-  return ensureTerms().then(() => {
-    const qL = q.toLowerCase().trim();
-    const isFavCat = cat === '★ 즐겨찾기';
-    const isAll = cat === '전체';
-    const catL = cat.toLowerCase();
-    const favSet = new Set(favs);
+  const qL = q.toLowerCase().trim();
+  const isFavCat = cat === '★ 즐겨찾기';
+  const isAll = cat === '전체';
+  const catL = cat.toLowerCase();
+  const favSet = new Set(favs);
 
-    const filtered = _SEARCH_IDX.filter(c => {
-      const matchQ = !qL || c.n.includes(qL) || c.f.includes(qL) || c.e.includes(qL) || c.c.includes(qL);
-      const matchCat = isAll || (isFavCat && favSet.has(c.id)) || c.c === catL;
-      const matchFam = !family || c.family === family;
-      return matchQ && matchCat && matchFam;
-    });
-
-    const total = filtered.length;
-    const slice = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
-    const items = slice.map(c => _TERMS_MAP.get(c.id)).filter((t): t is Term => !!t);
-    return { items, total, hasMore: (page + 1) * PAGE_SIZE < total };
+  const filtered = _SEARCH_IDX.filter(c => {
+    const matchQ = !qL || c.n.includes(qL) || c.f.includes(qL) || c.e.includes(qL) || c.c.includes(qL);
+    const matchCat = isAll || (isFavCat && favSet.has(c.id)) || c.c === catL;
+    const matchFam = !family || c.family === family;
+    return matchQ && matchCat && matchFam;
   });
+
+  const total = filtered.length;
+  const slice = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+  const items = slice.map(c => _TERMS_MAP.get(c.id)).filter((t): t is Term => !!t);
+  return Promise.resolve({ items, total, hasMore: (page + 1) * PAGE_SIZE < total });
 }
 
-// 단일 용어 ID로 조회
 function fetchTermById(id: string): Promise<Term | null> {
-  return ensureTerms().then(() => _TERMS_MAP.get(id) ?? null);
+  return Promise.resolve(_TERMS_MAP.get(id) ?? null);
 }
 import EventsView from '@/components/EventsView';
 import HomeView from '@/components/HomeView';
