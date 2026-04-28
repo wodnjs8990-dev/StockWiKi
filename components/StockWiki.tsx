@@ -1204,18 +1204,35 @@ function GlossaryView({ terms, termsHasMore, termsLoading, onLoadMore, searchQue
               </div>
             </div>
 
-            {/* 현재 결과 수 — 메인 정보 */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-              <span style={{ fontFamily: 'var(--mono)', fontSize: '13px', fontWeight: 600, color: activeGroupMeta?.color || 'var(--gold)', letterSpacing: '-.01em' }}>
-                {terms.length.toLocaleString()}
-              </span>
-              <span style={{ fontFamily: 'var(--mono)', fontSize: '9px', color: 'var(--t3)', letterSpacing: '.06em' }}>
-                {selectedSubCat ? '중분류 결과' : selectedGroup ? `${activeGroupMeta?.en} 결과` : '개 용어 표시 중'}
-              </span>
+            {/* 현재 결과 수 + 필터 상태 */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
+              {/* 현재 표시 중인 용어 수 */}
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
+                <span style={{ fontFamily: 'var(--mono)', fontSize: '18px', fontWeight: 700, color: activeGroupMeta?.color || 'var(--gold)', letterSpacing: '-.02em', lineHeight: 1 }}>
+                  {terms.length.toLocaleString()}
+                </span>
+                <span style={{ fontFamily: 'var(--mono)', fontSize: '9px', color: 'var(--t3)', letterSpacing: '.06em' }}>개 표시</span>
+              </div>
+              {/* 구분선 */}
+              <span style={{ width: 1, height: 14, background: 'rgba(255,255,255,.1)', flexShrink: 0 }} />
+              {/* 대분류 / 중분류 컨텍스트 */}
+              {selectedSubCat ? (
+                <span style={{ fontFamily: 'var(--mono)', fontSize: '9px', color: activeGroupMeta?.color || 'var(--t3)', letterSpacing: '.04em', opacity: 0.8 }}>
+                  {activeGroupMeta?.name} › {selectedSubCat}
+                </span>
+              ) : selectedGroup ? (
+                <span style={{ fontFamily: 'var(--mono)', fontSize: '9px', color: activeGroupMeta?.color || 'var(--t3)', letterSpacing: '.04em', opacity: 0.8 }}>
+                  {activeGroupMeta?.name} ({groupStats[selectedGroup]?.count.toLocaleString() || 0}개 전체)
+                </span>
+              ) : (
+                <span style={{ fontFamily: 'var(--mono)', fontSize: '9px', color: 'var(--t4)', letterSpacing: '.06em' }}>
+                  전체 {TERMS_TOTAL.toLocaleString()}개 중
+                </span>
+              )}
               {(selectedGroup || selectedSubCat) && (
                 <button
                   onClick={() => { handleGroupClick(null); }}
-                  style={{ fontFamily: 'var(--mono)', fontSize: '8px', color: 'var(--t3)', background: 'rgba(255,255,255,.05)', border: '1px solid rgba(255,255,255,.08)', borderRadius: 4, padding: '2px 7px', cursor: 'pointer' }}
+                  style={{ fontFamily: 'var(--mono)', fontSize: '8px', color: 'var(--t3)', background: 'rgba(255,255,255,.05)', border: '1px solid rgba(255,255,255,.08)', borderRadius: 4, padding: '2px 7px', cursor: 'pointer', marginLeft: 2 }}
                 >× 초기화</button>
               )}
             </div>
@@ -1555,7 +1572,8 @@ function TermModal({ term, termList, termsMap, onClose, categoryColors, favorite
 
   const relatedTerms = term.related?.map((id: string) => termsMap?.get(id)).filter(Boolean) || [];
   const categoryColor = categoryColors[term.category];
-  const accentColor = categoryColor?.text || '#C89650';
+  // bg = 실제 브랜드 컬러(tones[n]), text = 카드 위 텍스트(검정/아이보리) — bg 사용
+  const accentColor = categoryColor?.bg || '#C89650';
 
   // 섹션 정의
   const sections: { id: string; num: string; label: string; content: React.ReactNode }[] = [];
@@ -1672,32 +1690,50 @@ function TermModal({ term, termList, termsMap, onClose, categoryColors, favorite
           {/* 본문 스크롤 */}
           <div ref={mainScrollRef} style={{ flex: 1, overflowY: 'auto', padding: '32px 40px 40px', minWidth: 0, overscrollBehavior: 'contain' }}>
 
-            {/* 카테고리 pill */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 20 }}>
+            {/* 카테고리 pill 행 */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 28, flexWrap: 'wrap' }}>
               {term.category && (
-                <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: accentColor, padding: '4px 10px', borderRadius: 6, background: `${accentColor}18`, border: `1px solid ${accentColor}30`, letterSpacing: '.08em' }}>
+                <span style={{
+                  fontFamily: 'var(--mono)', fontSize: 11, fontWeight: 700,
+                  color: '#fff',
+                  padding: '6px 14px', borderRadius: 6,
+                  background: accentColor,
+                  letterSpacing: '.06em',
+                  boxShadow: `0 2px 12px ${accentColor}66`,
+                }}>
                   {term.category}
                 </span>
               )}
-              {term.family && term.family !== term.category && (
-                <>
-                  <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'rgba(255,255,255,.25)' }}>·</span>
-                  <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'rgba(255,255,255,.4)', padding: '4px 10px', borderRadius: 6, background: 'rgba(255,255,255,.05)', border: '1px solid rgba(255,255,255,.1)', letterSpacing: '.08em' }}>
-                    {term.family}
-                  </span>
-                </>
+              {term.group && (
+                <span style={{
+                  fontFamily: 'var(--mono)', fontSize: 10,
+                  color: accentColor,
+                  padding: '5px 12px', borderRadius: 6,
+                  background: `${accentColor}18`,
+                  border: `1px solid ${accentColor}60`,
+                  letterSpacing: '.08em',
+                }}>
+                  {term.group}
+                </span>
               )}
             </div>
 
-            {/* 타이틀 */}
-            <div style={{ marginBottom: 32, paddingBottom: 28, borderBottom: `1px solid ${accentColor}22` }}>
-              {/* 상단 컬러 악센트 라인 */}
-              <div style={{ width: 40, height: 3, borderRadius: 2, background: `linear-gradient(90deg, ${accentColor}, ${accentColor}44)`, marginBottom: 20, boxShadow: `0 0 12px ${accentColor}66` }} />
-              <div style={{ fontSize: 'clamp(52px, 7vw, 84px)', fontWeight: 200, lineHeight: 0.95, letterSpacing: '-.04em', color: '#fff', marginBottom: 16 }}>{term.name}</div>
+            {/* 타이틀 구간 */}
+            <div style={{ marginBottom: 36, paddingBottom: 32, borderBottom: `1px solid rgba(255,255,255,.1)` }}>
+              {/* accentColor 라인 — 굵고 빛남 */}
+              <div style={{
+                width: 56, height: 4, borderRadius: 3,
+                background: accentColor,
+                marginBottom: 24,
+                boxShadow: `0 0 20px ${accentColor}cc, 0 0 40px ${accentColor}55`,
+              }} />
+              <div style={{ fontSize: 'clamp(48px, 6.5vw, 80px)', fontWeight: 200, lineHeight: 0.95, letterSpacing: '-.04em', color: '#fff', marginBottom: 16 }}>{term.name}</div>
               {term.fullName && term.fullName !== term.name && (
-                <div style={{ fontSize: 20, fontWeight: 400, color: 'rgba(255,255,255,.65)', marginBottom: 6, letterSpacing: '-0.01em' }}>{term.fullName}</div>
+                <div style={{ fontSize: 19, fontWeight: 400, color: 'rgba(255,255,255,.6)', marginBottom: 8, letterSpacing: '-0.01em' }}>{term.fullName}</div>
               )}
-              {term.en && <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: accentColor, opacity: 0.7, letterSpacing: '.06em' }}>{term.en}</div>}
+              {term.en && (
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 12, color: accentColor, letterSpacing: '.08em', opacity: 0.85 }}>{term.en}</div>
+              )}
             </div>
 
             {/* 메모 패널 */}
@@ -1719,12 +1755,11 @@ function TermModal({ term, termList, termsMap, onClose, categoryColors, favorite
 
             {/* 섹션들 */}
             {sections.map((sec, i) => (
-              <div key={sec.id} id={sec.id} style={{ marginBottom: 32, scrollMarginTop: 8 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
-                  <div style={{ width: 3, height: 18, borderRadius: 2, background: accentColor, boxShadow: `0 0 8px ${accentColor}88` }} />
-                  <span style={{ fontFamily: 'var(--mono)', fontSize: 9, color: accentColor, letterSpacing: '.12em' }}>{sec.num}</span>
-                  <span style={{ fontFamily: 'var(--mono)', fontSize: 9, color: 'rgba(255,255,255,.25)', letterSpacing: '.12em' }}>·</span>
-                  <span style={{ fontFamily: 'var(--mono)', fontSize: 9, color: 'rgba(255,255,255,.5)', letterSpacing: '.1em' }}>{sec.label}</span>
+              <div key={sec.id} id={sec.id} style={{ marginBottom: 36, scrollMarginTop: 8 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, padding: '10px 14px', borderRadius: 8, background: `${accentColor}10`, borderLeft: `3px solid ${accentColor}` }}>
+                  <span style={{ fontFamily: 'var(--mono)', fontSize: 13, fontWeight: 800, color: accentColor, letterSpacing: '.04em', minWidth: 24 }}>{sec.num}</span>
+                  <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: `${accentColor}88`, letterSpacing: '.06em' }}>·</span>
+                  <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'rgba(255,255,255,.75)', letterSpacing: '.1em', textTransform: 'uppercase', fontWeight: 600 }}>{sec.label}</span>
                 </div>
                 {sec.id === 'sec-formula' ? (
                   <div style={{ padding: '18px 22px', borderRadius: 12, background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.08)', fontFamily: 'var(--mono)', fontSize: 15, color: '#fff', lineHeight: 1.7 }}>
@@ -1780,8 +1815,8 @@ function TermModal({ term, termList, termsMap, onClose, categoryColors, favorite
                       const el = mainScrollRef.current?.querySelector(`#${sec.id}`);
                       el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
                     }}
-                    style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px', borderRadius: 8, background: isActive ? 'rgba(255,255,255,.07)' : 'transparent', border: isActive ? `1px solid rgba(255,255,255,.1)` : '1px solid transparent', textAlign: 'left', cursor: 'pointer', transition: 'all .15s' }}>
-                    {isActive && <div style={{ width: 2, height: 14, borderRadius: 1, background: accentColor, flexShrink: 0 }} />}
+                    style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px', borderRadius: 8, background: isActive ? `${accentColor}18` : 'transparent', border: isActive ? `1px solid ${accentColor}50` : '1px solid transparent', textAlign: 'left', cursor: 'pointer', transition: 'all .15s' }}>
+                    <span style={{ fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700, color: isActive ? accentColor : 'rgba(255,255,255,.25)', minWidth: 18 }}>{sec.num}</span>
                     <span style={{ fontSize: 12, color: isActive ? '#fff' : 'rgba(255,255,255,.4)', fontWeight: isActive ? 500 : 400 }}>{sec.label}</span>
                   </button>
                 );
