@@ -1690,10 +1690,14 @@ function TermModal({ term, termList, termsMap, onClose, categoryColors, favorite
             </div>
 
             {/* 타이틀 */}
-            <div style={{ marginBottom: 32, paddingBottom: 28, borderBottom: '1px solid rgba(255,255,255,.06)' }}>
-              <div style={{ fontSize: 72, fontWeight: 200, lineHeight: 1, letterSpacing: '-.04em', color: '#fff', marginBottom: 14 }}>{term.name}</div>
-              <div style={{ fontSize: 22, fontWeight: 400, color: 'rgba(255,255,255,.75)', marginBottom: 4 }}>{term.fullName}</div>
-              {term.en && <div style={{ fontFamily: 'var(--mono)', fontSize: 12, color: 'rgba(255,255,255,.3)', fontStyle: 'italic' }}>{term.en}</div>}
+            <div style={{ marginBottom: 32, paddingBottom: 28, borderBottom: `1px solid ${accentColor}22` }}>
+              {/* 상단 컬러 악센트 라인 */}
+              <div style={{ width: 40, height: 3, borderRadius: 2, background: `linear-gradient(90deg, ${accentColor}, ${accentColor}44)`, marginBottom: 20, boxShadow: `0 0 12px ${accentColor}66` }} />
+              <div style={{ fontSize: 'clamp(52px, 7vw, 84px)', fontWeight: 200, lineHeight: 0.95, letterSpacing: '-.04em', color: '#fff', marginBottom: 16 }}>{term.name}</div>
+              {term.fullName && term.fullName !== term.name && (
+                <div style={{ fontSize: 20, fontWeight: 400, color: 'rgba(255,255,255,.65)', marginBottom: 6, letterSpacing: '-0.01em' }}>{term.fullName}</div>
+              )}
+              {term.en && <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: accentColor, opacity: 0.7, letterSpacing: '.06em' }}>{term.en}</div>}
             </div>
 
             {/* 메모 패널 */}

@@ -13,15 +13,18 @@ const FF = 0.45;
 function easeOut(t: number) { return 1 - Math.pow(1 - t, 3); }
 
 const FAMILIES = [
-  { id: 'fundamental', label: '기업펀더멘탈', en: 'FUNDAMENTAL', color: '#c8a96e', desc: '재무제표·밸류에이션·수익성·현금흐름' },
-  { id: 'market',      label: '시장거래',     en: 'MARKET',      color: '#6ea8c8', desc: 'ETF·주문유형·시장구조·한국/해외시장' },
-  { id: 'macro',       label: '거시경제',     en: 'MACRO',       color: '#8bc87a', desc: '금리·환율·인플레이션·경기순환' },
-  { id: 'risk',        label: '리스크관리',   en: 'RISK',        color: '#c87a8b', desc: 'VaR·포트폴리오·성과평가·퀀트통계' },
-  { id: 'derivatives', label: '파생상품',     en: 'DERIVATIVES', color: '#9a7ac8', desc: '선물·옵션·스왑·변동성·헤지' },
-  { id: 'trading',     label: '트레이딩',     en: 'TRADING',     color: '#c8b47a', desc: '기술적 지표·차트패턴·매매실전' },
-  { id: 'industry',    label: '산업섹터',     en: 'INDUSTRY',    color: '#7ac8c0', desc: '반도체·바이오·에너지·소비재·금융' },
-  { id: 'digital',     label: '디지털자산',   en: 'DIGITAL',     color: '#c87ab4', desc: 'DeFi·블록체인·토큰화·디지털자산' },
-  { id: 'tax',         label: '세금·제도',    en: 'TAX',         color: '#a8c87a', desc: '계좌·세금·공시·법률·규제' },
+  { id: 'fundamental', label: '펀더멘털',       en: 'FUNDAMENTAL', color: '#c8a96e', desc: '재무제표·밸류에이션·수익성·현금흐름' },
+  { id: 'market',      label: '시장·상품',       en: 'MARKET',      color: '#6ea8c8', desc: 'ETF·주문유형·시장구조·한국/해외시장' },
+  { id: 'macro',       label: '경제·거시',       en: 'ECON',        color: '#8bc87a', desc: '금리·환율·인플레이션·경기순환' },
+  { id: 'risk',        label: '리스크·퀀트',     en: 'RISK',        color: '#c87a8b', desc: 'VaR·포트폴리오·성과평가·퀀트통계' },
+  { id: 'derivatives', label: '파생·헤지',       en: 'DERIV',       color: '#9a7ac8', desc: '선물·옵션·스왑·변동성·헤지' },
+  { id: 'trading',     label: '매매실전',         en: 'TRADING',     color: '#c8b47a', desc: '기술적 지표·차트패턴·매매실전' },
+  { id: 'industry',    label: '산업·섹터',       en: 'INDUSTRY',    color: '#7ac8c0', desc: '반도체·바이오·에너지·소비재·금융' },
+  { id: 'digital',     label: '디지털자산',       en: 'DIGITAL',     color: '#6b9ea8', desc: 'DeFi·블록체인·토큰화·디지털자산' },
+  { id: 'tax',         label: '세금·제도',        en: 'TAX',         color: '#a8c87a', desc: '계좌·세금·공시·법률·규제' },
+  { id: 'crypto',      label: '암호화폐',         en: 'CRYPTO',      color: '#7aa8c8', desc: '비트코인·알트코인·DeFi·토크노믹스' },
+  { id: 'infra',       label: '데이터인프라',     en: 'INFRA',       color: '#5d9aa8', desc: '데이터·API·시스템·퀀트인프라' },
+  { id: 'macrotrading',label: '매크로트레이딩',   en: 'MACRO',       color: '#b89a50', desc: '글로벌매크로·FX·금리트레이딩' },
 ];
 
 const SCENE_LABELS = ['INTRO', 'PHILOSOPHY', 'NUMBERS', 'FAMILIES', 'GLOSSARY', 'CALCULATOR', 'CALENDAR', 'START'];
@@ -458,49 +461,99 @@ export default function HomeView({
 
         {/* S0 HERO */}
         <div id="hs0" className="hw-scene" style={sceneBase}>
+          {/* 격자 배경 */}
           <div style={{
             position: 'absolute', inset: 0,
-            backgroundImage: `linear-gradient(${isDark ? 'rgba(255,255,255,0.028)' : 'rgba(0,0,0,0.038)'} 1px, transparent 1px),
-                              linear-gradient(90deg, ${isDark ? 'rgba(255,255,255,0.028)' : 'rgba(0,0,0,0.038)'} 1px, transparent 1px)`,
+            backgroundImage: `linear-gradient(${isDark ? 'rgba(255,255,255,0.025)' : 'rgba(0,0,0,0.032)'} 1px, transparent 1px),
+                              linear-gradient(90deg, ${isDark ? 'rgba(255,255,255,0.025)' : 'rgba(0,0,0,0.032)'} 1px, transparent 1px)`,
             backgroundSize: '80px 80px',
-            maskImage: 'radial-gradient(ellipse 65% 65% at 50% 52%, black 15%, transparent 100%)',
-            WebkitMaskImage: 'radial-gradient(ellipse 65% 65% at 50% 52%, black 15%, transparent 100%)',
-            animation: 'hw-grid-drift 16s linear infinite',
+            maskImage: 'radial-gradient(ellipse 80% 80% at 50% 50%, black 0%, transparent 100%)',
+            WebkitMaskImage: 'radial-gradient(ellipse 80% 80% at 50% 50%, black 0%, transparent 100%)',
+            animation: 'hw-grid-drift 24s linear infinite',
+          }} />
+          {/* 다층 리퀴드 글로우 */}
+          <div style={{
+            position: 'absolute', inset: 0,
+            background: `radial-gradient(ellipse 60% 50% at 50% 58%, ${accent}28 0%, transparent 65%)`,
+            animation: 'hw-glow-pulse 7s ease-in-out infinite',
           }} />
           <div style={{
             position: 'absolute', inset: 0,
-            background: `radial-gradient(ellipse 50% 40% at 50% 56%, ${accent}1e 0%, transparent 70%)`,
-            animation: 'hw-glow-pulse 6s ease-in-out infinite',
+            background: `radial-gradient(ellipse 35% 28% at 38% 44%, #6ea8c822 0%, transparent 70%)`,
+            animation: 'hw-glow-pulse 9s ease-in-out infinite reverse',
           }} />
-          <div style={{ position: 'relative', zIndex: 1, textAlign: 'center', padding: '0 24px' }}>
+          <div style={{
+            position: 'absolute', inset: 0,
+            background: `radial-gradient(ellipse 28% 22% at 64% 60%, #9a7ac81a 0%, transparent 70%)`,
+            animation: 'hw-glow-pulse 11s ease-in-out infinite 2s',
+          }} />
+
+          <div style={{ position: 'relative', zIndex: 1, textAlign: 'center', padding: '0 24px', maxWidth: 760, width: '100%' }}>
+            {/* eyebrow 라벨 */}
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginBottom: 32,
+              padding: '5px 16px', borderRadius: 40,
+              background: `${accent}12`, border: `1px solid ${accent}30`,
+            }}>
+              <span style={{ width: 5, height: 5, borderRadius: '50%', background: accent, display: 'inline-block', boxShadow: `0 0 8px ${accent}` }} />
+              <span style={{ fontFamily: 'monospace', fontSize: 10, color: accent, letterSpacing: '0.22em' }}>KOREA'S FINANCIAL DICTIONARY</span>
+            </div>
+
+            {/* 메인 타이틀 */}
             <div className="hw-hero-title" style={{
               fontFamily: 'var(--font-gmarket), sans-serif', fontWeight: 500,
-              fontSize: 'clamp(28px, 5.5vw, 72px)',
-              lineHeight: 1.3, letterSpacing: '-0.02em', color: txt,
+              fontSize: 'clamp(32px, 5.8vw, 76px)',
+              lineHeight: 1.15, letterSpacing: '-0.03em', color: txt,
+              marginBottom: 0,
             }}>
-              <div style={{ opacity: 0.55, fontWeight: 300, fontSize: '0.65em', letterSpacing: '0.01em', marginBottom: 12 }}>가장 강력한 투자 무기는</div>
+              <div style={{ opacity: 0.5, fontWeight: 300, fontSize: '0.55em', letterSpacing: '0.02em', marginBottom: 10 }}>가장 강력한 투자 무기는</div>
               <div>
                 <span style={{ color: accent }}>'제대로 된 정보'</span>
-                <span>입니다.</span>
               </div>
+              <div>입니다.</div>
             </div>
-            <p style={{ color: muted, fontSize: 'clamp(13px, 1.5vw, 15px)', marginTop: 28, marginBottom: 44, letterSpacing: '0.01em' }}>
-              {(totalTerms || 16323).toLocaleString()}개 금융 용어 &middot; 9개 패밀리 &middot; 69종 계산기 &middot; 이벤트 캘린더
-            </p>
+
+            {/* 수치 배지 행 */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 20, marginTop: 36, marginBottom: 40, flexWrap: 'wrap' }}>
+              {[
+                { val: (totalTerms || 16323).toLocaleString(), unit: '개', label: '금융 용어', color: accent },
+                { val: '12', unit: '개', label: '대분류', color: '#6ea8c8' },
+                { val: '69', unit: '종', label: '계산기', color: '#c87a8b' },
+                { val: '365', unit: '일', label: '이벤트', color: '#9a7ac8' },
+              ].map((s, i) => (
+                <div key={i} style={{
+                  display: 'flex', flexDirection: 'column', alignItems: 'center',
+                  padding: '10px 18px', borderRadius: 10,
+                  background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)',
+                  border: `1px solid ${s.color}28`,
+                  minWidth: 72,
+                }}>
+                  <div style={{ fontSize: 22, fontWeight: 200, color: s.color, fontFamily: 'Inter, monospace', letterSpacing: '-0.04em', lineHeight: 1 }}>
+                    {s.val}<span style={{ fontSize: '0.5em', opacity: 0.7, marginLeft: 1 }}>{s.unit}</span>
+                  </div>
+                  <div style={{ fontSize: 9, color: muted, letterSpacing: '0.12em', marginTop: 5 }}>{s.label}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* CTA 버튼 */}
             <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
               <button onClick={() => setActiveTab?.('glossary')} style={{
-                background: accent, color: '#fff', border: 'none',
-                padding: '13px 36px', fontSize: 13, fontWeight: 600,
-                letterSpacing: '0.07em', cursor: 'pointer', borderRadius: 2,
+                background: `linear-gradient(135deg, ${accent} 0%, ${accent}cc 100%)`,
+                color: '#0a0a0a', border: 'none',
+                padding: '14px 40px', fontSize: 13, fontWeight: 700,
+                letterSpacing: '0.07em', cursor: 'pointer', borderRadius: 6,
+                boxShadow: `0 4px 24px ${accent}44`,
               }}>사전 열기</button>
               <button onClick={() => setActiveTab?.('calc')} style={{
                 background: 'transparent', color: txt, border: `1px solid ${border}`,
-                padding: '13px 36px', fontSize: 13, fontWeight: 500,
-                letterSpacing: '0.07em', cursor: 'pointer', borderRadius: 2,
+                padding: '14px 32px', fontSize: 13, fontWeight: 400,
+                letterSpacing: '0.06em', cursor: 'pointer', borderRadius: 6,
               }}>계산기 보기</button>
             </div>
-            <div className="hw-scroll-cue" style={{ marginTop: 64, color: dimmer, fontSize: 10, letterSpacing: '0.18em' }}>
-              <div style={{ width: 1, height: 28, background: `linear-gradient(to bottom, transparent, ${dimmer})`, margin: '0 auto 8px' }} />
+
+            {/* 스크롤 큐 — 버튼 바로 아래, 간격 최소화 */}
+            <div className="hw-scroll-cue" style={{ marginTop: 36, color: dimmer, fontSize: 9, letterSpacing: '0.22em' }}>
+              <div style={{ width: 1, height: 22, background: `linear-gradient(to bottom, transparent, ${dimmer})`, margin: '0 auto 6px' }} />
               SCROLL
             </div>
           </div>
@@ -534,7 +587,7 @@ export default function HomeView({
             <div className="hw-numbers-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 44, textAlign: 'center' }}>
               {[
                 { to: totalTerms || 2400, label: '금융 용어', unit: '개', color: accent },
-                { to: 9,   label: '패밀리 카테고리', unit: '개', color: '#8bc87a' },
+                { to: 12,  label: '대분류 그룹',     unit: '개', color: '#8bc87a' },
                 { to: 69,  label: '계산기 도구',     unit: '종', color: '#c87a8b' },
                 { to: 365, label: '이벤트 캘린더',   unit: '일', color: '#9a7ac8' },
               ].map((s, i) => (
@@ -557,9 +610,9 @@ export default function HomeView({
         <div id="hs3" className="hw-scene" style={{ ...sceneBase, alignItems: 'center', overflowY: 'auto' }}>
           <div style={{ width: '100%', maxWidth: 1080, padding: '68px 28px 32px' }}>
             <div className="hw-fam-title" style={{ textAlign: 'center', marginBottom: 36 }}>
-              <div style={{ fontSize: 10, letterSpacing: '0.26em', color: accent, marginBottom: 10, fontWeight: 600 }}>9 FAMILIES</div>
+              <div style={{ fontSize: 10, letterSpacing: '0.26em', color: accent, marginBottom: 10, fontWeight: 600 }}>12 GROUPS</div>
               <div style={{ fontSize: 'clamp(16px, 2.4vw, 30px)', fontWeight: 200, color: txt, letterSpacing: '-0.02em', fontFamily: 'Inter, sans-serif' }}>
-                <span style={{ fontWeight: 600, color: accent }}>9</span>개의 패밀리,{' '}
+                <span style={{ fontWeight: 600, color: accent }}>12</span>개의 대분류,{' '}
                 <span style={{ fontWeight: 600, color: txt }}>{(totalTerms || 16323).toLocaleString()}</span>개의 용어.{' '}
                 <span style={{ opacity: 0.6 }}>당신의 투자 지도를 완성하세요.</span>
               </div>
