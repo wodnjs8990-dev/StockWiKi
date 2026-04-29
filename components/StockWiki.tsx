@@ -7,7 +7,7 @@ const CalcPrefixContext = createContext<string>('');
 
 // CalcResultsContext — ResultBox가 결과를 오른쪽 패널로 전달
 type CalcResult = { label: string; value: string; unit: string; highlight?: boolean; bands?: number[]; interpret?: (n:number,isLow:boolean,isHigh:boolean)=>string; color?: string };
-type CalcResultsSink = (results: CalcResult[]) => void;
+type CalcResultsSink = (result: CalcResult) => void;
 const CalcResultsContext = createContext<{ sink: CalcResultsSink; color: string } | null>(null);
 
 // CalcColorContext — 현재 계산기의 카테고리 색상을 CalcNote 등에 전달
@@ -16,53 +16,58 @@ const CalcColorContext = createContext<string>('#C89650');
 import { Search, Calculator, BookOpen, ChevronRight, ChevronLeft, X, ArrowUpRight, Star, Clock, Menu, Link as LinkIcon, Copy, Check, Share2, CalendarDays, Info, Keyboard, LayoutDashboard, TrendingUp } from 'lucide-react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { TERMS, CATEGORIES, CATEGORY_COLORS, HUE_FAMILIES, CATEGORY_FAMILY } from '@/data/terms';
+import { CATEGORY_COLORS, CATEGORY_FAMILY } from '@/data/terms';
 import type { Term } from '@/data/terms';
 import { CALC_CATEGORIES } from '@/data/calcs';
 import { CURRENT_VERSION } from '@/data/changelog';
 
-const TERMS_TOTAL = TERMS.length;
+const TERMS_TOTAL_FALLBACK = 16323;
 
-// ── 클라이언트 사이드 검색 인덱스 — 모듈 로드 시 1회 생성
-const _TERMS_MAP = new Map(TERMS.map(t => [t.id, t]));
-const _SEARCH_IDX = TERMS.map(t => ({
-  id: t.id,
-  n: t.name.toLowerCase(),
-  f: (t.fullName || '').toLowerCase(),
-  e: (t.en || '').toLowerCase(),
-  c: t.category.toLowerCase(),
-  family: CATEGORY_FAMILY[t.category]?.family ?? '',
-}));
-
-const PAGE_SIZE = 40;
-
-function fetchTerms(q: string, cat: string, favs: string[], page: number, family?: string): Promise<{ items: Term[]; total: number; hasMore: boolean }> {
-  const qL = q.toLowerCase().trim();
-  const isFavCat = cat === '★ 즐겨찾기';
-  const isAll = cat === '전체';
-  const catL = cat.toLowerCase();
-  const favSet = new Set(favs);
-
-  const filtered = _SEARCH_IDX.filter(c => {
-    const matchQ = !qL || c.n.includes(qL) || c.f.includes(qL) || c.e.includes(qL) || c.c.includes(qL);
-    const matchCat = isAll || (isFavCat && favSet.has(c.id)) || c.c === catL;
-    const matchFam = !family || c.family === family;
-    return matchQ && matchCat && matchFam;
+function buildTermsUrl(params: Record<string, string | number | undefined>) {
+  const qs = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== '') qs.set(key, String(value));
   });
-
-  const total = filtered.length;
-  const slice = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
-  const items = slice.map(c => _TERMS_MAP.get(c.id)).filter((t): t is Term => !!t);
-  return Promise.resolve({ items, total, hasMore: (page + 1) * PAGE_SIZE < total });
+  return `/api/terms?${qs.toString()}`;
 }
 
-function fetchTermById(id: string): Promise<Term | null> {
-  return Promise.resolve(_TERMS_MAP.get(id) ?? null);
+async function fetchTerms(q: string, cat: string, favs: string[], page: number, family?: string): Promise<{ items: Term[]; total: number; hasMore: boolean }> {
+  const res = await fetch(buildTermsUrl({
+    q,
+    cat,
+    favs: favs.join(','),
+    page,
+    family,
+  }));
+  if (!res.ok) throw new Error('terms fetch failed');
+  return res.json();
+}
+
+async function fetchTermById(id: string): Promise<Term | null> {
+  const res = await fetch(buildTermsUrl({ id }));
+  if (!res.ok) return null;
+  const data = await res.json();
+  return data.items?.[0] ?? null;
+}
+
+type TermsStats = { total: number; groupStats: Record<string, { count: number; cats: string[] }> };
+
+async function fetchTermsStats(): Promise<TermsStats> {
+  const res = await fetch('/api/terms?stats=1');
+  if (!res.ok) throw new Error('terms stats fetch failed');
+  return res.json();
 }
 import EventsView from '@/components/EventsView';
 import HomeView from '@/components/HomeView';
 import DashboardHome from '@/components/DashboardHome';
 import CommandK from '@/components/CommandK';
+
+function normalizeCalcSessionValue<T>(key: string, value: T): T {
+  if (!key.startsWith('calc_') || typeof value !== 'string') return value;
+  const trimmed = value.trim();
+  if (!trimmed || !/^-?[\d,\s.]+$/.test(trimmed)) return value;
+  return trimmed.replace(/[,\s]/g, '') as T;
+}
 
 // sessionStorage와 연동하는 useState 헬퍼
 // CalcPrefixContext가 있으면 key에 prefix를 붙여 A/B 시나리오 독립 state 보장
@@ -72,11 +77,11 @@ function useSessionState<T>(key: string, initial: T): [T, React.Dispatch<React.S
   const [val, setVal] = useState<T>(() => {
     try {
       const s = typeof window !== 'undefined' ? sessionStorage.getItem(fullKey) : null;
-      return s !== null ? JSON.parse(s) : initial;
+      return s !== null ? normalizeCalcSessionValue(key, JSON.parse(s)) : initial;
     } catch { return initial; }
   });
   useEffect(() => {
-    try { sessionStorage.setItem(fullKey, JSON.stringify(val)); } catch {}
+    try { sessionStorage.setItem(fullKey, JSON.stringify(normalizeCalcSessionValue(key, val))); } catch {}
   }, [fullKey, val]);
   return [val, setVal];
 }
@@ -157,12 +162,11 @@ export default function StockWiki({ features, customEvents }: { features?: Featu
   const [activeTab, setActiveTab] = useState(initialTab);
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState(
-    catFromUrl && [...CATEGORIES, '★ 즐겨찾기'].includes(catFromUrl) ? catFromUrl : '전체'
-  );
+  const [selectedCategory, setSelectedCategory] = useState(catFromUrl || '전체');
   const [selectedCalc, setSelectedCalc] = useState(initialCalc);
   const [selectedTerm, setSelectedTerm] = useState<any>(null);
   const [selectedFamily, setSelectedFamily] = useState<string | null>(null);
+  const [termsStats, setTermsStats] = useState<TermsStats>({ total: TERMS_TOTAL_FALLBACK, groupStats: {} });
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
   // 클라이언트 측 용어 Map (API에서 조회된 용어 누적)
   const termsMapRef = useRef<Map<string, Term>>(new Map());
@@ -212,8 +216,6 @@ export default function StockWiki({ features, customEvents }: { features?: Featu
       fetchTermById(termFromUrl).then(t => { if (t) openTerm(t); });
     }
   }, []); // 마운트 1회만
-  const toggleTheme = () => {};  // dark-only
-
   // 즐겨찾기 초기화 (마운트 시)
   useEffect(() => {
     try {
@@ -314,11 +316,19 @@ export default function StockWiki({ features, customEvents }: { features?: Featu
 
   const openTerm = (term) => {
     lastFocusRef.current = document.activeElement as HTMLElement;
-    setSelectedTerm(term);
-    setRecent(prev => {
-      const filtered = prev.filter(t => t.id !== term.id);
-      return [term, ...filtered].slice(0, 5);
-    });
+    const applyTerm = (nextTerm: Term) => {
+      termsMapRef.current.set(nextTerm.id, nextTerm);
+      setSelectedTerm(nextTerm);
+      setRecent(prev => {
+        const filtered = prev.filter(t => t.id !== nextTerm.id);
+        return [nextTerm, ...filtered].slice(0, 5);
+      });
+    };
+    if (term?.id && !term.description && !term.easy && !term.detailed) {
+      fetchTermById(term.id).then(full => applyTerm(full || term));
+    } else {
+      applyTerm(term);
+    }
     // URL에 term 파라미터 추가
     const params = new URLSearchParams(window.location.search);
     params.set('term', term.id);
@@ -368,28 +378,47 @@ export default function StockWiki({ features, customEvents }: { features?: Featu
   const [termsPage, setTermsPage] = useState(0);
   const [termsHasMore, setTermsHasMore] = useState(false);
   const [termsLoading, setTermsLoading] = useState(false);
+  const termsFilterRef = useRef({ q: debouncedQuery, cat: selectedCategory, family: selectedFamily ?? undefined });
+
+  useEffect(() => {
+    termsFilterRef.current = { q: debouncedQuery, cat: selectedCategory, family: selectedFamily ?? undefined };
+  }, [debouncedQuery, selectedCategory, selectedFamily]);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchTermsStats()
+      .then(stats => { if (!cancelled) setTermsStats(stats); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
 
   // 검색/카테고리/family 바뀌면 1페이지 fetch
   useEffect(() => {
     let cancelled = false;
     setTermsLoading(true);
     setTermsPage(0);
-    fetchTerms(debouncedQuery, selectedCategory, [...favorites], 0, selectedFamily ?? undefined).then(res => {
-      if (cancelled) return;
-      res.items.forEach((t: Term) => termsMapRef.current.set(t.id, t));
-      setFilteredTerms(res.items);
-      setTermsTotal(res.total);
-      setTermsHasMore(res.hasMore);
-      setTermsLoading(false);
-    });
+    fetchTerms(debouncedQuery, selectedCategory, [...favorites], 0, selectedFamily ?? undefined)
+      .then(res => {
+        if (cancelled) return;
+        res.items.forEach((t: Term) => termsMapRef.current.set(t.id, t));
+        setFilteredTerms(res.items);
+        setTermsTotal(res.total);
+        setTermsHasMore(res.hasMore);
+        setTermsLoading(false);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setFilteredTerms([]);
+        setTermsTotal(0);
+        setTermsHasMore(false);
+        setTermsLoading(false);
+      });
     return () => { cancelled = true; };
   }, [debouncedQuery, selectedCategory, selectedFamily, favorites]);
 
-  const categoriesWithFav = favorites.size > 0
-    ? ['전체', '★ 즐겨찾기', ...CATEGORIES.slice(1)]
-    : CATEGORIES;
+  const categoriesWithFav = favorites.size > 0 ? ['전체', '★ 즐겨찾기'] : ['전체'];
 
-  // 다크/라이트 모드 색상 팔레트 (다크 전용)
+  // 다크 전용 색상 팔레트
   const T = {
     bgPage:      '#080808',
     bgSurface:   '#0f0f10',
@@ -533,32 +562,6 @@ export default function StockWiki({ features, customEvents }: { features?: Featu
             </button>
           )}
 
-          {/* Theme toggle */}
-          <button
-            onClick={toggleTheme}
-            style={{
-              width: 30, height: 30, borderRadius: 8,
-              background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.07)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              cursor: 'pointer', color: 'var(--t2)', transition: 'all .15s',
-            }}
-            title={isDark ? '라이트 모드' : '다크 모드'}
-          >
-            {isDark ? (
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="5"/>
-                <line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
-                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
-                <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
-                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
-              </svg>
-            ) : (
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-              </svg>
-            )}
-          </button>
-
           {/* Logo text */}
           <div style={{ fontFamily: 'var(--mono)', fontSize: 11, fontWeight: 300, color: 'var(--t1)', letterSpacing: '-.01em' }}>
             Stock<span style={{ color: 'var(--gold)', fontWeight: 500 }}>Wi</span>Ki
@@ -604,7 +607,7 @@ export default function StockWiki({ features, customEvents }: { features?: Featu
             T={T}
             isDark={isDark}
             feat={feat}
-            totalTerms={termsTotal}
+            totalTerms={termsStats.total}
             recent={recent}
             favorites={favorites}
             categoryColors={CATEGORY_COLORS}
@@ -618,7 +621,7 @@ export default function StockWiki({ features, customEvents }: { features?: Featu
         {activeTab === 'home' && (
           <DashboardHome
             isDark={isDark}
-            totalTerms={termsTotal || TERMS_TOTAL}
+            totalTerms={termsStats.total}
             recent={recent}
             favorites={favorites}
             setActiveTab={setActiveTab}
@@ -634,13 +637,24 @@ export default function StockWiki({ features, customEvents }: { features?: Featu
             termsHasMore={termsHasMore}
             termsLoading={termsLoading}
             onLoadMore={() => {
+              if (termsLoading || !termsHasMore) return;
               const nextPage = termsPage + 1;
+              const requestFilter = { q: debouncedQuery, cat: selectedCategory, family: selectedFamily ?? undefined };
+              setTermsLoading(true);
               setTermsPage(nextPage);
-              fetchTerms(debouncedQuery, selectedCategory, [...favorites], nextPage, selectedFamily ?? undefined).then(res => {
-                res.items.forEach((t: Term) => termsMapRef.current.set(t.id, t));
-                setFilteredTerms(prev => [...prev, ...res.items]);
-                setTermsHasMore(res.hasMore);
-              });
+              fetchTerms(requestFilter.q, requestFilter.cat, [...favorites], nextPage, requestFilter.family)
+                .then(res => {
+                  const currentFilter = termsFilterRef.current;
+                  if (
+                    currentFilter.q !== requestFilter.q ||
+                    currentFilter.cat !== requestFilter.cat ||
+                    currentFilter.family !== requestFilter.family
+                  ) return;
+                  res.items.forEach((t: Term) => termsMapRef.current.set(t.id, t));
+                  setFilteredTerms(prev => [...prev, ...res.items]);
+                  setTermsHasMore(res.hasMore);
+                })
+                .finally(() => setTermsLoading(false));
             }}
             selectedFamily={selectedFamily}
             setSelectedFamily={(fid: string | null) => {
@@ -657,7 +671,8 @@ export default function StockWiki({ features, customEvents }: { features?: Featu
             selectedTerm={selectedTerm}
             setSelectedTerm={openTerm}
             closeTerm={closeTerm}
-            totalCount={TERMS_TOTAL}
+            totalCount={termsStats.total}
+            groupStatsData={termsStats.groupStats}
             categoryColors={CATEGORY_COLORS}
             favorites={favorites}
             toggleFav={toggleFav}
@@ -813,25 +828,6 @@ export default function StockWiki({ features, customEvents }: { features?: Featu
               </a>
             </div>
 
-            {/* 테마 토글 */}
-            <div className="mt-auto px-4 py-4 border-t" style={{ borderColor: T.border }}>
-              <button
-                onClick={() => { toggleTheme(); }}
-                className="w-full flex items-center gap-3 px-3 py-2.5 border text-sm"
-                style={{ borderColor: T.border, color: T.textFaint }}
-              >
-                {isDark ? (
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
-                  </svg>
-                ) : (
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-                  </svg>
-                )}
-                <span>{isDark ? '라이트 모드' : '다크 모드'}</span>
-              </button>
-            </div>
           </div>
         </div>
       )}
@@ -867,7 +863,7 @@ export default function StockWiki({ features, customEvents }: { features?: Featu
         <CommandK
           onClose={() => setShowCommandK(false)}
           onNav={handleCmdNav}
-          totalTerms={termsTotal || TERMS_TOTAL}
+          totalTerms={termsStats.total}
         />
       )}
 
@@ -941,7 +937,7 @@ function MiniSparkGlos({ color = '#C89650', seed = 1, h = 26 }: { color?: string
   );
 }
 
-// 엑셀 group 값 → display name/color 매핑 (12개 대분류)
+// 엑셀 group 값 중 CRYPTO/INFRA/MACRO는 기존 9개 패밀리 안으로 흡수해서 표시한다.
 const GROUP_META: Record<string, { name: string; en: string; color: string; family: string }> = {
   FUNDAMENTAL: { name: '펀더멘털',    en: 'FUNDAMENTAL', color: '#6b9e5c', family: 'fundamental' },
   MARKET:      { name: '시장·상품',   en: 'MARKET',      color: '#5a8fbc', family: 'market'      },
@@ -952,37 +948,29 @@ const GROUP_META: Record<string, { name: string; en: string; color: string; fami
   INDUSTRY:    { name: '산업·섹터',   en: 'INDUSTRY',    color: '#a67d4f', family: 'industry'    },
   DIGITAL:     { name: '디지털자산',  en: 'DIGITAL',     color: '#689db0', family: 'digital'     },
   TAX:         { name: '세금·제도',   en: 'TAX',         color: '#6b8a6f', family: 'tax'         },
-  CRYPTO:      { name: '암호화폐',    en: 'CRYPTO',      color: '#7aa8c8', family: 'digital'     },
-  INFRA:       { name: '데이터인프라', en: 'INFRA',       color: '#6b9ea8', family: 'digital'     },
-  MACRO:       { name: '매크로트레이딩', en: 'MACRO',    color: '#b89a50', family: 'trading'     },
 };
 
 // 대분류 순서 (표시 순서)
-const GROUP_ORDER = ['FUNDAMENTAL','MARKET','ECON','RISK','DERIV','TRADING','INDUSTRY','DIGITAL','TAX','CRYPTO','INFRA','MACRO'];
+const GROUP_ORDER = ['FUNDAMENTAL','MARKET','ECON','RISK','DERIV','TRADING','INDUSTRY','DIGITAL','TAX'];
 
 // 중분류 → group 매핑 (CATEGORY_FAMILY 기반 역방향)
 // terms 파일의 group 필드를 직접 사용하므로 별도 매핑 불필요
 // fetchTerms 결과에서 term.group으로 접근
 
-function GlossaryView({ terms, termsHasMore, termsLoading, onLoadMore, searchQuery, setSearchQuery, searchRef, categories, selectedCategory, setSelectedCategory, selectedTerm, setSelectedTerm, closeTerm, totalCount, categoryColors, favorites, toggleFav, favMemos, updateFavMemo, recent, T, isDark, showToast, setActiveTab, selectedFamily, setSelectedFamily: setSelectedFamilyProp, termsMap }: any) {
+function GlossaryView({ terms, termsHasMore, termsLoading, onLoadMore, searchQuery, setSearchQuery, searchRef, categories, selectedCategory, setSelectedCategory, selectedTerm, setSelectedTerm, closeTerm, totalCount, groupStatsData, categoryColors, favorites, toggleFav, favMemos, updateFavMemo, recent, T, isDark, showToast, setActiveTab, selectedFamily, setSelectedFamily: setSelectedFamilyProp, termsMap }: any) {
   // 대분류 선택 상태 (group 코드 — 'FUNDAMENTAL' 등)
   const [selectedGroup, setSelectedGroup] = React.useState<string | null>(null);
   // 중분류 선택 상태 (category 문자열)
   const [selectedSubCat, setSelectedSubCat] = React.useState<string | null>(null);
 
-  // 전체 TERMS 기준 대분류별 카운트 & 중분류 목록 계산 (사이드바는 항상 전체 기준)
   const groupStats = React.useMemo(() => {
     const map: Record<string, { count: number; cats: Set<string> }> = {};
-    GROUP_ORDER.forEach(g => { map[g] = { count: 0, cats: new Set() }; });
-    TERMS.forEach((t: any) => {
-      const g = t.group || '';
-      if (map[g]) {
-        map[g].count++;
-        if (t.category) map[g].cats.add(t.category);
-      }
+    GROUP_ORDER.forEach(g => {
+      const stat = groupStatsData?.[g];
+      map[g] = { count: stat?.count || 0, cats: new Set(stat?.cats || []) };
     });
     return map;
-  }, []);
+  }, [groupStatsData]);
 
   // 선택된 대분류의 중분류 목록
   const subCatList = React.useMemo(() => {
@@ -1022,24 +1010,33 @@ function GlossaryView({ terms, termsHasMore, termsLoading, onLoadMore, searchQue
     setSelectedCategory('전체');
   };
 
-  const loaderRef = React.useRef<HTMLDivElement>(null);
-
-  React.useEffect(() => {
-    const el = loaderRef.current;
-    if (!el) return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && termsHasMore && !termsLoading) {
-          onLoadMore?.();
-        }
-      },
-      { rootMargin: '200px' }
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
+  const handleGridScroll = React.useCallback((e: React.UIEvent<HTMLDivElement>) => {
+    if (!termsHasMore || termsLoading) return;
+    const el = e.currentTarget;
+    if (el.scrollTop + el.clientHeight >= el.scrollHeight - 360) {
+      onLoadMore?.();
+    }
   }, [termsHasMore, termsLoading, onLoadMore]);
 
   const activeGroupMeta = selectedGroup ? GROUP_META[selectedGroup] : null;
+  const visibleTerms = React.useMemo(() => {
+    const q = searchQuery.toLowerCase().trim();
+    return terms.filter((term: Term) => {
+      if (selectedSubCat && term.category !== selectedSubCat) return false;
+      if (!selectedSubCat && selectedGroup) {
+        const expectedFamily = GROUP_META[selectedGroup]?.family;
+        const termFamily = CATEGORY_FAMILY[term.category]?.family;
+        if (expectedFamily && termFamily !== expectedFamily) return false;
+      }
+      if (!q) return true;
+      return (
+        term.name.toLowerCase().includes(q) ||
+        (term.fullName || '').toLowerCase().includes(q) ||
+        (term.en || '').toLowerCase().includes(q) ||
+        term.category.toLowerCase().includes(q)
+      );
+    });
+  }, [terms, selectedGroup, selectedSubCat, searchQuery]);
 
   return (
     <div style={{ display: 'flex', overflow: 'hidden', flex: 1, height: '100%' }} className="glos-split">
@@ -1189,8 +1186,7 @@ function GlossaryView({ terms, termsHasMore, termsLoading, onLoadMore, searchQue
           }} />
           
           <div style={{ position: 'relative' }}>
-            {/* 헤더 타이틀 + 카운트 — 현재 결과 / 전체 분리 */}
-            <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 4 }}>
+            <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 16, gap: 12 }}>
               <div style={{ fontSize: 22, fontWeight: 300, color: '#fff', letterSpacing: '-.03em' }}>
                 {selectedSubCat
                   ? <span style={{ color: activeGroupMeta?.color || 'var(--gold)' }}>{selectedSubCat}</span>
@@ -1198,43 +1194,17 @@ function GlossaryView({ terms, termsHasMore, termsLoading, onLoadMore, searchQue
                     ? <span style={{ color: activeGroupMeta?.color || 'var(--gold)' }}>{activeGroupMeta?.name}</span>
                     : '금융 용어 사전'}
               </div>
-              {/* 전체 TOTAL — 보조 정보 */}
-              <div style={{ fontFamily: 'var(--mono)', fontSize: '9px', color: 'var(--t4)', letterSpacing: '.08em', paddingBottom: 4 }}>
-                {totalCount.toLocaleString()} TOTAL
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingBottom: 4 }}>
+                {(selectedGroup || selectedSubCat) && (
+                  <button
+                    onClick={() => { handleGroupClick(null); }}
+                    style={{ fontFamily: 'var(--mono)', fontSize: '8px', color: 'var(--t3)', background: 'rgba(255,255,255,.05)', border: '1px solid rgba(255,255,255,.08)', borderRadius: 4, padding: '2px 7px', cursor: 'pointer' }}
+                  >× 초기화</button>
+                )}
+                <div style={{ fontFamily: 'var(--mono)', fontSize: '9px', color: 'var(--t4)', letterSpacing: '.08em' }}>
+                  {totalCount.toLocaleString()} TOTAL
+                </div>
               </div>
-            </div>
-
-            {/* 현재 결과 수 + 필터 상태 */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
-              {/* 현재 표시 중인 용어 수 */}
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
-                <span style={{ fontFamily: 'var(--mono)', fontSize: '18px', fontWeight: 700, color: activeGroupMeta?.color || 'var(--gold)', letterSpacing: '-.02em', lineHeight: 1 }}>
-                  {terms.length.toLocaleString()}
-                </span>
-                <span style={{ fontFamily: 'var(--mono)', fontSize: '9px', color: 'var(--t3)', letterSpacing: '.06em' }}>개 표시</span>
-              </div>
-              {/* 구분선 */}
-              <span style={{ width: 1, height: 14, background: 'rgba(255,255,255,.1)', flexShrink: 0 }} />
-              {/* 대분류 / 중분류 컨텍스트 */}
-              {selectedSubCat ? (
-                <span style={{ fontFamily: 'var(--mono)', fontSize: '9px', color: activeGroupMeta?.color || 'var(--t3)', letterSpacing: '.04em', opacity: 0.8 }}>
-                  {activeGroupMeta?.name} › {selectedSubCat}
-                </span>
-              ) : selectedGroup ? (
-                <span style={{ fontFamily: 'var(--mono)', fontSize: '9px', color: activeGroupMeta?.color || 'var(--t3)', letterSpacing: '.04em', opacity: 0.8 }}>
-                  {activeGroupMeta?.name} ({groupStats[selectedGroup]?.count.toLocaleString() || 0}개 전체)
-                </span>
-              ) : (
-                <span style={{ fontFamily: 'var(--mono)', fontSize: '9px', color: 'var(--t4)', letterSpacing: '.06em' }}>
-                  전체 {TERMS_TOTAL.toLocaleString()}개 중
-                </span>
-              )}
-              {(selectedGroup || selectedSubCat) && (
-                <button
-                  onClick={() => { handleGroupClick(null); }}
-                  style={{ fontFamily: 'var(--mono)', fontSize: '8px', color: 'var(--t3)', background: 'rgba(255,255,255,.05)', border: '1px solid rgba(255,255,255,.08)', borderRadius: 4, padding: '2px 7px', cursor: 'pointer', marginLeft: 2 }}
-                >× 초기화</button>
-              )}
             </div>
 
             {/* Search input */}
@@ -1339,8 +1309,8 @@ function GlossaryView({ terms, termsHasMore, termsLoading, onLoadMore, searchQue
           gridTemplateColumns: 'repeat(auto-fill,minmax(220px,1fr))',
           gap: 10,
           alignContent: 'start'
-        }}>
-          {terms.length === 0 ? (
+        }} onScroll={handleGridScroll}>
+          {visibleTerms.length === 0 ? (
             <div style={{
               gridColumn: '1 / -1',
               display: 'flex',
@@ -1364,7 +1334,7 @@ function GlossaryView({ terms, termsHasMore, termsLoading, onLoadMore, searchQue
               }}>다른 검색어를 시도해보세요</div>
             </div>
           ) : (
-            terms.map((term: any) => {
+            visibleTerms.map((term: any) => {
               const color = categoryColors[term.category];
               const isFav = favorites.has(term.id);
               const isSel = selectedTerm?.id === term.id;
@@ -1375,7 +1345,7 @@ function GlossaryView({ terms, termsHasMore, termsLoading, onLoadMore, searchQue
 
               return (
                 <div
-                  key={term.id}
+                  key={`${term.category}:${term.id}`}
                   onClick={() => setSelectedTerm(term)}
                   style={{
                     position: 'relative',
@@ -1510,14 +1480,6 @@ function GlossaryView({ terms, termsHasMore, termsLoading, onLoadMore, searchQue
           )}
         </div>
 
-        {/* 무한스크롤 로더 */}
-        {termsHasMore && (
-          <div ref={loaderRef} className="flex items-center justify-center py-8" style={{ borderTop: '1px solid rgba(255,255,255,.05)' }}>
-            <span className="mono text-[11px] uppercase tracking-widest animate-pulse" style={{ color: 'var(--t3)' }}>
-              {termsLoading ? 'Loading…' : 'Load more'}
-            </span>
-          </div>
-        )}
       </div>
 
       {/* ── TERM MODAL ── */}
@@ -1646,14 +1608,14 @@ function TermModal({ term, termList, termsMap, onClose, categoryColors, favorite
 
   return (
     <div
-      className="modal-overlay-in fixed inset-0 z-50 flex md:items-center md:justify-center md:p-4 items-end"
-      style={{ background: 'rgba(0,0,0,.85)' }}
+      className="modal-overlay-in fixed inset-0 z-50 flex md:items-center md:justify-center md:p-6 items-end"
+      style={{ background: 'rgba(0,0,0,.72)' }}
       onClick={closeAnim}
     >
       <div
         ref={modalRef}
-        className="modal-panel-in w-full md:max-w-4xl border flex flex-col"
-        style={{ background: '#0d0d0d', borderColor: 'rgba(255,255,255,.08)', maxHeight: '92vh', borderRadius: 16, overflow: 'hidden' }}
+        className="modal-panel-in w-full border flex flex-col"
+        style={{ width: 'min(980px, calc(100vw - 64px))', background: '#0b0b0b', borderColor: 'rgba(255,255,255,.10)', maxHeight: '84vh', borderRadius: 14, overflow: 'hidden', boxShadow: '0 24px 72px rgba(0,0,0,.66), 0 0 0 1px rgba(255,255,255,.035)' }}
         onClick={e => e.stopPropagation()}
       >
         {/* 모바일 드래그 핸들 */}
@@ -1663,7 +1625,7 @@ function TermModal({ term, termList, termsMap, onClose, categoryColors, favorite
         </div>
 
         {/* 상단 바 */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 20px', borderBottom: '1px solid rgba(255,255,255,.06)', flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 18px', borderBottom: '1px solid rgba(255,255,255,.06)', flexShrink: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             {total > 0 && (
               <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'rgba(255,255,255,.35)' }}>
@@ -1672,13 +1634,13 @@ function TermModal({ term, termList, termsMap, onClose, categoryColors, favorite
             )}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <button onClick={() => toggleFav(term.id)} style={{ width: 36, height: 36, borderRadius: 9, border: `1px solid rgba(255,255,255,.1)`, background: isFav ? 'rgba(200,150,80,.12)' : 'rgba(255,255,255,.04)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+            <button onClick={() => toggleFav(term.id)} style={{ width: 34, height: 34, borderRadius: 8, border: `1px solid rgba(255,255,255,.1)`, background: isFav ? 'rgba(200,150,80,.12)' : 'rgba(255,255,255,.04)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
               <Star size={14} fill={isFav ? accentColor : 'none'} color={isFav ? accentColor : 'rgba(255,255,255,.5)'} />
             </button>
-            <button onClick={() => setShowMemo(m=>!m)} style={{ width: 36, height: 36, borderRadius: 9, border: `1px solid rgba(255,255,255,.1)`, background: showMemo ? 'rgba(255,255,255,.08)' : 'rgba(255,255,255,.04)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+            <button onClick={() => setShowMemo(m=>!m)} style={{ width: 34, height: 34, borderRadius: 8, border: `1px solid rgba(255,255,255,.1)`, background: showMemo ? 'rgba(255,255,255,.08)' : 'rgba(255,255,255,.04)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
               <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'rgba(255,255,255,.5)' }}>메</span>
             </button>
-            <button onClick={closeAnim} style={{ width: 36, height: 36, borderRadius: 9, border: '1px solid rgba(255,255,255,.1)', background: 'rgba(255,255,255,.04)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+            <button onClick={closeAnim} style={{ width: 34, height: 34, borderRadius: 8, border: '1px solid rgba(255,255,255,.1)', background: 'rgba(255,255,255,.04)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
               <X size={15} color="rgba(255,255,255,.6)" />
             </button>
           </div>
@@ -1688,53 +1650,80 @@ function TermModal({ term, termList, termsMap, onClose, categoryColors, favorite
         <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
 
           {/* 본문 스크롤 */}
-          <div ref={mainScrollRef} style={{ flex: 1, overflowY: 'auto', padding: '32px 40px 40px', minWidth: 0, overscrollBehavior: 'contain' }}>
+          <div ref={mainScrollRef} style={{ flex: 1, overflowY: 'auto', minWidth: 0, overscrollBehavior: 'contain' }}>
 
-            {/* 카테고리 pill 행 */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 28, flexWrap: 'wrap' }}>
-              {term.category && (
-                <span style={{
-                  fontFamily: 'var(--mono)', fontSize: 11, fontWeight: 700,
-                  color: '#fff',
-                  padding: '6px 14px', borderRadius: 6,
-                  background: accentColor,
-                  letterSpacing: '.06em',
-                  boxShadow: `0 2px 12px ${accentColor}66`,
-                }}>
-                  {term.category}
-                </span>
-              )}
-              {term.group && (
-                <span style={{
-                  fontFamily: 'var(--mono)', fontSize: 10,
-                  color: accentColor,
-                  padding: '5px 12px', borderRadius: 6,
-                  background: `${accentColor}18`,
-                  border: `1px solid ${accentColor}60`,
-                  letterSpacing: '.08em',
-                }}>
-                  {term.group}
-                </span>
-              )}
-            </div>
-
-            {/* 타이틀 구간 */}
-            <div style={{ marginBottom: 36, paddingBottom: 32, borderBottom: `1px solid rgba(255,255,255,.1)` }}>
-              {/* accentColor 라인 — 굵고 빛남 */}
+            {/* ── HERO 블록 — accent rail + 메타 + 타이틀 ── */}
+            <div style={{
+              position: 'relative',
+              padding: '26px 32px 24px',
+              borderBottom: `1px solid rgba(255,255,255,.10)`,
+              background: `linear-gradient(180deg, ${accentColor}10 0%, rgba(255,255,255,.018) 58%, transparent 100%)`,
+              overflow: 'hidden',
+            }}>
+              {/* 상단 accent rail */}
               <div style={{
-                width: 56, height: 4, borderRadius: 3,
-                background: accentColor,
-                marginBottom: 24,
-                boxShadow: `0 0 20px ${accentColor}cc, 0 0 40px ${accentColor}55`,
+                position: 'absolute', top: 0, left: 0, right: 0,
+                height: 3,
+                background: `linear-gradient(90deg, ${accentColor} 0%, ${accentColor}88 36%, transparent 82%)`,
+                boxShadow: `0 0 18px ${accentColor}55`,
               }} />
-              <div style={{ fontSize: 'clamp(48px, 6.5vw, 80px)', fontWeight: 200, lineHeight: 0.95, letterSpacing: '-.04em', color: '#fff', marginBottom: 16 }}>{term.name}</div>
+              <div style={{
+                position: 'absolute', top: 20, bottom: 24, left: 0,
+                width: 3,
+                background: `linear-gradient(180deg, ${accentColor}, ${accentColor}33 72%, transparent)`,
+              }} />
+              <div style={{
+                position: 'absolute', inset: 0,
+                backgroundImage: `linear-gradient(rgba(255,255,255,.018) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.014) 1px, transparent 1px)`,
+                backgroundSize: '38px 38px',
+                maskImage: 'linear-gradient(180deg, black 0%, transparent 72%)',
+                WebkitMaskImage: 'linear-gradient(180deg, black 0%, transparent 72%)',
+                pointerEvents: 'none',
+              }} />
+
+              {/* 메타 행: category(solid) + group(outline) */}
+              <div style={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center', gap: 8, marginBottom: 18, flexWrap: 'wrap' }}>
+                {term.category && (
+                  <span style={{
+                    fontFamily: 'var(--mono)', fontSize: 10.5, fontWeight: 800,
+                    color: '#050505',
+                    padding: '5px 12px', borderRadius: 6,
+                    background: accentColor,
+                    letterSpacing: '.08em',
+                    boxShadow: `0 1px 0 rgba(255,255,255,.24) inset`,
+                  }}>
+                    {term.category}
+                  </span>
+                )}
+                {term.group && (
+                  <span style={{
+                    fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700,
+                    color: 'rgba(255,255,255,.78)',
+                    padding: '5px 11px', borderRadius: 6,
+                    background: 'rgba(255,255,255,.035)',
+                    border: `1px solid ${accentColor}55`,
+                    letterSpacing: '.10em',
+                  }}>
+                    {term.group}
+                  </span>
+                )}
+              </div>
+
+              {/* 타이틀 */}
+              <div style={{ position: 'relative', zIndex: 1, fontSize: 'clamp(36px, 4.4vw, 56px)', fontWeight: 250, lineHeight: 1, letterSpacing: '-.04em', color: '#fff', marginBottom: 10, textShadow: '0 14px 30px rgba(0,0,0,.36)' }}>{term.name}</div>
               {term.fullName && term.fullName !== term.name && (
-                <div style={{ fontSize: 19, fontWeight: 400, color: 'rgba(255,255,255,.6)', marginBottom: 8, letterSpacing: '-0.01em' }}>{term.fullName}</div>
+                <div style={{ position: 'relative', zIndex: 1, fontSize: 15, fontWeight: 300, color: 'rgba(255,255,255,.58)', marginBottom: 8, letterSpacing: '-0.01em' }}>{term.fullName}</div>
               )}
               {term.en && (
-                <div style={{ fontFamily: 'var(--mono)', fontSize: 12, color: accentColor, letterSpacing: '.08em', opacity: 0.85 }}>{term.en}</div>
+                <div style={{ position: 'relative', zIndex: 1, display: 'inline-flex', alignItems: 'center', gap: 8, fontFamily: 'var(--mono)', fontSize: 10, color: accentColor, letterSpacing: '.11em', marginTop: 1 }}>
+                  <span style={{ width: 18, height: 1, background: `${accentColor}aa` }} />
+                  {term.en}
+                </div>
               )}
             </div>
+
+            {/* 본문 패딩 구간 */}
+            <div style={{ padding: '24px 32px 32px' }}>
 
             {/* 메모 패널 */}
             {showMemo && (
@@ -1755,41 +1744,27 @@ function TermModal({ term, termList, termsMap, onClose, categoryColors, favorite
 
             {/* 섹션들 */}
             {sections.map((sec, i) => (
-              <div key={sec.id} id={sec.id} style={{ marginBottom: 36, scrollMarginTop: 8 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, padding: '10px 14px', borderRadius: 8, background: `${accentColor}10`, borderLeft: `3px solid ${accentColor}` }}>
-                  <span style={{ fontFamily: 'var(--mono)', fontSize: 13, fontWeight: 800, color: accentColor, letterSpacing: '.04em', minWidth: 24 }}>{sec.num}</span>
-                  <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: `${accentColor}88`, letterSpacing: '.06em' }}>·</span>
-                  <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'rgba(255,255,255,.75)', letterSpacing: '.1em', textTransform: 'uppercase', fontWeight: 600 }}>{sec.label}</span>
+              <div key={sec.id} id={sec.id} style={{ marginBottom: 30, scrollMarginTop: 12 }}>
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: 10, marginBottom: 12, padding: '0 0 0 10px', borderLeft: `3px solid ${accentColor}` }}>
+                  <span style={{ fontFamily: 'var(--mono)', fontSize: 15, lineHeight: 1, fontWeight: 900, color: accentColor, letterSpacing: '-.02em', minWidth: 26 }}>{sec.num}</span>
+                  <span style={{ width: 1, height: 14, background: `${accentColor}55` }} />
+                  <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'rgba(255,255,255,.78)', letterSpacing: '.10em', textTransform: 'uppercase', fontWeight: 700 }}>{sec.label}</span>
                 </div>
                 {sec.id === 'sec-formula' ? (
-                  <div style={{ padding: '18px 22px', borderRadius: 12, background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.08)', fontFamily: 'var(--mono)', fontSize: 15, color: '#fff', lineHeight: 1.7 }}>
+                  <div style={{ position: 'relative', padding: '16px 18px', borderRadius: 10, background: 'rgba(255,255,255,.035)', border: `1px solid ${accentColor}30`, fontFamily: 'var(--mono)', fontSize: 14, color: 'rgba(255,255,255,.88)', lineHeight: 1.68 }}>
+                    <div style={{ fontSize: 8.5, letterSpacing: '.20em', color: accentColor, marginBottom: 8, fontWeight: 800 }}>FORMULA</div>
                     {sec.content as string}
                   </div>
                 ) : sec.id === 'sec-example' ? (
-                  <div style={{ padding: '16px 20px', borderRadius: 12, borderLeft: `3px solid ${accentColor}55`, background: `${accentColor}08`, fontFamily: 'var(--mono)', fontSize: 13, color: 'rgba(255,255,255,.7)', fontStyle: 'italic', lineHeight: 1.7 }}>
+                  <div style={{ padding: '15px 18px', borderRadius: 10, border: `1px solid ${accentColor}24`, borderLeft: `3px solid ${accentColor}`, background: 'rgba(255,255,255,.025)', fontFamily: 'var(--mono)', fontSize: 13, color: 'rgba(255,255,255,.76)', fontStyle: 'italic', lineHeight: 1.68 }}>
+                    <div style={{ fontSize: 8.5, letterSpacing: '.20em', color: accentColor, marginBottom: 8, fontStyle: 'normal', fontWeight: 800 }}>EXAMPLE</div>
                     {sec.content as string}
                   </div>
                 ) : (
-                  <p style={{ fontSize: 15, lineHeight: 1.8, color: 'rgba(255,255,255,.75)' }}>{sec.content as string}</p>
+                  <p style={{ fontSize: 14.5, lineHeight: 1.78, color: 'rgba(255,255,255,.74)', margin: 0 }}>{sec.content as string}</p>
                 )}
               </div>
             ))}
-
-            {/* 관련 용어 (본문 하단) */}
-            {relatedTerms.length > 0 && (
-              <div style={{ marginTop: 8, paddingTop: 24, borderTop: '1px solid rgba(255,255,255,.06)' }}>
-                <div style={{ fontFamily: 'var(--mono)', fontSize: 9, letterSpacing: '.2em', color: 'rgba(255,255,255,.3)', marginBottom: 14 }}>관련 용어</div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                  {relatedTerms.map((rt: any) => (
-                    <button key={rt.id} onClick={() => onNavigate(rt.id)}
-                      style={{ padding: '8px 16px', borderRadius: 8, background: 'rgba(255,255,255,.05)', border: '1px solid rgba(255,255,255,.09)', color: 'rgba(255,255,255,.7)', fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, transition: 'all .15s' }}>
-                      {rt.name}
-                      <ChevronRight size={11} style={{ opacity: .5 }} />
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
 
             {/* 계산기 열기 버튼 */}
             {term.calcId && (
@@ -1801,9 +1776,10 @@ function TermModal({ term, termList, termsMap, onClose, categoryColors, favorite
               </button>
             )}
           </div>
+          </div>
 
           {/* 우측 사이드: 목차 + 관련 용어 */}
-          <div className="hidden md:flex flex-col" style={{ width: 200, flexShrink: 0, borderLeft: '1px solid rgba(255,255,255,.06)', padding: '28px 20px', overflowY: 'auto' }}>
+          <div className="hidden md:flex flex-col" style={{ width: 190, flexShrink: 0, borderLeft: '1px solid rgba(255,255,255,.07)', padding: '22px 15px', overflowY: 'auto', background: 'rgba(255,255,255,.012)' }}>
             {/* 목차 */}
             <div style={{ fontFamily: 'var(--mono)', fontSize: 8.5, letterSpacing: '.2em', color: 'rgba(255,255,255,.25)', marginBottom: 14 }}>CONTENTS</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginBottom: 32 }}>
@@ -1815,9 +1791,10 @@ function TermModal({ term, termList, termsMap, onClose, categoryColors, favorite
                       const el = mainScrollRef.current?.querySelector(`#${sec.id}`);
                       el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
                     }}
-                    style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px', borderRadius: 8, background: isActive ? `${accentColor}18` : 'transparent', border: isActive ? `1px solid ${accentColor}50` : '1px solid transparent', textAlign: 'left', cursor: 'pointer', transition: 'all .15s' }}>
-                    <span style={{ fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700, color: isActive ? accentColor : 'rgba(255,255,255,.25)', minWidth: 18 }}>{sec.num}</span>
-                    <span style={{ fontSize: 12, color: isActive ? '#fff' : 'rgba(255,255,255,.4)', fontWeight: isActive ? 500 : 400 }}>{sec.label}</span>
+                    style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderRadius: 8, background: isActive ? 'rgba(255,255,255,.045)' : 'transparent', border: isActive ? `1px solid ${accentColor}40` : '1px solid transparent', textAlign: 'left', cursor: 'pointer', transition: 'all .15s' }}>
+                    {isActive && <span style={{ position: 'absolute', left: 4, top: 9, bottom: 9, width: 2, borderRadius: 2, background: accentColor }} />}
+                    <span style={{ fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 800, color: isActive ? accentColor : 'rgba(255,255,255,.30)', minWidth: 20 }}>{sec.num}</span>
+                    <span style={{ fontSize: 11.5, color: isActive ? 'rgba(255,255,255,.82)' : 'rgba(255,255,255,.42)', fontWeight: isActive ? 650 : 500 }}>{sec.label}</span>
                   </button>
                 );
               })}
@@ -1844,7 +1821,7 @@ function TermModal({ term, termList, termsMap, onClose, categoryColors, favorite
         </div>
 
         {/* 하단 네비 */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px', borderTop: '1px solid rgba(255,255,255,.06)', flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 18px', borderTop: '1px solid rgba(255,255,255,.06)', flexShrink: 0 }}>
           <button onClick={onPrev} disabled={!hasPrev}
             style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 8, background: hasPrev ? 'rgba(255,255,255,.05)' : 'transparent', border: `1px solid ${hasPrev ? 'rgba(255,255,255,.1)' : 'transparent'}`, color: hasPrev ? 'rgba(255,255,255,.7)' : 'transparent', fontFamily: 'var(--mono)', fontSize: 11, cursor: hasPrev ? 'pointer' : 'default', transition: 'all .15s' }}>
             <ChevronRight size={12} style={{ transform: 'rotate(180deg)' }} />
@@ -1891,6 +1868,20 @@ type CalcHistoryEntry = {
 // 계산기 히스토리 이벤트 (ResultBox → CalculatorView 통신)
 const CALC_HISTORY_EVENT = 'stockwiki:calc_history';
 
+const calcResultSignature = (result?: CalcResult) => {
+  if (!result) return '';
+  return [
+    result.label,
+    result.value,
+    result.unit,
+    result.highlight ? '1' : '0',
+    result.color || '',
+    (result.bands || []).join(','),
+  ].join('|');
+};
+
+const toResultNumber = (value: string) => parseFloat(value.replace(/[^0-9.-]/g, '')) || 0;
+
 function CalculatorView({ selectedCalc, setSelectedCalc, T, isDark }) {
   // 테마 싱글톤 동기화
   _T = T;
@@ -1908,44 +1899,57 @@ function CalculatorView({ selectedCalc, setSelectedCalc, T, isDark }) {
   const [compareCalcMode, setCompareCalcMode] = useState(false);
   const [compareCalcId, setCompareCalcId] = useState('');
 
-  // A/B diff — DOM polling
+  // A/B 결과 — ResultBox가 직접 전달한다. 입력 중 DOM 감시를 돌리지 않아야 타이핑이 끊기지 않는다.
   const panelARef = React.useRef<HTMLDivElement>(null);
   const panelBRef = React.useRef<HTMLDivElement>(null);
   type DiffRow = { label: string; a: string; b: string; unit: string; aNum: number; bNum: number; diff: number; pct: number };
-  const [diffRows, setDiffRows] = useState<DiffRow[]>([]);
+  const [resultsA, setResultsA] = useState<CalcResult[]>([]);
+  const [resultsB, setResultsB] = useState<CalcResult[]>([]);
+  const resultsARef = React.useRef<Map<string, CalcResult>>(new Map());
+  const resultsBRef = React.useRef<Map<string, CalcResult>>(new Map());
 
-  const readPanel = (ref: React.RefObject<HTMLDivElement>) => {
-    if (!ref.current) return [];
-    return Array.from(ref.current.querySelectorAll('[data-result-label]')).map(el => ({
-      label: el.getAttribute('data-result-label') || '',
-      value: el.getAttribute('data-result-value') || '',
-      unit:  el.getAttribute('data-result-unit') || '',
-    }));
-  };
-
-  const refreshDiff = React.useCallback(() => {
-    const a = readPanel(panelARef);
-    const b = readPanel(panelBRef);
-    const rows: DiffRow[] = a.map(ar => {
-      const br = b.find(r => r.label === ar.label);
-      const aNum = parseFloat(ar.value.replace(/[^0-9.-]/g,'')) || 0;
-      const bNum = parseFloat(br?.value?.replace(/[^0-9.-]/g,'') || '0') || 0;
-      const diff = bNum - aNum;
-      const pct  = aNum !== 0 ? (diff / Math.abs(aNum)) * 100 : 0;
-      return { label: ar.label, a: ar.value, b: br?.value || '—', unit: ar.unit, aNum, bNum, diff, pct };
-    });
-    setDiffRows(rows);
+  const updateResultsA = useCallback((result: CalcResult) => {
+    const prev = resultsARef.current.get(result.label);
+    if (calcResultSignature(prev) === calcResultSignature(result)) return;
+    resultsARef.current.set(result.label, result);
+    setResultsA(Array.from(resultsARef.current.values()));
   }, []);
 
-  React.useEffect(() => {
-    if (!compareCalcMode) return;
-    const obs = new MutationObserver(refreshDiff);
-    const cfg = { subtree: true, childList: true, characterData: true };
-    if (panelARef.current) obs.observe(panelARef.current, cfg);
-    if (panelBRef.current) obs.observe(panelBRef.current, cfg);
-    refreshDiff();
-    return () => obs.disconnect();
-  }, [compareCalcMode, selectedCalc, refreshDiff]);
+  const updateResultsB = useCallback((result: CalcResult) => {
+    const prev = resultsBRef.current.get(result.label);
+    if (calcResultSignature(prev) === calcResultSignature(result)) return;
+    resultsBRef.current.set(result.label, result);
+    setResultsB(Array.from(resultsBRef.current.values()));
+  }, []);
+
+  React.useLayoutEffect(() => {
+    resultsARef.current.clear();
+    resultsBRef.current.clear();
+    setResultsA([]);
+    setResultsB([]);
+  }, [selectedCalc]);
+
+  useEffect(() => {
+    if (compareCalcMode) return;
+    resultsBRef.current.clear();
+    setResultsB([]);
+  }, [compareCalcMode]);
+
+  const calcColor = currentCalc?.color || '#C89650';
+  const scenarioAContext = useMemo(() => ({ sink: updateResultsA, color: calcColor }), [updateResultsA, calcColor]);
+  const scenarioBContext = useMemo(() => ({ sink: updateResultsB, color: calcColor }), [updateResultsB, calcColor]);
+
+  const diffRows = useMemo<DiffRow[]>(() => {
+    if (!compareCalcMode) return [];
+    return resultsA.map(ar => {
+      const br = resultsB.find(r => r.label === ar.label);
+      const aNum = toResultNumber(ar.value);
+      const bNum = toResultNumber(br?.value || '0');
+      const diff = bNum - aNum;
+      const pct = aNum !== 0 ? (diff / Math.abs(aNum)) * 100 : 0;
+      return { label: ar.label, a: ar.value, b: br?.value || '—', unit: ar.unit, aNum, bNum, diff, pct };
+    });
+  }, [compareCalcMode, resultsA, resultsB]);
 
   useEffect(() => {
     try {
@@ -2158,42 +2162,87 @@ function CalculatorView({ selectedCalc, setSelectedCalc, T, isDark }) {
           CALCULATORS › {activeGroup?.name?.toUpperCase() || 'INDEX'} › {currentCalc?.num || '—'}
         </div>
 
-        <div style={{ padding: '12px 20px', display: 'grid', gridTemplateColumns: '380px 1fr', gap: 12, alignItems: 'start' }}>
+        <div className="calc-workbench" style={{
+          padding: '12px 20px',
+          display: 'grid',
+          gridTemplateColumns: compareCalcMode
+            ? 'minmax(320px,1fr) minmax(240px,.56fr) minmax(320px,1fr)'
+            : '380px 1fr',
+          gap: 12,
+          alignItems: 'start',
+        }}>
 
           {/* ── LEFT COL: A/B 버튼 + CalcHeader + Inputs + CalcNote ── */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
             {currentCalc && (
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 4, marginBottom: 6 }}>
-                {['A', 'B'].map(m => {
-                  const isActive = (m === 'A' && !compareCalcMode) || (m === 'B' && compareCalcMode);
-                  return (
-                    <button key={m} onClick={() => setCompareCalcMode(m === 'B')}
-                      style={{ width: 32, height: 28, borderRadius: 7, border: `1px solid ${isActive ? currentCalc.color + '60' : 'rgba(255,255,255,.08)'}`, background: isActive ? `${currentCalc.color}18` : 'transparent', color: isActive ? currentCalc.color : 'var(--t2)', fontFamily: 'var(--mono)', fontSize: 11, cursor: 'pointer', fontWeight: 600, transition: 'all .15s' }}>
-                      {m}
-                    </button>
-                  );
-                })}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ width: 28, height: 28, borderRadius: 7, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: `${currentCalc.color}1f`, border: `1px solid ${currentCalc.color}55`, color: currentCalc.color, fontFamily: 'var(--mono)', fontSize: 12, fontWeight: 700 }}>A</span>
+                  <span style={{ fontFamily: 'var(--mono)', fontSize: 8, letterSpacing: '.18em', color: 'var(--t3)' }}>SCENARIO A</span>
+                </div>
+                <button
+                  onClick={() => setCompareCalcMode(m => !m)}
+                  style={{ height: 28, padding: '0 12px', borderRadius: 7, border: `1px solid ${compareCalcMode ? currentCalc.color + '66' : 'rgba(255,255,255,.08)'}`, background: compareCalcMode ? `${currentCalc.color}18` : 'rgba(255,255,255,.025)', color: compareCalcMode ? currentCalc.color : 'var(--t2)', fontFamily: 'var(--mono)', fontSize: 10, cursor: 'pointer', fontWeight: 700, letterSpacing: '.08em', transition: 'all .15s' }}
+                >
+                  {compareCalcMode ? 'A/B ON' : 'A/B 비교'}
+                </button>
               </div>
             )}
-            <CalcColorContext.Provider value={currentCalc?.color || '#C89650'}>
-              {/* CalcResultsContext.Provider: ResultBox를 sentinel 모드로 전환 — 왼쪽에 카드 중복 렌더 방지 */}
-              <CalcResultsContext.Provider value={{ sink: () => {}, color: currentCalc?.color || '#C89650' }}>
-                <CalcPrefixContext.Provider value={compareCalcMode ? 'B' : 'A'}>
+            <CalcColorContext.Provider value={calcColor}>
+              <CalcResultsContext.Provider value={scenarioAContext}>
+                <CalcPrefixContext.Provider value="A">
                   <div ref={panelARef}>
                     {renderCalcComponent(selectedCalc)}
                   </div>
                 </CalcPrefixContext.Provider>
               </CalcResultsContext.Provider>
+              {compareCalcMode && (
+                <CalcResultsReader
+                  results={resultsA}
+                  calcColor={calcColor}
+                  mode="A"
+                  compact
+                />
+              )}
             </CalcColorContext.Provider>
           </div>
 
-          {/* ── RIGHT COL: 결과 패널 (HTML 프로토타입 그대로) ── */}
+          {compareCalcMode ? (
+            <>
+              <CalcDiffPanel rows={diffRows} calcColor={calcColor} />
+
+              <div className="magic-card calc-compare-panel" style={{ padding: '16px 18px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+                  <span style={{ width: 28, height: 28, borderRadius: 7, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(74,112,69,.22)', border: '1px solid rgba(139,200,122,.4)', color: '#8bc87a', fontFamily: 'var(--mono)', fontSize: 12, fontWeight: 700 }}>B</span>
+                  <div>
+                    <div style={{ fontFamily: 'var(--mono)', fontSize: 8, letterSpacing: '.22em', textTransform: 'uppercase', color: '#8bc87a' }}>SCENARIO B</div>
+                    <div style={{ fontSize: 12, color: 'var(--t2)', marginTop: 2 }}>독립 입력</div>
+                  </div>
+                </div>
+                <CalcColorContext.Provider value={calcColor}>
+                  <CalcResultsContext.Provider value={scenarioBContext}>
+                    <CalcPrefixContext.Provider value="B">
+                      <div ref={panelBRef}>
+                        {renderCalcComponent(selectedCalc)}
+                      </div>
+                    </CalcPrefixContext.Provider>
+                  </CalcResultsContext.Provider>
+                </CalcColorContext.Provider>
+                <CalcResultsReader
+                  results={resultsB}
+                  calcColor="#8bc87a"
+                  mode="B"
+                  compact
+                />
+              </div>
+            </>
+          ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
 
-            {/* 결과 카드들 — panelARef의 sentinel [data-result-label] 에서 읽음 */}
+            {/* 결과 카드들 */}
             <CalcResultsReader
-              containerRef={panelARef}
-              calcColor={currentCalc?.color || '#C89650'}
+              results={resultsA}
+              calcColor={calcColor}
               mode={compareCalcMode ? 'B' : 'A'}
             />
 
@@ -2212,20 +2261,6 @@ function CalculatorView({ selectedCalc, setSelectedCalc, T, isDark }) {
                     </div>
                   ))}
                 </div>
-              </div>
-            )}
-
-            {/* SCENARIO B — 비교 모드 */}
-            {compareCalcMode && (
-              <div className="magic-card" style={{ padding: '16px 18px' }}>
-                <div style={{ fontFamily: 'var(--mono)', fontSize: 8, letterSpacing: '.22em', textTransform: 'uppercase', color: 'var(--t3)', marginBottom: 10 }}>SCENARIO B</div>
-                <CalcColorContext.Provider value={currentCalc?.color || '#C89650'}>
-                  <CalcPrefixContext.Provider value="B">
-                    <div ref={panelBRef}>
-                      {renderCalcComponent(selectedCalc)}
-                    </div>
-                  </CalcPrefixContext.Provider>
-                </CalcColorContext.Provider>
               </div>
             )}
 
@@ -2279,6 +2314,7 @@ function CalculatorView({ selectedCalc, setSelectedCalc, T, isDark }) {
               </div>
             )}
           </div>
+          )}
         </div>
 
         {/* Mobile: calc list */}
@@ -2417,24 +2453,25 @@ function ResultBox({ label, value, unit, highlight, color: colorProp, bands, int
   const ctx = useContext(CalcResultsContext);
   const [copied, setCopied] = useState(false);
 
-  // Context 있으면 오른쪽 패널로 올리고 invisible sentinel 반환
-  const resultRef = React.useRef({ label, value, unit, highlight, bands, interpret, color });
+  const resultValue = value == null ? '' : String(value);
+  const resultUnit = unit == null ? '' : String(unit);
+  const bandsKey = Array.isArray(bands) ? bands.join(',') : '';
+
   useEffect(() => {
-    resultRef.current = { label, value, unit, highlight, bands, interpret, color };
-  });
+    if (!ctx) return;
+    ctx.sink({
+      label,
+      value: resultValue,
+      unit: resultUnit,
+      highlight: Boolean(highlight),
+      bands,
+      interpret,
+      color,
+    });
+  }, [ctx, label, resultValue, resultUnit, highlight, bandsKey, interpret, color]);
 
   if (ctx) {
-    // sentinel: data attribute만 남기고 DOM은 숨김
-    return (
-      <span
-        data-result-label={label}
-        data-result-value={value}
-        data-result-unit={unit || ''}
-        data-result-highlight={highlight ? '1' : ''}
-        data-result-bands={bands ? bands.join(',') : ''}
-        style={{ display: 'none' }}
-      />
-    );
+    return null;
   }
 
   // standalone mode (context 없을 때 — 비교B 패널 등)
@@ -2570,31 +2607,78 @@ function CalcHeader({ num, title, desc, color: colorProp, calcId, results }: any
 }
 
 
-// CalcResultsReader — 왼쪽 패널의 sentinel들에서 결과를 읽어 context sink 호출
-function CalcResultsReader({ containerRef, calcColor, mode }: { containerRef: React.RefObject<HTMLDivElement>; calcColor: string; mode: string }) {
-  const [results, setResults] = useState<any[]>([]);
+// CalcResultsReader — ResultBox가 전달한 결과를 카드/compact rail로 표시
+function CalcResultsReader({ results, calcColor, mode, compact = false }: { results: CalcResult[]; calcColor: string; mode: string; compact?: boolean }) {
+  if (compact) {
+    const hasAnyValue = results.some(r => r.value && r.value !== '—' && r.value !== '0');
+    return (
+      <div className="magic-card calc-result-rail" style={{
+        marginTop: 12,
+        padding: 0,
+        overflow: 'hidden',
+        background: `linear-gradient(135deg, ${calcColor}0d 0%, rgba(255,255,255,.022) 42%, rgba(0,0,0,.34) 100%)`,
+        borderColor: `${calcColor}22`,
+      }}>
+        <div style={{ height: 2, background: hasAnyValue ? `linear-gradient(90deg, ${calcColor}, transparent)` : 'rgba(255,255,255,.06)', boxShadow: hasAnyValue ? `0 0 14px ${calcColor}88` : undefined }} />
+        <div style={{ padding: '13px 14px 14px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 10 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+              <span style={{ width: 6, height: 6, borderRadius: '50%', background: hasAnyValue ? calcColor : 'rgba(255,255,255,.14)', boxShadow: hasAnyValue ? `0 0 10px ${calcColor}` : undefined }} />
+              <span style={{ fontFamily: 'var(--mono)', fontSize: 8, letterSpacing: '.22em', color: 'var(--t3)' }}>RESULTS · {mode}</span>
+            </div>
+            <span style={{ fontFamily: 'var(--mono)', fontSize: 8, color: hasAnyValue ? calcColor : 'var(--t4)' }}>{hasAnyValue ? 'LIVE' : 'WAIT'}</span>
+          </div>
 
-  useEffect(() => {
-    const readResults = () => {
-      if (!containerRef.current) return;
-      const sentinels = containerRef.current.querySelectorAll('[data-result-label]');
-      const arr: any[] = [];
-      sentinels.forEach(el => {
-        const label = el.getAttribute('data-result-label') || '';
-        const value = el.getAttribute('data-result-value') || '';
-        const unit = el.getAttribute('data-result-unit') || '';
-        const highlight = el.getAttribute('data-result-highlight') === '1';
-        const bandsRaw = el.getAttribute('data-result-bands') || '';
-        const bands = bandsRaw ? bandsRaw.split(',').map(Number) : null;
-        if (label) arr.push({ label, value, unit, highlight, color: calcColor, bands });
-      });
-      setResults(arr);
-    };
-    readResults();
-    const obs = new MutationObserver(readResults);
-    if (containerRef.current) obs.observe(containerRef.current, { subtree: true, childList: true, characterData: true, attributes: true });
-    return () => obs.disconnect();
-  }, [containerRef, calcColor, mode]);
+          {results.length === 0 ? (
+            <div style={{ padding: '16px 0', fontSize: 11, lineHeight: 1.6, color: 'var(--t3)', textAlign: 'center' }}>
+              결과 항목을 준비 중입니다.
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+              {results.map((r, i) => {
+                const hasValue = r.value && r.value !== '—' && r.value !== '0';
+                const resultNum = hasValue ? parseFloat((r.value || '').replace(/,/g, '')) : null;
+                let gauge: React.ReactNode = null;
+                if (hasValue && r.highlight && r.bands && r.bands.length >= 2 && resultNum != null && isFinite(resultNum)) {
+                  const [low, high] = r.bands;
+                  const pct = Math.min(Math.max((resultNum - low) / (high - low), 0), 1);
+                  const gc = pct < .33 ? '#8bc87a' : pct < .67 ? calcColor : '#c87a8b';
+                  gauge = (
+                    <div style={{ position: 'relative', height: 5, borderRadius: 99, background: 'rgba(255,255,255,.06)', overflow: 'hidden', marginTop: 8 }}>
+                      <div key={`${r.value}-${mode}`} style={{ position: 'absolute', inset: 0, right: 'auto', width: `${pct * 100}%`, borderRadius: 99, background: `linear-gradient(90deg, ${gc}88, ${gc})`, boxShadow: `0 0 12px ${gc}88`, animation: 'gaugeIn .75s cubic-bezier(.16,1,.3,1) both' }} />
+                    </div>
+                  );
+                }
+                return (
+                  <div
+                    key={`${r.label}-${i}`}
+                    className="result-anim"
+                    style={{
+                      animationDelay: `${i * 35}ms`,
+                      padding: '10px 11px',
+                      borderRadius: 10,
+                      border: `1px solid ${hasValue ? `${calcColor}26` : 'rgba(255,255,255,.055)'}`,
+                      background: hasValue
+                        ? `linear-gradient(135deg, ${calcColor}10, rgba(255,255,255,.024))`
+                        : 'rgba(255,255,255,.018)',
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 10 }}>
+                      <span style={{ fontFamily: 'var(--mono)', fontSize: 8, letterSpacing: '.16em', color: hasValue ? calcColor : 'var(--t3)' }}>{r.label}</span>
+                      <span style={{ fontFamily: 'var(--mono)', fontSize: r.highlight ? 20 : 16, color: hasValue ? '#fff' : 'rgba(255,255,255,.24)', lineHeight: 1, textShadow: hasValue ? `0 0 16px ${calcColor}66` : undefined }}>
+                        {r.value || '—'}<span style={{ fontSize: 9, color: 'var(--t3)', marginLeft: 3 }}>{r.unit}</span>
+                      </span>
+                    </div>
+                    {gauge}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -2669,6 +2753,92 @@ function CalcResultsReader({ containerRef, calcColor, mode }: { containerRef: Re
         );
       })}
     </>
+  );
+}
+
+function CalcDiffPanel({ rows, calcColor }: { rows: any[]; calcColor: string }) {
+  const cleanRows = rows.filter(r => r.label);
+  return (
+    <div className="magic-card calc-diff-panel border-beam" style={{
+      padding: 0,
+      overflow: 'hidden',
+      '--beam-color': calcColor,
+      background: `radial-gradient(ellipse at 50% -10%, ${calcColor}16 0%, transparent 45%), linear-gradient(180deg, rgba(255,255,255,.026), rgba(0,0,0,.38))`,
+    } as React.CSSProperties}>
+      <div style={{ height: 3, background: `linear-gradient(90deg, ${calcColor}, rgba(139,200,122,.9))`, boxShadow: `0 0 18px ${calcColor}77` }} />
+      <div style={{ padding: '16px 16px 14px', position: 'relative' }}>
+        <div style={{ position: 'absolute', left: '50%', top: 54, bottom: 12, width: 1, background: `linear-gradient(to bottom, ${calcColor}33, rgba(255,255,255,.04), #8bc87a33)`, boxShadow: `0 0 18px ${calcColor}44`, pointerEvents: 'none' }} />
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 12 }}>
+          <div>
+            <div style={{ fontFamily: 'var(--mono)', fontSize: 8, letterSpacing: '.24em', textTransform: 'uppercase', color: 'var(--t3)', marginBottom: 4 }}>
+              A/B DIFF
+            </div>
+            <div style={{ fontFamily: 'var(--mono)', fontSize: 8, color: 'var(--t4)', letterSpacing: '.12em' }}>B - A DELTA</div>
+          </div>
+          <div style={{ width: 32, height: 32, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', border: `1px solid ${calcColor}35`, background: `${calcColor}12`, color: calcColor, fontFamily: 'var(--mono)', fontSize: 12, boxShadow: `0 0 18px ${calcColor}22` }}>Δ</div>
+        </div>
+        {cleanRows.length === 0 ? (
+          <div style={{ padding: '28px 0', textAlign: 'center', fontSize: 12, color: 'var(--t3)', lineHeight: 1.7 }}>
+            값을 입력하면<br />차이가 표시됩니다.
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {cleanRows.map((r, i) => {
+              const positive = r.diff > 0;
+              const negative = r.diff < 0;
+              const tone = positive ? '#8bc87a' : negative ? '#c87a8b' : 'var(--t3)';
+              const diffText = r.diff === 0 ? '0' : `${positive ? '+' : ''}${Number(r.diff).toLocaleString('ko-KR', { maximumFractionDigits: 2 })}`;
+              const pctText = r.pct === 0 ? '0%' : `${positive ? '+' : ''}${Number(r.pct).toLocaleString('ko-KR', { maximumFractionDigits: 1 })}%`;
+              const strength = Math.min(Math.abs(r.pct || 0), 100);
+              return (
+                <div key={`${r.label}-${r.a}-${r.b}-${i}`} className="result-anim" style={{
+                  animationDelay: `${i * 45}ms`,
+                  padding: '11px 12px',
+                  borderRadius: 10,
+                  background: positive || negative
+                    ? `linear-gradient(135deg, ${tone}12, rgba(255,255,255,.023))`
+                    : 'rgba(255,255,255,.026)',
+                  border: `1px solid ${positive || negative ? `${tone}33` : 'rgba(255,255,255,.055)'}`,
+                  boxShadow: positive || negative ? `0 0 20px ${tone}10` : undefined,
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, marginBottom: 9 }}>
+                    <span style={{ fontFamily: 'var(--mono)', fontSize: 8.5, color: 'var(--t2)', letterSpacing: '.12em' }}>{r.label}</span>
+                    <span style={{ fontFamily: 'var(--mono)', fontSize: 8.5, color: tone, textShadow: positive || negative ? `0 0 9px ${tone}77` : undefined }}>{pctText}</span>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'baseline', gap: 8 }}>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontFamily: 'var(--mono)', fontSize: 8, color: 'var(--t3)', marginBottom: 3 }}>A</div>
+                      <div style={{ fontFamily: 'var(--mono)', fontSize: 14, color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.a}<span style={{ fontSize: 9, color: 'var(--t3)', marginLeft: 2 }}>{r.unit}</span></div>
+                    </div>
+                    <div style={{ fontFamily: 'var(--mono)', fontSize: 13, color: tone, textAlign: 'center' }}>{diffText}</div>
+                    <div style={{ minWidth: 0, textAlign: 'right' }}>
+                      <div style={{ fontFamily: 'var(--mono)', fontSize: 8, color: 'var(--t3)', marginBottom: 3 }}>B</div>
+                      <div style={{ fontFamily: 'var(--mono)', fontSize: 14, color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.b}<span style={{ fontSize: 9, color: 'var(--t3)', marginLeft: 2 }}>{r.unit}</span></div>
+                    </div>
+                  </div>
+                  <div style={{ position: 'relative', height: 7, borderRadius: 999, background: 'rgba(255,255,255,.055)', overflow: 'hidden', marginTop: 10 }}>
+                    <div
+                      key={`${r.label}-${r.diff}`}
+                      style={{
+                        position: 'absolute',
+                        top: 0,
+                        bottom: 0,
+                        left: positive ? '50%' : `${50 - strength / 2}%`,
+                        width: `${Math.max(strength / 2, positive || negative ? 4 : 0)}%`,
+                        borderRadius: 999,
+                        background: positive || negative ? `linear-gradient(90deg, ${tone}66, ${tone})` : 'rgba(255,255,255,.14)',
+                        boxShadow: positive || negative ? `0 0 14px ${tone}88` : undefined,
+                        animation: 'gaugeIn .65s cubic-bezier(.16,1,.3,1) both',
+                      }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -5451,10 +5621,6 @@ const GUIDE_SECTIONS = [
       {
         label: 'Esc 키로 닫기',
         desc: '열려 있는 용어 창, 가이드, 검색 팔레트 등을 모두 Esc 키로 닫을 수 있습니다.',
-      },
-      {
-        label: '다크 / 라이트 모드',
-        desc: '헤더 오른쪽의 달 / 해 아이콘을 누르면 화면 색상 테마가 바뀝니다. 선택한 테마는 다음 방문 때도 유지됩니다.',
       },
       {
         label: '모바일에서 사용하기',

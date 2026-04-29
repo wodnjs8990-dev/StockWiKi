@@ -10,12 +10,13 @@ export const revalidate = 60;
 
 // 동적 OG 메타태그 — ?term=per 딥링크 공유 시 카카오/트위터에 용어 정보 표시
 export async function generateMetadata(
-  { searchParams }: { searchParams: { term?: string; calc?: string } }
+  { searchParams }: { searchParams: Promise<{ term?: string; calc?: string }> }
 ): Promise<Metadata> {
   const base = 'https://stockwiki.kr';
+  const params = await searchParams;
 
   // 특정 용어 딥링크
-  const termId = searchParams?.term;
+  const termId = params?.term;
   if (termId) {
     const term = TERMS.find(t => t.id === termId);
     if (term) {

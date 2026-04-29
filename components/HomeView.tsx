@@ -22,9 +22,6 @@ const FAMILIES = [
   { id: 'industry',    label: '산업·섹터',       en: 'INDUSTRY',    color: '#7ac8c0', desc: '반도체·바이오·에너지·소비재·금융' },
   { id: 'digital',     label: '디지털자산',       en: 'DIGITAL',     color: '#6b9ea8', desc: 'DeFi·블록체인·토큰화·디지털자산' },
   { id: 'tax',         label: '세금·제도',        en: 'TAX',         color: '#a8c87a', desc: '계좌·세금·공시·법률·규제' },
-  { id: 'crypto',      label: '암호화폐',         en: 'CRYPTO',      color: '#7aa8c8', desc: '비트코인·알트코인·DeFi·토크노믹스' },
-  { id: 'infra',       label: '데이터인프라',     en: 'INFRA',       color: '#5d9aa8', desc: '데이터·API·시스템·퀀트인프라' },
-  { id: 'macrotrading',label: '매크로트레이딩',   en: 'MACRO',       color: '#b89a50', desc: '글로벌매크로·FX·금리트레이딩' },
 ];
 
 const SCENE_LABELS = ['INTRO', 'PHILOSOPHY', 'NUMBERS', 'FAMILIES', 'GLOSSARY', 'CALCULATOR', 'CALENDAR', 'START'];
@@ -90,6 +87,52 @@ export default function HomeView({
         opacity: 1 !important;
         transform: translateY(-4px) !important;
       }
+      .hw-liquid-shell {
+        position: relative;
+        overflow: hidden;
+        border-radius: 18px;
+        border: 1px solid rgba(200,150,80,0.22);
+        background:
+          linear-gradient(135deg, rgba(255,255,255,0.075), rgba(255,255,255,0.018) 38%, rgba(110,168,200,0.05) 70%, rgba(139,200,122,0.035)),
+          linear-gradient(180deg, rgba(8,8,8,0.72), rgba(8,8,8,0.9));
+        box-shadow:
+          0 1px 0 rgba(255,255,255,0.14) inset,
+          0 0 0 1px rgba(0,0,0,0.35),
+          0 34px 90px rgba(0,0,0,0.52),
+          0 0 68px rgba(200,150,80,0.12);
+        backdrop-filter: blur(28px) saturate(120%);
+        -webkit-backdrop-filter: blur(28px) saturate(120%);
+      }
+      .hw-liquid-shell::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        background:
+          linear-gradient(100deg, transparent 0%, rgba(200,150,80,0.10) 24%, transparent 44%),
+          radial-gradient(ellipse 120% 70% at 50% 0%, rgba(255,255,255,0.10), transparent 58%);
+        opacity: .9;
+      }
+      .hw-liquid-shell::after {
+        content: '';
+        position: absolute;
+        left: 18px; right: 18px; top: 18px; bottom: 18px;
+        pointer-events: none;
+        border-radius: 14px;
+        border: 1px solid rgba(255,255,255,0.055);
+      }
+      .hw-hero-metric {
+        min-height: 92px;
+        border-radius: 10px;
+        background: rgba(255,255,255,0.035);
+        border: 1px solid rgba(255,255,255,0.075);
+        box-shadow: 0 1px 0 rgba(255,255,255,0.05) inset;
+      }
+      .hw-control-strip {
+        border-radius: 12px;
+        background: rgba(0,0,0,0.24);
+        border: 1px solid rgba(255,255,255,0.07);
+      }
       .hw-nav-link {
         opacity: 0.5; transition: opacity 0.2s; cursor: pointer;
         font-size: 11px; letter-spacing: 0.12em; padding: 4px 0;
@@ -116,6 +159,10 @@ export default function HomeView({
 
         /* HERO 타이틀 */
         .hw-hero-title  { font-size: clamp(40px, 13vw, 72px) !important; }
+        .hw-liquid-shell { border-radius: 14px !important; }
+        .hw-hero-panel { grid-template-columns: 1fr !important; padding: 24px 20px !important; }
+        .hw-hero-metrics { grid-template-columns: 1fr 1fr !important; }
+        .hw-control-strip { flex-direction: column !important; align-items: stretch !important; }
 
         /* S3 FAMILIES 그리드 — 3×3, 스크롤 없음 */
         .hw-fam-grid {
@@ -402,6 +449,9 @@ export default function HomeView({
   const accent = '#C89650';
   const bgCard = isDark ? '#111' : '#fff';
   const bgSurf = isDark ? '#0d0d0d' : '#f0eeea';
+  const heroTxt = '#ede9df';
+  const heroMuted = '#a8a29a';
+  const heroDim = '#67625d';
 
   return (
     <div style={{ position: 'fixed', inset: 0, overflow: 'hidden', background: bg, zIndex: 1 }}>
@@ -488,71 +538,131 @@ export default function HomeView({
             animation: 'hw-glow-pulse 11s ease-in-out infinite 2s',
           }} />
 
-          <div style={{ position: 'relative', zIndex: 1, textAlign: 'center', padding: '0 24px', maxWidth: 760, width: '100%' }}>
-            {/* eyebrow 라벨 */}
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginBottom: 32,
-              padding: '5px 16px', borderRadius: 40,
-              background: `${accent}12`, border: `1px solid ${accent}30`,
-            }}>
-              <span style={{ width: 5, height: 5, borderRadius: '50%', background: accent, display: 'inline-block', boxShadow: `0 0 8px ${accent}` }} />
-              <span style={{ fontFamily: 'monospace', fontSize: 10, color: accent, letterSpacing: '0.22em' }}>KOREA'S FINANCIAL DICTIONARY</span>
-            </div>
+          <div style={{ position: 'relative', zIndex: 1, padding: '0 22px', width: '100%', maxWidth: 1120 }}>
+            <div className="hw-liquid-shell">
+              <div className="hw-hero-panel" style={{
+                position: 'relative',
+                zIndex: 1,
+                display: 'grid',
+                gridTemplateColumns: 'minmax(0, 1.16fr) minmax(320px, .84fr)',
+                gap: 26,
+                padding: '34px',
+                alignItems: 'stretch',
+              }}>
+                <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: 30 }}>
+                  <div>
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 9, marginBottom: 24,
+                      padding: '6px 14px', borderRadius: 999,
+                      background: 'rgba(200,150,80,0.10)', border: '1px solid rgba(200,150,80,0.30)',
+                    }}>
+                      <span style={{ width: 6, height: 6, borderRadius: '50%', background: accent, display: 'inline-block', boxShadow: `0 0 12px ${accent}` }} />
+                      <span style={{ fontFamily: 'monospace', fontSize: 10, color: accent, letterSpacing: '0.18em' }}>FINANCIAL CONTROL SURFACE</span>
+                    </div>
 
-            {/* 메인 타이틀 */}
-            <div className="hw-hero-title" style={{
-              fontFamily: 'var(--font-gmarket), sans-serif', fontWeight: 500,
-              fontSize: 'clamp(32px, 5.8vw, 76px)',
-              lineHeight: 1.15, letterSpacing: '-0.03em', color: txt,
-              marginBottom: 0,
-            }}>
-              <div style={{ opacity: 0.5, fontWeight: 300, fontSize: '0.55em', letterSpacing: '0.02em', marginBottom: 10 }}>가장 강력한 투자 무기는</div>
-              <div>
-                <span style={{ color: accent }}>'제대로 된 정보'</span>
-              </div>
-              <div>입니다.</div>
-            </div>
+                    <div className="hw-hero-title" style={{
+                      fontFamily: 'var(--font-gmarket), sans-serif', fontWeight: 500,
+                      fontSize: 'clamp(40px, 6.2vw, 82px)',
+                      lineHeight: 1.05, letterSpacing: '-0.03em', color: heroTxt,
+                    }}>
+                      <div style={{ opacity: 0.58, fontWeight: 300, fontSize: '0.42em', letterSpacing: '0.01em', marginBottom: 12 }}>가장 강력한 투자 무기는</div>
+                      <div><span style={{ color: accent }}>제대로 된 정보</span>입니다.</div>
+                    </div>
 
-            {/* 수치 배지 행 */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 20, marginTop: 36, marginBottom: 40, flexWrap: 'wrap' }}>
-              {[
-                { val: (totalTerms || 16323).toLocaleString(), unit: '개', label: '금융 용어', color: accent },
-                { val: '12', unit: '개', label: '대분류', color: '#6ea8c8' },
-                { val: '69', unit: '종', label: '계산기', color: '#c87a8b' },
-                { val: '365', unit: '일', label: '이벤트', color: '#9a7ac8' },
-              ].map((s, i) => (
-                <div key={i} style={{
-                  display: 'flex', flexDirection: 'column', alignItems: 'center',
-                  padding: '10px 18px', borderRadius: 10,
-                  background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)',
-                  border: `1px solid ${s.color}28`,
-                  minWidth: 72,
-                }}>
-                  <div style={{ fontSize: 22, fontWeight: 200, color: s.color, fontFamily: 'Inter, monospace', letterSpacing: '-0.04em', lineHeight: 1 }}>
-                    {s.val}<span style={{ fontSize: '0.5em', opacity: 0.7, marginLeft: 1 }}>{s.unit}</span>
+                    <p style={{ maxWidth: 530, color: heroMuted, fontSize: 14, lineHeight: 1.85, margin: '22px 0 0' }}>
+                      용어, 공식, 예시, 연결 개념을 한 흐름에서 읽고 바로 계산기로 이어가는 투자 언어 인터페이스.
+                    </p>
                   </div>
-                  <div style={{ fontSize: 9, color: muted, letterSpacing: '0.12em', marginTop: 5 }}>{s.label}</div>
+
+                  <div className="hw-control-strip" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, padding: 14 }}>
+                    <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                      <button onClick={() => setActiveTab?.('glossary')} style={{
+                        background: `linear-gradient(135deg, ${accent} 0%, #d4aa65 100%)`,
+                        color: '#080808', border: 'none',
+                        padding: '14px 34px', fontSize: 13, fontWeight: 800,
+                        letterSpacing: '0.07em', cursor: 'pointer', borderRadius: 8,
+                        boxShadow: `0 10px 28px ${accent}33, 0 1px 0 rgba(255,255,255,.35) inset`,
+                      }}>사전 열기</button>
+                      <button onClick={() => setActiveTab?.('calc')} style={{
+                        background: 'rgba(255,255,255,0.035)', color: heroTxt, border: `1px solid rgba(255,255,255,0.12)`,
+                        padding: '14px 24px', fontSize: 13, fontWeight: 600,
+                        letterSpacing: '0.06em', cursor: 'pointer', borderRadius: 8,
+                      }}>계산기 보기</button>
+                    </div>
+                    <div style={{ fontFamily: 'monospace', fontSize: 10, color: heroDim, letterSpacing: '0.14em', whiteSpace: 'nowrap' }}>
+                      9 GROUPS · {(totalTerms || 16323).toLocaleString()} TERMS
+                    </div>
+                  </div>
                 </div>
-              ))}
+
+                <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  <div className="hw-hero-metrics" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                    {[
+                      { val: (totalTerms || 16323).toLocaleString(), unit: '개', label: '금융 용어', color: accent },
+                      { val: '9', unit: '개', label: '대분류', color: '#6ea8c8' },
+                      { val: '69', unit: '종', label: '계산기', color: '#8bc87a' },
+                      { val: '365', unit: '일', label: '이벤트', color: '#7aa8c8' },
+                    ].map((s) => (
+                      <div key={s.label} className="hw-hero-metric" style={{ padding: '16px 16px 14px' }}>
+                        <div style={{ height: 2, width: 28, background: s.color, borderRadius: 2, marginBottom: 16, boxShadow: `0 0 14px ${s.color}66` }} />
+                        <div style={{ fontSize: 28, fontWeight: 300, color: s.color, fontFamily: 'Inter, monospace', letterSpacing: '-0.04em', lineHeight: 1 }}>
+                          {s.val}<span style={{ fontSize: '0.42em', opacity: 0.72, marginLeft: 2 }}>{s.unit}</span>
+                        </div>
+                        <div style={{ fontSize: 10, color: heroMuted, letterSpacing: '0.13em', marginTop: 8 }}>{s.label}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div style={{
+                    flex: 1,
+                    minHeight: 132,
+                    borderRadius: 12,
+                    border: '1px solid rgba(255,255,255,0.08)',
+                    background: 'linear-gradient(180deg, rgba(0,0,0,0.18), rgba(0,0,0,0.34))',
+                    padding: 16,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
+                      <span style={{ fontFamily: 'monospace', fontSize: 10, color: '#8bc87a', letterSpacing: '0.18em' }}>LIVE INDEX</span>
+                      <span style={{ fontFamily: 'monospace', fontSize: 10, color: heroDim }}>READY</span>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: 4, alignItems: 'end', height: 54 }}>
+                      {FAMILIES.map((fam, i) => (
+                        <button
+                          key={fam.id}
+                          onClick={() => setActiveTab?.('glossary')}
+                          title={fam.label}
+                          style={{
+                            height: `${22 + ((i * 11) % 32)}px`,
+                            border: 'none',
+                            borderRadius: 3,
+                            cursor: 'pointer',
+                            background: `linear-gradient(180deg, ${fam.color}, ${fam.color}55)`,
+                            boxShadow: `0 0 10px ${fam.color}22`,
+                          }}
+                        />
+                      ))}
+                    </div>
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                      {['펀더멘털', '시장', '거시', '리스크'].map((label, i) => (
+                        <span key={label} style={{
+                          fontSize: 10,
+                          color: i === 0 ? accent : heroMuted,
+                          border: `1px solid ${i === 0 ? `${accent}55` : 'rgba(255,255,255,.08)'}`,
+                          background: i === 0 ? `${accent}14` : 'rgba(255,255,255,.025)',
+                          padding: '4px 8px',
+                          borderRadius: 999,
+                          letterSpacing: '0.04em',
+                        }}>{label}</span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
 
-            {/* CTA 버튼 */}
-            <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
-              <button onClick={() => setActiveTab?.('glossary')} style={{
-                background: `linear-gradient(135deg, ${accent} 0%, ${accent}cc 100%)`,
-                color: '#0a0a0a', border: 'none',
-                padding: '14px 40px', fontSize: 13, fontWeight: 700,
-                letterSpacing: '0.07em', cursor: 'pointer', borderRadius: 6,
-                boxShadow: `0 4px 24px ${accent}44`,
-              }}>사전 열기</button>
-              <button onClick={() => setActiveTab?.('calc')} style={{
-                background: 'transparent', color: txt, border: `1px solid ${border}`,
-                padding: '14px 32px', fontSize: 13, fontWeight: 400,
-                letterSpacing: '0.06em', cursor: 'pointer', borderRadius: 6,
-              }}>계산기 보기</button>
-            </div>
-
-            {/* 스크롤 큐 — 버튼 바로 아래, 간격 최소화 */}
-            <div className="hw-scroll-cue" style={{ marginTop: 36, color: dimmer, fontSize: 9, letterSpacing: '0.22em' }}>
+            <div className="hw-scroll-cue" style={{ marginTop: 22, textAlign: 'center', color: dimmer, fontSize: 9, letterSpacing: '0.22em' }}>
               <div style={{ width: 1, height: 22, background: `linear-gradient(to bottom, transparent, ${dimmer})`, margin: '0 auto 6px' }} />
               SCROLL
             </div>
@@ -587,7 +697,7 @@ export default function HomeView({
             <div className="hw-numbers-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 44, textAlign: 'center' }}>
               {[
                 { to: totalTerms || 2400, label: '금융 용어', unit: '개', color: accent },
-                { to: 12,  label: '대분류 그룹',     unit: '개', color: '#8bc87a' },
+                { to: 9,  label: '대분류 그룹',     unit: '개', color: '#8bc87a' },
                 { to: 69,  label: '계산기 도구',     unit: '종', color: '#c87a8b' },
                 { to: 365, label: '이벤트 캘린더',   unit: '일', color: '#9a7ac8' },
               ].map((s, i) => (
@@ -610,9 +720,9 @@ export default function HomeView({
         <div id="hs3" className="hw-scene" style={{ ...sceneBase, alignItems: 'center', overflowY: 'auto' }}>
           <div style={{ width: '100%', maxWidth: 1080, padding: '68px 28px 32px' }}>
             <div className="hw-fam-title" style={{ textAlign: 'center', marginBottom: 36 }}>
-              <div style={{ fontSize: 10, letterSpacing: '0.26em', color: accent, marginBottom: 10, fontWeight: 600 }}>12 GROUPS</div>
+              <div style={{ fontSize: 10, letterSpacing: '0.26em', color: accent, marginBottom: 10, fontWeight: 600 }}>9 GROUPS</div>
               <div style={{ fontSize: 'clamp(16px, 2.4vw, 30px)', fontWeight: 200, color: txt, letterSpacing: '-0.02em', fontFamily: 'Inter, sans-serif' }}>
-                <span style={{ fontWeight: 600, color: accent }}>12</span>개의 대분류,{' '}
+                <span style={{ fontWeight: 600, color: accent }}>9</span>개의 대분류,{' '}
                 <span style={{ fontWeight: 600, color: txt }}>{(totalTerms || 16323).toLocaleString()}</span>개의 용어.{' '}
                 <span style={{ opacity: 0.6 }}>당신의 투자 지도를 완성하세요.</span>
               </div>

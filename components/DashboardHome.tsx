@@ -86,7 +86,7 @@ function MiniSpark({ color = '#C89650', seed = 1, h = 24 }: { color?: string; se
     return 40 + x * 25 + (i / 20) * 15;
   });
   const min = Math.min(...data), max = Math.max(...data), range = max - min || 1;
-  const pts = data.map((v, i) => `${(i / (data.length - 1)) * W},${H - ((v - min) / range) * (H - 3) - 2}`).join(' ');
+  const pts = data.map((v, i) => `${((i / (data.length - 1)) * W).toFixed(2)},${(H - ((v - min) / range) * (H - 3) - 2).toFixed(2)}`).join(' ');
   const id = `ms${seed}${color.replace('#', '')}`;
   return (
     <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} style={{ overflow: 'visible' }}>
@@ -115,6 +115,8 @@ function GlowChart({ data, color, h = 70 }: { data: number[]; color: string; h?:
   const area = `${path} L${W},${H} L0,${H} Z`;
   const gid = `gc${color.replace('#', '')}`;
   const [lx, ly] = pts[pts.length - 1];
+  const endX = Number(lx.toFixed(2));
+  const endY = Number(ly.toFixed(2));
   return (
     <svg width="100%" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={{ overflow: 'visible' }}>
       <defs>
@@ -131,7 +133,7 @@ function GlowChart({ data, color, h = 70 }: { data: number[]; color: string; h?:
       <path d={path} fill="none" stroke={color} strokeWidth="0.8" opacity="0.2" />
       <path d={path} fill="none" stroke={color} strokeWidth="1.6"
         style={{ filter: `drop-shadow(0 0 5px ${color}99) drop-shadow(0 0 12px ${color}44)` }} />
-      <circle cx={lx} cy={ly} r="3.5" fill={color}
+      <circle cx={endX} cy={endY} r="3.5" fill={color}
         style={{ filter: `drop-shadow(0 0 6px ${color}) drop-shadow(0 0 14px ${color}66)` }} />
     </svg>
   );
@@ -140,7 +142,10 @@ function GlowChart({ data, color, h = 70 }: { data: number[]; color: string; h?:
 /* ── deterministic sparkline data ── */
 function genData(base: number, len = 50, vol = 0.008): number[] {
   const d = [base];
-  for (let i = 1; i < len; i++) d.push(Math.max(d[i - 1] * (1 + (Math.random() - 0.47) * vol), base * 0.85));
+  for (let i = 1; i < len; i++) {
+    const wave = Math.sin(i * 0.71 + base * 0.001) * 0.42 + Math.cos(i * 0.29) * 0.25;
+    d.push(Math.max(d[i - 1] * (1 + wave * vol), base * 0.85));
+  }
   return d;
 }
 
@@ -309,16 +314,25 @@ export default function DashboardHome({
             </div>
           </div>
 
-          {/* ── KPI Chart ── */}
-          <div className="card" style={{ padding: '18px 20px' }}>
+          {/* ── Liquid Hero Surface ── */}
+          <div className="card sw-home-surface" style={{ padding: '20px 22px 18px' }}>
+            <div className="sw-home-sheen" />
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 }}>
-              <div style={{ fontFamily: 'var(--mono)', fontSize: 8.5, letterSpacing: '.18em', textTransform: 'uppercase', color: 'var(--t2)' }}>
-                금융 용어 데이터베이스
+              <div>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 8, letterSpacing: '.24em', textTransform: 'uppercase', color: 'var(--gold)', marginBottom: 7 }}>
+                  FINANCIAL CONTROL SURFACE
+                </div>
+                <div style={{ fontSize: 24, fontWeight: 300, color: '#fff', letterSpacing: '-.04em', lineHeight: 1 }}>
+                  Stock<span style={{ color: 'var(--gold)', fontWeight: 500 }}>Wi</span>Ki
+                </div>
               </div>
               <button onClick={() => setActiveTab('glossary')} style={{
                 fontFamily: 'var(--mono)', fontSize: 9, color: 'var(--t3)',
                 cursor: 'pointer', background: 'none', border: 'none',
               }}>↗</button>
+            </div>
+            <div style={{ fontSize: 12.5, color: 'var(--t2)', lineHeight: 1.72, margin: '14px 0 14px', maxWidth: 360 }}>
+              용어, 공식, 계산기, 이벤트를 하나의 흐름으로 연결하는 투자 언어 인터페이스.
             </div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 5, marginBottom: 2 }}>
               <span style={{
@@ -331,7 +345,9 @@ export default function DashboardHome({
             <div style={{ fontFamily: 'var(--mono)', fontSize: 8, color: 'var(--t3)', marginBottom: 12 }}>
               9 families · 108 categories
             </div>
-            <GlowChart data={kospiData} color="#C89650" h={68} />
+            <div className="sw-home-line">
+              <GlowChart data={kospiData} color="#C89650" h={68} />
+            </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6 }}>
               {['FUN', 'MKT', 'MAC', 'RSK', 'DRV', 'TRD', 'IND', 'DIG', 'TAX'].map(l => (
                 <div key={l} style={{ fontFamily: 'var(--mono)', fontSize: 6, color: 'var(--t4)' }}>{l}</div>
@@ -364,13 +380,16 @@ export default function DashboardHome({
             <button className="btn-ghost" onClick={() => setActiveTab('calculator')}>계산기 →</button>
           </div>
 
-          {/* ── Footer ── */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '2px 2px 0' }}>
-            <div style={{ fontSize: 11, fontWeight: 300, color: 'var(--t2)' }}>
-              Stock<span style={{ color: 'var(--gold)', fontWeight: 500 }}>Wi</span>Ki
-              <span style={{ fontFamily: 'var(--mono)', fontSize: 8, color: 'var(--t3)', marginLeft: 5 }}>.kr</span>
+          {/* ── CTA Support Surface ── */}
+          <div className="sw-home-meta-surface">
+            <div className="sw-home-meta-line" />
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+              <div>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 8, color: 'var(--t3)', letterSpacing: '.22em', marginBottom: 6 }}>SURFACE READY</div>
+                <div style={{ fontSize: 12, color: 'var(--t2)', lineHeight: 1.55 }}>사전과 계산기로 이어지는 단일 진입면</div>
+              </div>
+              <div style={{ fontFamily: 'var(--mono)', fontSize: 8, color: 'var(--t3)', textAlign: 'right' }}>v2<br />2026</div>
             </div>
-            <div style={{ fontFamily: 'var(--mono)', fontSize: 7.5, color: 'var(--t3)' }}>v2 · 2026</div>
           </div>
         </div>
       </div>
@@ -385,8 +404,8 @@ export default function DashboardHome({
 
         {/* ── Index Charts ── */}
         {[
-          { n: 'KOSPI 종합주가지수', v: 2748.3, ch: '+18.4', pct: 0.67, c: '#C89650', d: kospiData },
-          { n: 'NASDAQ 100 선물',   v: 19241.5, ch: '+124.8', pct: 0.65, c: '#6ea8c8', d: ndxData },
+          { n: 'KOSPI INDEX', status: 'UNIMPLEMENTED', c: '#C89650', d: kospiData },
+          { n: 'NASDAQ 100', status: 'UNIMPLEMENTED', c: '#6ea8c8', d: ndxData },
         ].map(idx => (
           <div key={idx.n} className="card" style={{ padding: '18px 20px', cursor: 'pointer' }}
             onClick={() => setActiveTab('glossary')}>
@@ -396,22 +415,22 @@ export default function DashboardHome({
                   {idx.n}
                 </div>
                 <div style={{
-                  fontFamily: 'var(--mono)', fontSize: 28, fontWeight: 300, color: '#ffffff',
-                  letterSpacing: '-.04em', lineHeight: 1,
+                  fontFamily: 'var(--mono)', fontSize: 20, fontWeight: 500, color: idx.c,
+                  letterSpacing: '.08em', lineHeight: 1.15,
                   textShadow: `0 0 25px ${idx.c}66, 0 0 50px ${idx.c}22`,
-                }}>{idx.v.toLocaleString()}</div>
+                }}>{idx.status}</div>
               </div>
               <div style={{ textAlign: 'right', paddingTop: 2 }}>
-                <div style={{ fontFamily: 'var(--mono)', fontSize: 12, color: '#4A7045', textShadow: '0 0 10px rgba(74,112,69,.6)' }}>
-                  +{idx.pct.toFixed(2)}%
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--t2)', letterSpacing: '.16em' }}>
+                  PENDING
                 </div>
-                <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, color: 'rgba(74,112,69,.45)', marginTop: 2 }}>{idx.ch}</div>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 8, color: 'var(--t3)', marginTop: 3 }}>DATA API</div>
               </div>
             </div>
             <GlowChart data={idx.d} color={idx.c} h={58} />
             <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8 }}>
-              <span style={{ fontFamily: 'var(--mono)', fontSize: 7.5, color: 'var(--t3)' }}>장외 · 전일 종가</span>
-              <span style={{ fontFamily: 'var(--mono)', fontSize: 7.5, color: 'var(--t3)' }}>52W 고점 대비</span>
+              <span style={{ fontFamily: 'var(--mono)', fontSize: 7.5, color: 'var(--t3)' }}>MARKET DATA</span>
+              <span style={{ fontFamily: 'var(--mono)', fontSize: 7.5, color: 'var(--t3)' }}>NOT LIVE</span>
             </div>
           </div>
         ))}

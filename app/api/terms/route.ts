@@ -27,9 +27,39 @@ const LIGHT_MAP = new Map(TERMS.map(t => ({
 })). map(t => [t.id, t]));
 
 const PAGE_SIZE = 40; // 50→40: 초기 로드 속도 개선
+const FAMILY_GROUP: Record<string, string> = {
+  fundamental: 'FUNDAMENTAL',
+  market: 'MARKET',
+  macro: 'ECON',
+  risk: 'RISK',
+  derivatives: 'DERIV',
+  trading: 'TRADING',
+  industry: 'INDUSTRY',
+  digital: 'DIGITAL',
+  tax: 'TAX',
+};
+
+const GROUP_STATS = TERMS.reduce((acc, term: any) => {
+  const family = CATEGORY_FAMILY[term.category]?.family ?? '';
+  const group = FAMILY_GROUP[family] || term.group || '';
+  if (!group) return acc;
+  if (!acc[group]) acc[group] = { count: 0, cats: [] as string[] };
+  acc[group].count += 1;
+  if (term.category && !acc[group].cats.includes(term.category)) acc[group].cats.push(term.category);
+  return acc;
+}, {} as Record<string, { count: number; cats: string[] }>);
+
+Object.values(GROUP_STATS).forEach(stat => stat.cats.sort());
 
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl;
+
+  if (searchParams.get('stats') === '1') {
+    return NextResponse.json(
+      { total: TERMS.length, groupStats: GROUP_STATS },
+      { headers: { 'Cache-Control': 'public, max-age=3600, stale-while-revalidate=86400' } }
+    );
+  }
 
   // ── 단일 ID 조회 (상세 모달용) — 전체 필드 반환
   const singleId = searchParams.get('id');

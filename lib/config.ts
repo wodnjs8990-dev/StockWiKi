@@ -25,6 +25,7 @@ export type CustomEvent = {
 
 // ── 배너 읽기
 export async function getBanner(): Promise<BannerConfig | null> {
+  if (!process.env.EDGE_CONFIG) return null;
   try {
     const banner = await get<BannerConfig>('banner');
     if (!banner || !banner.enabled) return null;
@@ -38,6 +39,7 @@ export async function getBanner(): Promise<BannerConfig | null> {
 
 // ── 커스텀 이벤트 읽기
 export async function getCustomEvents(): Promise<CustomEvent[]> {
+  if (!process.env.EDGE_CONFIG) return [];
   try {
     return (await get<CustomEvent[]>('customEvents')) ?? [];
   } catch {
@@ -70,12 +72,12 @@ const DEFAULT_CONFIG: SiteConfig = {
 
 // 읽기: 전 세계 엣지에서 5ms 이내
 export async function getSiteConfig(): Promise<SiteConfig> {
+  if (!process.env.EDGE_CONFIG) return DEFAULT_CONFIG;
   try {
     const config = await get<SiteConfig>('siteConfig');
     if (!config) return DEFAULT_CONFIG;
     return { ...DEFAULT_CONFIG, ...config };
-  } catch (e) {
-    console.error('Edge Config read failed:', e);
+  } catch {
     return DEFAULT_CONFIG;
   }
 }
