@@ -36,18 +36,6 @@ const DAY_KO = ['일', '월', '화', '수', '목', '금', '토'];
 const pad = (n: number) => String(n).padStart(2, '0');
 
 /* ── Helpers ── */
-function glassColor(hex: string, alpha: number) {
-  const normalized = hex.replace('#', '').trim();
-  const full = normalized.length === 3
-    ? normalized.split('').map(ch => ch + ch).join('')
-    : normalized.padEnd(6, '0').slice(0, 6);
-  const value = Number.parseInt(full, 16);
-  const r = (value >> 16) & 255;
-  const g = (value >> 8) & 255;
-  const b = value & 255;
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-}
-
 function getKST() {
   return new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Seoul' }));
 }
@@ -151,61 +139,28 @@ function GlowChart({ data, color, h = 70 }: { data: number[]; color: string; h?:
   );
 }
 
-function DataTickRow({ labels }: { labels: string[] }) {
-  return (
-    <div
-      className="data-tick-row"
-      aria-hidden="true"
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: 8,
-        marginTop: 6,
-        color: 'var(--t4)',
-        fontFamily: 'var(--mono)',
-        fontSize: 6,
-        lineHeight: 1,
-        letterSpacing: '.16em',
-        textTransform: 'uppercase',
-        whiteSpace: 'nowrap',
-      }}
-    >
-      {labels.map((label, i) => (
-        <span
-          key={`${label}-${i}`}
-          style={{ display: 'inline-flex', alignItems: 'center', gap: 5, minWidth: 0 }}
-        >
-          <i style={{ display: 'inline-block', width: 1, height: 6, background: 'rgba(255,255,255,.12)' }} />
-          <span style={{ display: 'inline-block' }}>{label}</span>
-        </span>
-      ))}
-    </div>
-  );
-}
-
-function LiquidDataRail({ onGlossary, onCalculator, onEvents }: { onGlossary: () => void; onCalculator: () => void; onEvents: () => void }) {
+function SurfaceFlowRail({ onGlossary, onCalculator, onEvents }: { onGlossary: () => void; onCalculator: () => void; onEvents: () => void }) {
   const nodes = [
-    { label: 'TERM', text: '용어', onClick: onGlossary },
-    { label: 'FORMULA', text: '공식', onClick: onGlossary },
-    { label: 'CALC', text: '계산기', onClick: onCalculator },
-    { label: 'EVENT', text: '이벤트', onClick: onEvents },
+    { label: '용어 흐름', onClick: onGlossary },
+    { label: '공식 흐름', onClick: onGlossary },
+    { label: '계산기 흐름', onClick: onCalculator },
+    { label: '이벤트 흐름', onClick: onEvents },
   ];
   const nodeLeft = (index: number) => `${10 + (index / (nodes.length - 1)) * 80}%`;
 
   return (
     <div
       className="liquid-data-rail"
-      aria-label="StockWiKi data flow"
+      aria-label="StockWiKi surface flow"
       style={{
         position: 'relative',
-        height: 48,
-        margin: '8px 0 12px',
+        height: 34,
+        margin: '8px 0 13px',
         borderRadius: 14,
-        background: 'linear-gradient(180deg, rgba(255,255,255,.022), rgba(0,0,0,.16)), radial-gradient(ellipse at 8% 50%, rgba(200,169,110,.08), transparent 36%), radial-gradient(ellipse at 91% 46%, rgba(110,168,200,.07), transparent 38%)',
-        border: '1px solid rgba(255,255,255,.045)',
+        background: 'linear-gradient(180deg, rgba(255,255,255,.016), rgba(0,0,0,.11)), radial-gradient(ellipse at 14% 55%, rgba(200,169,110,.065), transparent 38%), radial-gradient(ellipse at 88% 48%, rgba(110,168,200,.05), transparent 42%)',
+        border: '1px solid rgba(255,255,255,.035)',
         overflow: 'hidden',
-        boxShadow: 'inset 0 1px 0 rgba(255,255,255,.08), inset 0 -18px 30px rgba(0,0,0,.22)',
+        boxShadow: 'inset 0 1px 0 rgba(255,255,255,.055), inset 0 -14px 24px rgba(0,0,0,.18)',
       }}
     >
       <div
@@ -214,11 +169,11 @@ function LiquidDataRail({ onGlossary, onCalculator, onEvents }: { onGlossary: ()
           position: 'absolute',
           left: 28,
           right: 28,
-          top: 19,
+          top: 16,
           height: 1,
           borderRadius: 999,
-          background: 'linear-gradient(90deg, rgba(200,169,110,.32), rgba(110,168,200,.24), rgba(139,200,122,.22))',
-          boxShadow: '0 0 14px rgba(200,169,110,.12)',
+          background: 'linear-gradient(90deg, rgba(200,169,110,.22), rgba(110,168,200,.14), rgba(139,200,122,.16))',
+          boxShadow: '0 0 10px rgba(200,169,110,.08)',
         }}
       />
       <div
@@ -226,13 +181,13 @@ function LiquidDataRail({ onGlossary, onCalculator, onEvents }: { onGlossary: ()
         style={{
           position: 'absolute',
           left: 28,
-          top: 19,
+          top: 16,
           height: 1,
-          width: '40%',
+          width: '35%',
           borderRadius: 999,
-          background: 'linear-gradient(90deg, transparent, rgba(200,169,110,.85), rgba(110,168,200,.72), transparent)',
-          filter: 'blur(.15px) drop-shadow(0 0 8px rgba(200,169,110,.55))',
-          animation: 'liquidRail 4.8s cubic-bezier(.45,0,.2,1) infinite',
+          background: 'linear-gradient(90deg, transparent, rgba(200,169,110,.55), rgba(110,168,200,.38), transparent)',
+          filter: 'drop-shadow(0 0 6px rgba(200,169,110,.28))',
+          animation: 'liquidRail 7.2s cubic-bezier(.45,0,.2,1) infinite',
         }}
       />
       {nodes.map((node, i) => (
@@ -240,11 +195,13 @@ function LiquidDataRail({ onGlossary, onCalculator, onEvents }: { onGlossary: ()
           key={node.label}
           type="button"
           className="liquid-data-node"
+          aria-label={node.label}
+          title={node.label}
           style={{
             position: 'absolute',
             top: 0,
             left: nodeLeft(i),
-            width: 62,
+            width: 38,
             height: '100%',
             transform: 'translateX(-50%)',
             border: 0,
@@ -260,359 +217,18 @@ function LiquidDataRail({ onGlossary, onCalculator, onEvents }: { onGlossary: ()
             className="liquid-node-dot"
             style={{
               position: 'absolute',
-              top: 16,
+              top: 13,
               left: '50%',
-              width: 7,
-              height: 7,
+              width: 6,
+              height: 6,
               transform: 'translateX(-50%)',
               borderRadius: '50%',
-              background: 'rgba(200,169,110,.92)',
-              boxShadow: '0 0 10px rgba(200,169,110,.72), 0 0 20px rgba(110,168,200,.18)',
+              background: i === 2 ? 'rgba(110,168,200,.86)' : i === 3 ? 'rgba(139,200,122,.76)' : 'rgba(200,169,110,.82)',
+              boxShadow: '0 0 8px rgba(200,169,110,.36), 0 0 18px rgba(110,168,200,.1)',
             }}
           />
-          <span
-            className="liquid-node-label"
-            style={{
-              position: 'absolute',
-              left: 0,
-              right: 0,
-              top: 27,
-              fontSize: 6.5,
-              lineHeight: 1,
-              letterSpacing: '.16em',
-              textAlign: 'center',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {node.label}
-          </span>
-          <span
-            className="liquid-node-text"
-            style={{
-              position: 'absolute',
-              left: 0,
-              right: 0,
-              top: 35,
-              color: 'var(--t2)',
-              fontSize: 8,
-              lineHeight: 1,
-              letterSpacing: '-.02em',
-              textAlign: 'center',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {node.text}
-          </span>
         </button>
       ))}
-    </div>
-  );
-}
-
-function GlassRim() {
-  return (
-    <div className="glass-rim" aria-hidden="true">
-      <span className="rim rim-top" />
-      <span className="rim rim-right" />
-      <span className="rim rim-bottom" />
-      <span className="rim rim-left" />
-      <i className="corner corner-tl" />
-      <i className="corner corner-tr" />
-      <i className="corner corner-br" />
-      <i className="corner corner-bl" />
-    </div>
-  );
-}
-
-function OpticalGlass({ tone = 'gold' }: { tone?: 'gold' | 'blue' | 'green' | 'violet' | 'red' | 'neutral' }) {
-  return (
-    <div className={`optical-glass optical-glass-${tone}`} aria-hidden="true">
-      <span className="optical-glass-sheen" />
-      <span className="optical-glass-depth" />
-      <span className="optical-glass-caustic" />
-      <span className="optical-glass-edge optical-glass-edge-left" />
-      <span className="optical-glass-edge optical-glass-edge-right" />
-      <span className="optical-glass-edge optical-glass-edge-bottom" />
-    </div>
-  );
-}
-
-function SurfaceTelemetry() {
-  const rows = [
-    { label: 'FLOW', value: '0.78', pct: 78, color: '#c8a96e' },
-    { label: 'REFRACT', value: '42', pct: 42, color: '#6ea8c8' },
-    { label: 'DEPTH', value: '03', pct: 63, color: '#8bc87a' },
-  ];
-
-  return (
-    <div
-      className="surface-telemetry"
-      aria-hidden="true"
-      style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-        gap: 6,
-        margin: '10px 0',
-      }}
-    >
-      {rows.map(row => (
-        <div
-          className="telemetry-cell"
-          key={row.label}
-          style={{
-            '--telemetry-color': row.color,
-            position: 'relative',
-            overflow: 'hidden',
-            minHeight: 42,
-            borderRadius: 10,
-            padding: '8px 9px',
-            border: `1px solid ${glassColor(row.color, .22)}`,
-            background: `linear-gradient(145deg, rgba(255,255,255,.07), rgba(255,255,255,.018) 45%, rgba(0,0,0,.22)), ${glassColor(row.color, .08)}`,
-            boxShadow: 'inset 0 1px 0 rgba(255,255,255,.12), inset 0 -12px 24px rgba(0,0,0,.22)',
-          } as any}
-        >
-          <span
-            aria-hidden="true"
-            style={{
-              position: 'absolute',
-              inset: 0,
-              background: 'linear-gradient(112deg, transparent, rgba(255,255,255,.08), transparent 45%)',
-              transform: 'translateX(-35%)',
-              opacity: .5,
-            }}
-          />
-          <div
-            className="telemetry-head"
-            style={{
-              position: 'relative',
-              zIndex: 1,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: 8,
-              marginBottom: 7,
-              fontFamily: 'var(--mono)',
-              color: 'var(--t3)',
-              fontSize: 6.5,
-              lineHeight: 1,
-              letterSpacing: '.16em',
-            }}
-          >
-            <span>{row.label}</span>
-            <b style={{ color: row.color, fontWeight: 500, letterSpacing: '.02em', textShadow: `0 0 10px ${glassColor(row.color, .55)}` }}>{row.value}</b>
-          </div>
-          <div
-            className="telemetry-track"
-            style={{
-              position: 'relative',
-              zIndex: 1,
-              height: 2,
-              borderRadius: 999,
-              background: 'rgba(255,255,255,.07)',
-              overflow: 'hidden',
-            }}
-          >
-            <i
-              style={{
-                display: 'block',
-                height: '100%',
-                width: `${row.pct}%`,
-                borderRadius: 'inherit',
-                background: `linear-gradient(90deg, transparent, ${row.color})`,
-                boxShadow: `0 0 10px ${glassColor(row.color, .72)}`,
-              }}
-            />
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function GlossaryIntelligenceStrip({ totalTerms, onOpen }: { totalTerms: number; onOpen: () => void }) {
-  const nodes = [
-    { en: 'AI INFRA', ko: 'AI 인프라', color: '#6ea8c8' },
-    { en: 'CAPEX', ko: '자본적지출', color: '#c8a96e' },
-    { en: 'FCF', ko: '잉여현금흐름', color: '#8bc87a' },
-    { en: 'DCF', ko: '현금흐름할인', color: '#9a7ac8' },
-    { en: 'PER', ko: '주가수익비율', color: '#c8b47a' },
-  ];
-
-  return (
-    <div
-      className="card depth-card intelligence-strip bento-wide"
-      onClick={onOpen}
-      style={{
-        gridColumn: '1 / 3',
-        position: 'relative',
-        overflow: 'hidden',
-        padding: '18px 20px',
-        cursor: 'pointer',
-        background: 'radial-gradient(ellipse at 18% 50%, rgba(110,168,200,.105), transparent 38%), radial-gradient(ellipse at 80% 18%, rgba(139,200,122,.08), transparent 42%), linear-gradient(145deg, rgba(255,255,255,.036), rgba(255,255,255,.012) 44%, rgba(0,0,0,.26))',
-        boxShadow: 'inset 0 1px 0 rgba(255,255,255,.16), inset 0 -24px 44px rgba(0,0,0,.24), 0 18px 48px rgba(0,0,0,.48)',
-        '--edge-color': 'rgba(110,168,200,.28)',
-      } as any}
-    >
-      <OpticalGlass tone="blue" />
-      <div
-        className="intelligence-ambient"
-        style={{
-          position: 'absolute',
-          inset: 0,
-          pointerEvents: 'none',
-          opacity: .62,
-          background: 'linear-gradient(105deg, transparent 0%, rgba(255,255,255,.075) 18%, transparent 32%), repeating-linear-gradient(90deg, rgba(255,255,255,.02) 0 1px, transparent 1px 62px)',
-        }}
-      />
-      <div
-        className="intelligence-head"
-        style={{
-          position: 'relative',
-          zIndex: 1,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: 16,
-        }}
-      >
-        <div>
-          <div
-            className="panel-kicker"
-            style={{
-              marginBottom: 6,
-              color: 'var(--gold)',
-              fontFamily: 'var(--mono)',
-              fontSize: 8,
-              lineHeight: 1,
-              letterSpacing: '.22em',
-              textTransform: 'uppercase',
-            }}
-          >
-            GLOSSARY INTELLIGENCE
-          </div>
-          <div className="intelligence-title" style={{ color: 'var(--t1)', fontSize: 17, lineHeight: 1.2, letterSpacing: '-.025em' }}>용어가 연결되는 투자 문맥</div>
-        </div>
-        <div
-          className="intelligence-count"
-          style={{
-            color: '#fff',
-            fontFamily: 'var(--mono)',
-            fontSize: 24,
-            lineHeight: 1,
-            letterSpacing: '-.05em',
-            textShadow: '0 0 24px rgba(110,168,200,.25)',
-            whiteSpace: 'nowrap',
-          }}
-        >
-          {(totalTerms || 16323).toLocaleString()}
-          <span style={{ marginLeft: 6, color: 'var(--t3)', fontSize: 9, letterSpacing: '.04em' }}>terms</span>
-        </div>
-      </div>
-      <div
-        className="intelligence-path"
-        style={{
-          position: 'relative',
-          zIndex: 1,
-          display: 'grid',
-          gridTemplateColumns: 'repeat(5, minmax(0, 1fr))',
-          gap: 8,
-          margin: '17px 0 14px',
-        }}
-      >
-        {nodes.map((node, i) => (
-          <div
-            key={node.en}
-            className="intel-node"
-            style={{
-              '--node-color': node.color,
-              position: 'relative',
-              minHeight: 58,
-              borderRadius: 12,
-              border: `1px solid ${glassColor(node.color, .3)}`,
-              background: `radial-gradient(ellipse at 20% 0%, ${glassColor(node.color, .18)}, transparent 70%), rgba(0,0,0,.22)`,
-              padding: '11px 12px',
-              boxShadow: 'inset 0 1px 0 rgba(255,255,255,.07)',
-            } as any}
-          >
-            <span
-              className="intel-dot"
-              style={{
-                display: 'block',
-                width: 6,
-                height: 6,
-                marginBottom: 8,
-                borderRadius: '50%',
-                background: node.color,
-                boxShadow: `0 0 10px ${glassColor(node.color, .7)}`,
-              }}
-            />
-            <span
-              className="intel-en"
-              style={{
-                display: 'block',
-                marginBottom: 4,
-                color: node.color,
-                fontFamily: 'var(--mono)',
-                fontSize: 8,
-                lineHeight: 1,
-                letterSpacing: '.16em',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {node.en}
-            </span>
-            <span
-              className="intel-ko"
-              style={{
-                display: 'block',
-                color: 'var(--t2)',
-                fontSize: 11,
-                lineHeight: 1.2,
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {node.ko}
-            </span>
-            {i < nodes.length - 1 && (
-              <span
-                className="intel-link"
-                style={{
-                  position: 'absolute',
-                  right: -12,
-                  top: 29,
-                  zIndex: 3,
-                  width: 16,
-                  height: 1,
-                  background: `linear-gradient(90deg, ${node.color}, rgba(255,255,255,.1))`,
-                  boxShadow: `0 0 10px ${glassColor(node.color, .42)}`,
-                }}
-              />
-            )}
-          </div>
-        ))}
-      </div>
-      <div
-        className="intelligence-foot"
-        style={{
-          position: 'relative',
-          zIndex: 1,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: 16,
-          color: 'var(--t3)',
-          fontFamily: 'var(--mono)',
-          fontSize: 8,
-          lineHeight: 1,
-          letterSpacing: '.1em',
-          textTransform: 'uppercase',
-        }}
-      >
-        <span>RELATED PATH · 실적 해석</span>
-        <span>사전에서 열기 →</span>
-      </div>
     </div>
   );
 }
@@ -795,6 +411,13 @@ export default function DashboardHome({
 
           {/* ── Liquid Hero Surface ── */}
           <div className={`card sw-home-surface depth-card ${activeFocus === 'surface' || activeFocus === 'glossary' ? 'active-surface' : ''}`} style={{ padding: '20px 22px 18px' }}>
+            <div className="sw-home-liquid-core" aria-hidden="true">
+              <span className="liquid-core-band liquid-core-band-a" />
+              <span className="liquid-core-band liquid-core-band-b" />
+              <span className="liquid-core-line liquid-core-line-a" />
+              <span className="liquid-core-line liquid-core-line-b" />
+            </div>
+            <div className="sw-home-edge-light" aria-hidden="true" />
             <div className="sw-home-inner-pocket" />
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 }}>
               <div>
@@ -824,10 +447,14 @@ export default function DashboardHome({
             <div style={{ fontFamily: 'var(--mono)', fontSize: 8, color: 'var(--t3)', marginBottom: 12 }}>
               9 families · 108 categories
             </div>
+            <SurfaceFlowRail
+              onGlossary={() => setActiveTab('glossary')}
+              onCalculator={() => setActiveTab('calculator')}
+              onEvents={() => setActiveTab('events')}
+            />
             <div className="sw-home-line">
               <GlowChart data={kospiData} color="#C89650" h={68} />
             </div>
-            <DataTickRow labels={['TERM', 'FORMULA', 'CALC', 'EVENT']} />
             <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6 }}>
               {['FUN', 'MKT', 'MAC', 'RSK', 'DRV', 'TRD', 'IND', 'DIG', 'TAX'].map(l => (
                 <div key={l} style={{ fontFamily: 'var(--mono)', fontSize: 6, color: 'var(--t4)' }}>{l}</div>
@@ -908,7 +535,6 @@ export default function DashboardHome({
               </div>
             </div>
             <GlowChart data={idx.d} color={idx.c} h={58} />
-            <DataTickRow labels={['OPEN', 'MID', 'CLOSE']} />
             <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8 }}>
               <span style={{ fontFamily: 'var(--mono)', fontSize: 7.5, color: 'var(--t3)' }}>MARKET DATA</span>
               <span style={{ fontFamily: 'var(--mono)', fontSize: 7.5, color: 'var(--t3)' }}>NOT LIVE</span>

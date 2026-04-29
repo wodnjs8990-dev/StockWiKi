@@ -1956,6 +1956,73 @@ button[title="다크 모드"] {
   opacity: 0 !important;
 }
 
+.sw-home-liquid-core,
+.sw-home-edge-light {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  overflow: hidden;
+}
+
+.sw-home-liquid-core {
+  z-index: 0;
+  opacity: .88;
+  background:
+    radial-gradient(ellipse at 20% 18%, rgba(200,150,80,.12), transparent 34%),
+    radial-gradient(ellipse at 88% 76%, rgba(74,112,69,.07), transparent 42%),
+    linear-gradient(124deg, transparent 0%, rgba(110,168,200,.035) 38%, transparent 58%);
+  mask-image: linear-gradient(to bottom, rgba(0,0,0,.88), rgba(0,0,0,.72) 58%, rgba(0,0,0,.36));
+  -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,.88), rgba(0,0,0,.72) 58%, rgba(0,0,0,.36));
+}
+
+.liquid-core-band,
+.liquid-core-line {
+  position: absolute;
+  display: block;
+  pointer-events: none;
+}
+
+.liquid-core-band {
+  left: -14%;
+  right: -14%;
+  height: 42px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.055), rgba(200,150,80,.08), transparent);
+  filter: blur(10px);
+  transform: rotate(-7deg);
+}
+
+.liquid-core-band-a {
+  top: 22%;
+  animation: homeLiquidBand 16s ease-in-out infinite alternate;
+}
+
+.liquid-core-band-b {
+  top: 62%;
+  opacity: .58;
+  animation: homeLiquidBand 20s ease-in-out infinite alternate-reverse;
+}
+
+.liquid-core-line {
+  left: 18px;
+  right: 18px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(200,150,80,.42), rgba(110,168,200,.24), transparent);
+  opacity: .38;
+}
+
+.liquid-core-line-a { top: 34%; }
+.liquid-core-line-b { bottom: 28%; opacity: .24; }
+
+.sw-home-edge-light {
+  z-index: 0;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.11),
+    inset 1px 0 0 rgba(200,150,80,.09),
+    inset 0 -1px 0 rgba(0,0,0,.46);
+}
+
 .sw-home-inner-pocket {
   opacity: .28 !important;
 }
@@ -1992,6 +2059,11 @@ button[title="다크 모드"] {
     inset 0 1px 0 rgba(255,255,255,.08),
     inset 0 -24px 48px rgba(0,0,0,.24),
     0 18px 46px rgba(0,0,0,.5) !important;
+}
+
+@keyframes homeLiquidBand {
+  from { transform: translate3d(-2%, -4px, 0) rotate(-7deg); }
+  to   { transform: translate3d(3%, 5px, 0) rotate(-7deg); }
 }
 /* Border beam rotation */
 @keyframes beamRotate     { from { --beam-angle: 0deg }   to { --beam-angle: 360deg } }

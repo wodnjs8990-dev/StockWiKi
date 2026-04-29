@@ -503,19 +503,20 @@ export default function StockWiki({ features, customEvents }: { features?: Featu
         position: 'sticky', top: 0, zIndex: 100,
         backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
       }}>
-        {/* Logo icon */}
+        {/* Brand */}
         <button onClick={goHome} style={{
-          width: 28, height: 28, borderRadius: 8,
-          background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.07)',
+          height: 30, borderRadius: 10,
+          padding: '0 12px',
+          background: activeTab === 'home' ? 'rgba(255,255,255,.075)' : 'rgba(255,255,255,.035)',
+          border: activeTab === 'home' ? '1px solid rgba(200,150,80,.26)' : '1px solid rgba(255,255,255,.07)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          marginRight: 6, flexShrink: 0, cursor: 'pointer',
+          marginRight: 8, flexShrink: 0, cursor: 'pointer',
+          color: 'var(--t1)',
+          fontFamily: 'var(--mono)',
+          fontSize: 12,
+          letterSpacing: '-.03em',
         }}>
-          <svg viewBox="0 0 16 16" width="14" height="14" fill="none">
-            <rect x="2" y="2" width="5" height="5" rx="1.2" stroke="#C89650" strokeWidth="1.2"/>
-            <rect x="9" y="2" width="5" height="5" rx="1.2" fill="#C89650" fillOpacity=".25" stroke="#C89650" strokeWidth="1.2"/>
-            <rect x="2" y="9" width="5" height="5" rx="1.2" stroke="#C89650" strokeWidth=".8" strokeDasharray="1.5,1" opacity=".5"/>
-            <rect x="9" y="9" width="5" height="5" rx="1.2" stroke="#C89650" strokeWidth=".8" opacity=".3"/>
-          </svg>
+          Stock<span style={{ color: 'var(--gold)', fontWeight: 600 }}>Wi</span>Ki
         </button>
 
         {/* Nav tabs */}
@@ -562,10 +563,9 @@ export default function StockWiki({ features, customEvents }: { features?: Featu
             </button>
           )}
 
-          {/* Logo text */}
-          <div style={{ fontFamily: 'var(--mono)', fontSize: 11, fontWeight: 300, color: 'var(--t1)', letterSpacing: '-.01em' }}>
-            Stock<span style={{ color: 'var(--gold)', fontWeight: 500 }}>Wi</span>Ki
-            <span style={{ fontFamily: 'var(--mono)', fontSize: 7, color: 'var(--t3)', marginLeft: 3 }}>v2</span>
+          {/* Version meta */}
+          <div style={{ fontFamily: 'var(--mono)', fontSize: 8, color: 'var(--t3)', letterSpacing: '.18em', textTransform: 'uppercase' }}>
+            v2
           </div>
         </div>
 
