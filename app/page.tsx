@@ -46,7 +46,7 @@ export async function generateMetadata(
   // 기본 홈 메타
   return {
     title: 'StockWiKi.kr · 금융 사전 & 계산기',
-    description: '주식·선물·옵션·거시경제·회계·퀀트까지 — 전업투자자를 위한 금융 용어 사전과 실전 계산기. 531개 용어, 29개 계산기 수록.',
+    description: '주식·선물·옵션·거시경제·회계·퀀트까지 — 전업투자자를 위한 금융 용어 사전과 실전 계산기. 16,323개 용어와 69종 계산기 수록.',
     openGraph: {
       title: 'StockWiKi.kr · 금융 사전 & 계산기',
       description: '전업투자자를 위한 금융 용어 사전과 실전 계산기',

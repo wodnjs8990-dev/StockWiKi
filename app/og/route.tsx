@@ -75,9 +75,9 @@ export async function GET(req: NextRequest) {
           {/* 배지들 */}
           <div style={{ display: 'flex', gap: '16px' }}>
             {[
-              { label: '용어', value: '531+' },
-              { label: '계산기', value: '29개' },
-              { label: '카테고리', value: '17개' },
+              { label: '용어', value: '16,323' },
+              { label: '계산기', value: '69종' },
+              { label: '패밀리', value: '9개' },
             ].map(({ label, value }) => (
               <div
                 key={label}
