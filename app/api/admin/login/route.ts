@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { verifyPassword, createSessionToken, setSessionCookie } from '@/lib/auth';
+import { verifyPassword, createSessionToken, setSessionCookie, getAdminAuthStatus } from '@/lib/auth';
 import { saveLoginRecord } from '@/app/api/admin/login-history/route';
 
 // 단순 레이트 리미트: IP별 실패 추적 (메모리 기반)
@@ -18,6 +18,18 @@ function getClientIp(req: Request): string {
 export async function POST(req: Request) {
   const ip = getClientIp(req);
   const now = Date.now();
+  const authStatus = getAdminAuthStatus();
+
+  if (!authStatus.configured) {
+    return NextResponse.json(
+      {
+        error: process.env.NODE_ENV === 'production'
+          ? '관리자 인증 환경변수가 설정되지 않았습니다'
+          : '로컬 관리자 비밀번호가 설정되지 않았습니다. .env.local에 ADMIN_DEV_PASSWORD를 추가하거나 ADMIN_PASSWORD_HASH를 설정하세요.',
+      },
+      { status: 503 }
+    );
+  }
 
   // 레이트 리미트 체크
   const record = failedAttempts.get(ip);

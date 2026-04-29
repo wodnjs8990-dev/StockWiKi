@@ -491,7 +491,7 @@ export default function StockWiki({ features, customEvents }: { features?: Featu
   }, [customEvents]);
 
   return (
-    <div style={{ background: '#080808', color: 'var(--t1)', fontFamily: 'var(--sans), sans-serif', height: '100dvh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+    <div style={{ background: '#080808', color: 'var(--t1)', fontFamily: 'var(--sans), sans-serif', minHeight: '100dvh', display: 'flex', flexDirection: 'column', overflow: 'visible' }}>
 
       {/* ════ HEADER — Dashboard.html 스타일 ════ */}
       <header style={{
@@ -596,7 +596,8 @@ export default function StockWiki({ features, customEvents }: { features?: Featu
       <main
         className="app-body"
         style={{
-          flex: 1,
+          flex: '0 0 auto',
+          minHeight: 'calc(100dvh - 52px)',
           overflow: (activeTab === 'home' || activeTab === 'about') ? 'hidden' : 'auto',
           display: 'flex',
           flexDirection: 'column',

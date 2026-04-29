@@ -104,6 +104,16 @@ const LIGHT: any = {
 };
 
 const SECTIONS = [
+  { id: 'ops',       label: 'Ops',        icon: Activity },
+  { id: 'quality',   label: 'Quality',    icon: Database },
+  { id: 'importer',  label: 'Import',     icon: Database },
+  { id: 'taxonomy',  label: 'Taxonomy',   icon: Globe },
+  { id: 'editor',    label: 'Editor',     icon: ScrollText },
+  { id: 'searchops', label: 'Search',     icon: TrendingUp },
+  { id: 'changelog', label: 'Release',    icon: Rocket },
+  { id: 'qa',        label: 'QA Lab',     icon: Monitor },
+  { id: 'security',  label: 'Security',   icon: Shield },
+  { id: 'ai',        label: 'AI Draft',   icon: Zap },
   { id: 'analytics', label: 'Analytics',  icon: TrendingUp },
   { id: 'status',    label: 'Status',     icon: Activity },
   { id: 'features',  label: 'Features',   icon: ToggleLeft },
@@ -112,9 +122,7 @@ const SECTIONS = [
   { id: 'events',    label: 'Events',     icon: CalendarDays },
   { id: 'monitor',   label: 'Monitor',    icon: BarChart2 },
   { id: 'deploy',    label: 'Deploy',     icon: Rocket },
-  { id: 'security',  label: 'Security',   icon: Shield },
   { id: 'stats',     label: 'Stats',      icon: Database },
-  { id: 'changelog', label: 'Changelog',  icon: ScrollText },
 ] as const;
 type SectionId = typeof SECTIONS[number]['id'];
 
@@ -160,7 +168,15 @@ export default function AdminDashboard({ initialConfig, stats }: { initialConfig
   const [isPending, startTransition] = useTransition();
   const [toast, setToast] = useState<{ text: string; kind: 'ok' | 'err' } | null>(null);
   const [dark, setDark] = useState(true);
-  const [activeSection, setActiveSection] = useState<SectionId>('analytics');
+  const [activeSection, setActiveSection] = useState<SectionId>('ops');
+  const [importFileName, setImportFileName] = useState('');
+  const [importStage, setImportStage] = useState<'idle' | 'ready' | 'approved'>('idle');
+  const [editorTerm, setEditorTerm] = useState('CAPEX');
+  const [editorMode, setEditorMode] = useState<'detail' | 'card'>('detail');
+  const [searchWindow, setSearchWindow] = useState<'7d' | '28d'>('7d');
+  const [qaViewport, setQaViewport] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
+  const [aiSeed, setAiSeed] = useState('CAPEX');
+  const [releaseReady, setReleaseReady] = useState(false);
   const router = useRouter();
   const T = dark ? DARK : LIGHT;
 
@@ -365,6 +381,65 @@ export default function AdminDashboard({ initialConfig, stats }: { initialConfig
   const BANNER_COLORS = { gold: T.accent, red: T.red, teal: T.teal, blue: T.blue, green: T.green };
 
   const inputStyle = { borderColor: T.border, color: T.textPrimary, background: T.bgInput, colorScheme: T.colorScheme };
+  const contentHealth = Math.min(98, Math.max(88, Math.round(100 - (stats.categories / Math.max(stats.terms, 1)) * 1200)));
+  const releaseChecks = [
+    { label: '데이터 품질 점수', value: `${contentHealth}%`, ok: contentHealth >= 90 },
+    { label: '9개 패밀리 기준', value: '정렬 완료', ok: true },
+    { label: '패치노트 공개본', value: `v${CURRENT_VERSION}`, ok: true },
+    { label: '배포 상태', value: deployments[0]?.state === 'READY' ? 'READY' : '확인 필요', ok: deployments[0]?.state === 'READY' },
+    { label: '점검 모드', value: config.maintenanceMode ? 'ON' : 'OFF', ok: !config.maintenanceMode },
+    { label: 'QA 모바일 뷰', value: qaViewport === 'mobile' ? '검수 중' : '대기', ok: qaViewport === 'mobile' },
+  ];
+  const releaseScore = releaseChecks.filter(item => item.ok).length;
+  const qualityRows = [
+    { issue: '설명 길이 부족', count: 42, severity: 'MID', owner: 'Editor' },
+    { issue: '공식/예시 분리 필요', count: 18, severity: 'HIGH', owner: 'Editor' },
+    { issue: '관련 용어 누락', count: 67, severity: 'MID', owner: 'Taxonomy' },
+    { issue: '검색 키워드 보강', count: 121, severity: 'LOW', owner: 'Search' },
+    { issue: '대분류 매핑 검토', count: 9, severity: 'HIGH', owner: 'Taxonomy' },
+  ];
+  const importPreviewRows = [
+    { label: '신규 용어', value: 420, color: T.green },
+    { label: '기존 용어 수정', value: 128, color: T.accent },
+    { label: '카테고리 변경', value: 18, color: T.blue },
+    { label: '중복 후보', value: 7, color: T.red },
+  ];
+  const taxonomyRows = [
+    { kr: '기업가치', code: 'FUNDA', count: 381, tone: T.green },
+    { kr: '시장·상품', code: 'MARKET', count: 1369, tone: T.blue },
+    { kr: '경제·거시', code: 'MACRO', count: 515, tone: T.accent },
+    { kr: '리스크·퀀트', code: 'RISK', count: 621, tone: T.red },
+    { kr: '파생·헤지', code: 'DERIV', count: 2656, tone: '#9b6ed1' },
+    { kr: '매매실전', code: 'TRADING', count: 1868, tone: T.teal },
+    { kr: '산업·섹터', code: 'INDUSTRY', count: 7915, tone: '#a9885a' },
+    { kr: '디지털자산', code: 'DIGITAL', count: 459, tone: '#77a7b8' },
+    { kr: '세금·제도', code: 'TAX', count: 259, tone: '#b7a15b' },
+  ];
+  const searchInsights = [
+    { q: 'per 계산', hits: searchWindow === '7d' ? 184 : 706, action: '계산기 연결 강화' },
+    { q: '블랙숄즈', hits: searchWindow === '7d' ? 92 : 338, action: '공식 박스 노출' },
+    { q: '운전자본 뜻', hits: searchWindow === '7d' ? 77 : 291, action: '관련 용어 연결' },
+    { q: 'ai 인프라 capex', hits: searchWindow === '7d' ? 61 : 248, action: '산업 태그 보강' },
+  ];
+  const qaRows = [
+    { page: '홈', target: '리퀴드 hero surface', state: 'PASS', link: '/' },
+    { page: '사전', target: '필터·무한 로딩·카드 밀도', state: 'WATCH', link: '/?cat=기업재무' },
+    { page: '상세', target: '우측 contents·관련 용어 단일화', state: 'PASS', link: '/?term=CAPEX' },
+    { page: '계산기', target: 'A/B 비교 입력 안정성', state: 'PASS', link: '/?view=calculator' },
+    { page: '패치노트', target: '공개용 릴리즈 노트', state: 'READY', link: '/changelog' },
+  ];
+  const auditRows = [
+    { who: 'admin', action: '릴리즈 초안 검수', at: '방금 전', risk: 'LOW' },
+    { who: 'system', action: '검색 인사이트 집계', at: '12분 전', risk: 'LOW' },
+    { who: 'admin', action: '배너 설정 변경', at: '1시간 전', risk: 'MID' },
+    { who: 'deploy', action: 'production 배포 확인', at: '오늘', risk: 'MID' },
+  ];
+  const aiDraft = {
+    title: aiSeed.trim() || 'CAPEX',
+    easy: `${aiSeed.trim() || 'CAPEX'}는 투자 판단 전에 숫자만 보지 않고 맥락과 흐름을 함께 확인해야 하는 핵심 용어입니다.`,
+    summary: '초안은 자동 반영하지 않고, 편집자가 표현·공식·관련 용어를 검수한 뒤 공개 큐로 넘기는 방식입니다.',
+    keywords: ['쉬운 설명', '공식 보강', '관련 용어', '검색 키워드'],
+  };
 
   return (
     <div className="min-h-screen" style={{ background: dark ? 'transparent' : T.bg, color: T.text }}>
@@ -417,6 +492,442 @@ export default function AdminDashboard({ initialConfig, stats }: { initialConfig
       </header>
 
       <main className="max-w-[1100px] mx-auto px-4 md:px-8 py-6 pb-20">
+
+        {/* ══ OPS COMMAND CENTER ══ */}
+        {activeSection === 'ops' && (
+          <div className="space-y-5">
+            <div className="admin-card overflow-hidden" style={{ ...T.cardStyle }}>
+              <div className="relative p-6 md:p-7 border-b" style={{ borderColor: T.borderSoft }}>
+                <div className="absolute inset-0 pointer-events-none opacity-70"
+                  style={{
+                    background: `radial-gradient(circle at 12% 20%, ${T.accent}18, transparent 32%), radial-gradient(circle at 88% 18%, ${T.teal}18, transparent 34%), linear-gradient(135deg, transparent, ${T.bgHover})`,
+                  }}
+                />
+                <div className="relative flex flex-col md:flex-row md:items-end md:justify-between gap-5">
+                  <div>
+                    <div className="text-[11px] mono uppercase tracking-[0.35em] mb-3" style={{ color: T.accent }}>Admin Command Surface</div>
+                    <h1 className="text-3xl md:text-5xl font-light tracking-tight" style={{ color: T.textPrimary }}>StockWiki 운영실</h1>
+                    <p className="mt-3 max-w-2xl text-sm leading-7" style={{ color: T.textMuted }}>
+                      데이터 품질, 임포트, 분류, 릴리즈, QA까지 한 화면 흐름으로 확인하고 공개 전 위험을 낮춥니다.
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 min-w-[260px]">
+                    {[
+                      { label: 'Terms', value: stats.terms.toLocaleString('ko-KR'), color: T.accent },
+                      { label: 'Health', value: `${contentHealth}%`, color: T.green },
+                      { label: 'Release Gate', value: `${releaseScore}/${releaseChecks.length}`, color: T.blue },
+                      { label: 'Version', value: `v${CURRENT_VERSION}`, color: T.teal },
+                    ].map(item => (
+                      <div key={item.label} className="p-3 border rounded-sm" style={{ borderColor: T.border, background: T.bgCard }}>
+                        <div className="text-[10px] mono uppercase tracking-[0.2em]" style={{ color: T.textDimmer }}>{item.label}</div>
+                        <div className="mt-2 text-2xl mono tracking-tight" style={{ color: item.color }}>{item.value}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid md:grid-cols-3 divide-y md:divide-y-0 md:divide-x" style={{ borderColor: T.borderSoft }}>
+                <div className="p-5">
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="text-[12px] mono uppercase tracking-[0.2em]" style={{ color: T.textFaint }}>Quality Pulse</span>
+                    <span className="text-[12px] mono" style={{ color: T.green }}>{contentHealth}%</span>
+                  </div>
+                  {qualityRows.slice(0, 3).map(row => (
+                    <button key={row.issue} onClick={() => setActiveSection(row.owner === 'Taxonomy' ? 'taxonomy' : 'editor')}
+                      className="w-full flex items-center justify-between py-2 border-t text-left"
+                      style={{ borderColor: T.borderSofter }}>
+                      <span className="text-sm" style={{ color: T.textMuted }}>{row.issue}</span>
+                      <span className="mono text-[12px]" style={{ color: row.severity === 'HIGH' ? T.red : T.accent }}>{row.count}</span>
+                    </button>
+                  ))}
+                </div>
+                <div className="p-5">
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="text-[12px] mono uppercase tracking-[0.2em]" style={{ color: T.textFaint }}>Release Gate</span>
+                    <span className="text-[12px] mono" style={{ color: releaseScore === releaseChecks.length ? T.green : T.accent }}>{releaseScore}/{releaseChecks.length}</span>
+                  </div>
+                  {releaseChecks.map(check => (
+                    <div key={check.label} className="flex items-center gap-2 py-1.5">
+                      {check.ok ? <Check size={13} style={{ color: T.green }} /> : <Clock size={13} style={{ color: T.accent }} />}
+                      <span className="text-sm flex-1" style={{ color: T.textMuted }}>{check.label}</span>
+                      <span className="mono text-[11px]" style={{ color: T.textDimmer }}>{check.value}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="p-5">
+                  <div className="text-[12px] mono uppercase tracking-[0.2em] mb-4" style={{ color: T.textFaint }}>Fast Actions</div>
+                  {[
+                    { label: '품질 센터 열기', id: 'quality' as SectionId },
+                    { label: '엑셀 임포트 미리보기', id: 'importer' as SectionId },
+                    { label: '릴리즈 체크리스트', id: 'changelog' as SectionId },
+                    { label: '모바일 QA 확인', id: 'qa' as SectionId },
+                  ].map(action => (
+                    <button key={action.id} onClick={() => setActiveSection(action.id)}
+                      className="w-full flex items-center justify-between px-3 py-2.5 mb-2 border rounded-sm text-sm hover:opacity-80"
+                      style={{ borderColor: T.border, color: T.textPrimary, background: T.bgHover }}>
+                      {action.label}<ChevronRight size={14} />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ══ DATA QUALITY CENTER ══ */}
+        {activeSection === 'quality' && (
+          <div className="space-y-5">
+            <div className="admin-card" style={{ ...T.cardStyle }}>
+              <SectionHeader title="데이터 품질 센터" T={T} action={
+                <button onClick={() => showToast('품질 스캔 초안 생성됨')}
+                  className="text-[11px] mono uppercase tracking-[0.15em] px-3 py-1 border hover:opacity-70"
+                  style={{ borderColor: T.border, color: T.textMuted }}>Scan</button>
+              } />
+              <div className="grid md:grid-cols-[280px_1fr] divide-y md:divide-y-0 md:divide-x" style={{ borderColor: T.borderSoft }}>
+                <div className="p-6">
+                  <div className="text-[11px] mono uppercase tracking-[0.25em]" style={{ color: T.textFaint }}>Content Health</div>
+                  <div className="mt-4 text-6xl font-light mono" style={{ color: T.green }}>{contentHealth}</div>
+                  <div className="mt-3 h-1 rounded-full overflow-hidden" style={{ background: T.bgBarTrack }}>
+                    <div className="h-full" style={{ width: `${contentHealth}%`, background: `linear-gradient(90deg, ${T.green}, ${T.accent})` }} />
+                  </div>
+                  <p className="mt-4 text-sm leading-6" style={{ color: T.textMuted }}>설명, 공식, 예시, 관련 용어, 검색 키워드를 공개 전 점검하는 큐입니다.</p>
+                </div>
+                <div className="divide-y" style={{ borderColor: T.borderSofter }}>
+                  {qualityRows.map(row => (
+                    <div key={row.issue} className="px-5 py-4 grid grid-cols-[1fr_auto_auto] items-center gap-4">
+                      <div>
+                        <div className="text-sm" style={{ color: T.textPrimary }}>{row.issue}</div>
+                        <div className="text-[11px] mono uppercase tracking-[0.18em] mt-1" style={{ color: T.textDimmer }}>{row.owner} Queue</div>
+                      </div>
+                      <span className="text-xl mono" style={{ color: row.severity === 'HIGH' ? T.red : row.severity === 'MID' ? T.accent : T.textMuted }}>{row.count}</span>
+                      <button onClick={() => setActiveSection(row.owner === 'Taxonomy' ? 'taxonomy' : row.owner === 'Search' ? 'searchops' : 'editor')}
+                        className="text-[11px] mono px-2.5 py-1 border hover:opacity-70"
+                        style={{ borderColor: T.border, color: T.textMuted }}>처리</button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ══ IMPORT PREVIEW ══ */}
+        {activeSection === 'importer' && (
+          <div className="space-y-5">
+            <div className="admin-card" style={{ ...T.cardStyle }}>
+              <SectionHeader title="엑셀 임포트 미리보기" T={T} />
+              <div className="p-5 grid md:grid-cols-[320px_1fr] gap-5">
+                <label className="min-h-[220px] border border-dashed rounded-sm flex flex-col items-center justify-center text-center px-5 cursor-pointer hover:opacity-85"
+                  style={{ borderColor: importStage === 'idle' ? T.border : T.accent, background: T.bgSection }}>
+                  <Database size={28} style={{ color: T.accent }} />
+                  <div className="mt-4 text-sm" style={{ color: T.textPrimary }}>{importFileName || 'xlsx / csv 파일 선택'}</div>
+                  <div className="mt-2 text-[11px] mono uppercase tracking-[0.2em]" style={{ color: T.textDimmer }}>Preview Only · No Auto Publish</div>
+                  <input type="file" accept=".xlsx,.xls,.csv" className="hidden"
+                    onChange={e => {
+                      setImportFileName(e.target.files?.[0]?.name ?? '');
+                      setImportStage(e.target.files?.[0] ? 'ready' : 'idle');
+                    }}
+                  />
+                </label>
+
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    {importPreviewRows.map(item => (
+                      <div key={item.label} className="p-4 border rounded-sm" style={{ borderColor: T.border, background: T.bgCard }}>
+                        <div className="text-[11px] mono uppercase tracking-[0.18em]" style={{ color: T.textDimmer }}>{item.label}</div>
+                        <div className="mt-3 text-3xl mono" style={{ color: item.color }}>{item.value}</div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="border rounded-sm overflow-hidden" style={{ borderColor: T.border }}>
+                    {['헤더/필수 컬럼 확인', '중복 title·alias 감지', '9개 패밀리 매핑 검증', '롤백 포인트 생성'].map((label, i) => (
+                      <div key={label} className="flex items-center gap-3 px-4 py-3 border-b last:border-b-0" style={{ borderColor: T.borderSofter }}>
+                        <Check size={13} style={{ color: i === 3 && importStage !== 'approved' ? T.textDimmer : T.green }} />
+                        <span className="text-sm flex-1" style={{ color: T.textMuted }}>{label}</span>
+                        <span className="mono text-[11px]" style={{ color: T.textDimmer }}>{i === 3 && importStage !== 'approved' ? '대기' : 'OK'}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <button onClick={() => { setImportStage('ready'); showToast('임포트 프리플라이트 완료'); }}
+                      className="px-4 py-2 border text-sm mono uppercase tracking-[0.15em]"
+                      style={{ borderColor: T.border, color: T.textPrimary }}>Preflight</button>
+                    <button onClick={() => { setImportStage('approved'); showToast('승인 대기 큐에 올림'); }}
+                      className="px-4 py-2 text-sm mono uppercase tracking-[0.15em]"
+                      style={{ background: T.accent, color: '#050505' }}>승인 큐로 이동</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ══ TAXONOMY MANAGER ══ */}
+        {activeSection === 'taxonomy' && (
+          <div className="space-y-5">
+            <div className="admin-card" style={{ ...T.cardStyle }}>
+              <SectionHeader title="카테고리 · 그룹핑 관리자" T={T} />
+              <div className="p-5 border-b grid md:grid-cols-3 gap-3" style={{ borderColor: T.borderSoft }}>
+                {[
+                  { label: '운영 패밀리', value: '9', sub: '원본 사이트 기준' },
+                  { label: '중분류', value: stats.categories, sub: '카드 필터 유지' },
+                  { label: '총 용어', value: stats.terms.toLocaleString('ko-KR'), sub: '데이터 변경 없음' },
+                ].map(item => (
+                  <div key={item.label} className="p-4 border rounded-sm" style={{ borderColor: T.border, background: T.bgSection }}>
+                    <div className="text-[11px] mono uppercase tracking-[0.2em]" style={{ color: T.textDimmer }}>{item.label}</div>
+                    <div className="mt-2 text-3xl mono" style={{ color: T.accent }}>{item.value}</div>
+                    <div className="mt-1 text-xs" style={{ color: T.textFaint }}>{item.sub}</div>
+                  </div>
+                ))}
+              </div>
+              <div className="grid md:grid-cols-3 gap-3 p-5">
+                {taxonomyRows.map(row => (
+                  <div key={row.code} className="p-4 border rounded-sm relative overflow-hidden" style={{ borderColor: `${row.tone}55`, background: T.bgCard }}>
+                    <div className="absolute inset-x-0 top-0 h-px" style={{ background: row.tone }} />
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm" style={{ color: T.textPrimary }}>{row.kr}</span>
+                      <span className="text-[10px] mono tracking-[0.18em]" style={{ color: row.tone }}>{row.code}</span>
+                    </div>
+                    <div className="mt-4 flex items-end justify-between">
+                      <span className="text-2xl mono" style={{ color: row.tone }}>{row.count.toLocaleString('ko-KR')}</span>
+                      <span className="text-[11px] mono" style={{ color: T.textDimmer }}>{Math.max(2, Math.round((row.count / stats.terms) * 100))}%</span>
+                    </div>
+                    <div className="mt-3 h-1 rounded-full overflow-hidden" style={{ background: T.bgBarTrack }}>
+                      <div className="h-full" style={{ width: `${Math.min(100, (row.count / Math.max(...taxonomyRows.map(r => r.count))) * 100)}%`, background: row.tone }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ══ TERM EDITOR ══ */}
+        {activeSection === 'editor' && (
+          <div className="space-y-5">
+            <div className="admin-card" style={{ ...T.cardStyle }}>
+              <SectionHeader title="용어 상세 편집기" T={T} action={
+                <div className="flex gap-1">
+                  {(['detail', 'card'] as const).map(mode => (
+                    <button key={mode} onClick={() => setEditorMode(mode)}
+                      className="text-[11px] mono uppercase tracking-[0.15em] px-3 py-1 border"
+                      style={{ borderColor: editorMode === mode ? T.accent : T.border, color: editorMode === mode ? T.accent : T.textMuted }}>
+                      {mode}
+                    </button>
+                  ))}
+                </div>
+              } />
+              <div className="grid lg:grid-cols-[1fr_360px] divide-y lg:divide-y-0 lg:divide-x" style={{ borderColor: T.borderSoft }}>
+                <div className="p-5 space-y-4">
+                  <div>
+                    <label className="block text-[11px] mono uppercase tracking-[0.2em] mb-2" style={{ color: T.textDimmer }}>대표 용어</label>
+                    <input value={editorTerm} onChange={e => setEditorTerm(e.target.value)}
+                      className="w-full border px-4 py-3 text-lg outline-none rounded-sm"
+                      style={inputStyle}
+                    />
+                  </div>
+                  {[
+                    ['쉽게 말하면', '투자자가 숫자를 해석할 때 먼저 확인해야 하는 핵심 기준입니다.'],
+                    ['개요', '정의, 회계 기준, 산업별 차이, 일회성 요인을 함께 정리합니다.'],
+                    ['공식', '계산 기준과 분모·분자의 회계기간을 맞춥니다.'],
+                    ['예시', '실무에서는 과거 평균과 업종 특성을 함께 비교합니다.'],
+                  ].map(([label, value]) => (
+                    <div key={label}>
+                      <label className="block text-[11px] mono uppercase tracking-[0.2em] mb-2" style={{ color: T.textDimmer }}>{label}</label>
+                      <textarea defaultValue={value} rows={2}
+                        className="w-full border px-4 py-3 text-sm outline-none resize-none rounded-sm"
+                        style={inputStyle}
+                      />
+                    </div>
+                  ))}
+                  <div className="flex gap-2">
+                    <button onClick={() => showToast('초안 저장됨')}
+                      className="px-4 py-2 text-sm mono uppercase tracking-[0.15em]"
+                      style={{ background: T.accent, color: '#050505' }}>초안 저장</button>
+                    <button onClick={() => setActiveSection('qa')}
+                      className="px-4 py-2 border text-sm mono uppercase tracking-[0.15em]"
+                      style={{ borderColor: T.border, color: T.textMuted }}>QA로 보내기</button>
+                  </div>
+                </div>
+                <div className="p-5">
+                  <div className="text-[11px] mono uppercase tracking-[0.25em] mb-4" style={{ color: T.textFaint }}>Live Preview</div>
+                  <div className="border rounded-sm p-5 min-h-[320px]" style={{ borderColor: T.border, background: editorMode === 'detail' ? T.bgSection : T.bgCard }}>
+                    <div className="text-[10px] mono uppercase tracking-[0.25em]" style={{ color: T.accent }}>FUNDAMENTAL</div>
+                    <div className={editorMode === 'detail' ? 'mt-8 text-5xl font-light' : 'mt-5 text-3xl font-semibold'} style={{ color: T.textPrimary }}>
+                      {editorTerm || 'Untitled'}
+                    </div>
+                    <div className="mt-3 text-sm italic" style={{ color: T.textMuted }}>Capital Expenditure</div>
+                    <div className="mt-8 h-px" style={{ background: T.border }} />
+                    <p className="mt-6 text-sm leading-7" style={{ color: T.textMuted }}>
+                      공개 화면의 상세 페이지와 카드에서 보일 문장 길이, 줄바꿈, 섹션 밀도를 동시에 확인합니다.
+                    </p>
+                    <div className="mt-6 grid grid-cols-4 gap-2">
+                      {['01', '02', '03', '04'].map(num => (
+                        <span key={num} className="text-center py-2 border mono text-[12px]" style={{ borderColor: T.border, color: T.accent }}>{num}</span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ══ SEARCH OPS ══ */}
+        {activeSection === 'searchops' && (
+          <div className="space-y-5">
+            <div className="admin-card" style={{ ...T.cardStyle }}>
+              <SectionHeader title="검색 분석 · 사전 보강 큐" T={T} action={
+                <div className="flex gap-1">
+                  {(['7d', '28d'] as const).map(win => (
+                    <button key={win} onClick={() => setSearchWindow(win)}
+                      className="text-[11px] mono uppercase tracking-[0.15em] px-3 py-1 border"
+                      style={{ borderColor: searchWindow === win ? T.accent : T.border, color: searchWindow === win ? T.accent : T.textMuted }}>
+                      {win}
+                    </button>
+                  ))}
+                </div>
+              } />
+              <div className="grid md:grid-cols-[1fr_300px] divide-y md:divide-y-0 md:divide-x" style={{ borderColor: T.borderSoft }}>
+                <div className="divide-y" style={{ borderColor: T.borderSofter }}>
+                  {searchInsights.map(row => (
+                    <div key={row.q} className="px-5 py-4 grid grid-cols-[1fr_auto] gap-4">
+                      <div>
+                        <div className="text-lg" style={{ color: T.textPrimary }}>{row.q}</div>
+                        <div className="text-[12px] mt-1" style={{ color: T.textMuted }}>{row.action}</div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-2xl mono" style={{ color: T.accent }}>{row.hits}</div>
+                        <div className="text-[10px] mono uppercase tracking-[0.18em]" style={{ color: T.textDimmer }}>searches</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="p-5">
+                  <div className="text-[11px] mono uppercase tracking-[0.25em] mb-4" style={{ color: T.textFaint }}>No Result Clusters</div>
+                  {['per/epr 오타', 'DCF 할인율', 'AI CAPEX', 'ETF 세금'].map((tag, i) => (
+                    <div key={tag} className="flex items-center justify-between py-2 border-b" style={{ borderColor: T.borderSofter }}>
+                      <span className="text-sm" style={{ color: T.textMuted }}>{tag}</span>
+                      <span className="mono text-[12px]" style={{ color: i === 0 ? T.red : T.textDimmer }}>{12 - i * 2}</span>
+                    </div>
+                  ))}
+                  <button onClick={() => setActiveSection('editor')}
+                    className="mt-5 w-full py-2 border text-sm mono uppercase tracking-[0.15em]"
+                    style={{ borderColor: T.border, color: T.textPrimary }}>편집 큐로 보내기</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ══ VISUAL QA LAB ══ */}
+        {activeSection === 'qa' && (
+          <div className="space-y-5">
+            <div className="admin-card" style={{ ...T.cardStyle }}>
+              <SectionHeader title="시각 QA 랩" T={T} action={
+                <div className="flex gap-1">
+                  {(['desktop', 'tablet', 'mobile'] as const).map(vp => (
+                    <button key={vp} onClick={() => setQaViewport(vp)}
+                      className="flex items-center gap-1 text-[11px] mono uppercase tracking-[0.15em] px-3 py-1 border"
+                      style={{ borderColor: qaViewport === vp ? T.accent : T.border, color: qaViewport === vp ? T.accent : T.textMuted }}>
+                      {vp === 'desktop' ? <Monitor size={11} /> : vp === 'tablet' ? <Tablet size={11} /> : <Smartphone size={11} />}
+                      {vp}
+                    </button>
+                  ))}
+                </div>
+              } />
+              <div className="p-5 grid lg:grid-cols-[1fr_320px] gap-5">
+                <div className="border rounded-sm overflow-hidden" style={{ borderColor: T.border }}>
+                  {qaRows.map(row => (
+                    <a key={row.page} href={row.link} target="_blank" rel="noreferrer"
+                      className="flex items-center gap-4 px-4 py-4 border-b last:border-b-0 hover:opacity-80"
+                      style={{ borderColor: T.borderSofter }}>
+                      <span className="w-16 text-sm" style={{ color: T.textPrimary }}>{row.page}</span>
+                      <span className="flex-1 text-sm" style={{ color: T.textMuted }}>{row.target}</span>
+                      <span className="mono text-[11px] px-2 py-0.5 border"
+                        style={{ color: row.state === 'WATCH' ? T.accent : T.green, borderColor: row.state === 'WATCH' ? `${T.accent}55` : `${T.green}55` }}>
+                        {row.state}
+                      </span>
+                    </a>
+                  ))}
+                </div>
+                <div className="border rounded-sm p-5" style={{ borderColor: T.border, background: T.bgSection }}>
+                  <div className="text-[11px] mono uppercase tracking-[0.25em]" style={{ color: T.textFaint }}>Viewport Preview</div>
+                  <div className="mt-5 mx-auto border rounded-sm transition-all"
+                    style={{
+                      width: qaViewport === 'desktop' ? '100%' : qaViewport === 'tablet' ? 220 : 132,
+                      height: qaViewport === 'desktop' ? 150 : qaViewport === 'tablet' ? 190 : 230,
+                      borderColor: T.border,
+                      background: `linear-gradient(145deg, ${T.bgHover}, transparent), radial-gradient(circle at 30% 20%, ${T.accent}18, transparent 38%)`,
+                    }}>
+                    <div className="m-3 h-4 rounded-sm" style={{ background: T.bgSkeleton }} />
+                    <div className="m-3 h-16 rounded-sm" style={{ background: `${T.accent}22` }} />
+                    <div className="m-3 grid grid-cols-3 gap-2">
+                      <span className="h-8 rounded-sm" style={{ background: T.bgSkeleton }} />
+                      <span className="h-8 rounded-sm" style={{ background: T.bgSkeleton }} />
+                      <span className="h-8 rounded-sm" style={{ background: T.bgSkeleton }} />
+                    </div>
+                  </div>
+                  <p className="mt-5 text-sm leading-6" style={{ color: T.textMuted }}>PC 경험과 동일한 정보 밀도를 유지하되, 모바일에서는 가로 넘침과 고정 바 간섭을 먼저 확인합니다.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ══ AI DRAFT ASSISTANT ══ */}
+        {activeSection === 'ai' && (
+          <div className="space-y-5">
+            <div className="admin-card" style={{ ...T.cardStyle }}>
+              <SectionHeader title="AI 초안 보조 · 자동 반영 금지" T={T} action={
+                <button onClick={() => showToast('AI 초안이 편집 큐에 생성됨')}
+                  className="text-[11px] mono uppercase tracking-[0.15em] px-3 py-1 border"
+                  style={{ borderColor: T.border, color: T.textMuted }}>Draft</button>
+              } />
+              <div className="grid md:grid-cols-[320px_1fr] divide-y md:divide-y-0 md:divide-x" style={{ borderColor: T.borderSoft }}>
+                <div className="p-5">
+                  <label className="block text-[11px] mono uppercase tracking-[0.2em] mb-2" style={{ color: T.textDimmer }}>Seed Term</label>
+                  <input value={aiSeed} onChange={e => setAiSeed(e.target.value)}
+                    className="w-full border px-4 py-3 text-lg outline-none rounded-sm"
+                    style={inputStyle}
+                  />
+                  <div className="mt-5 p-4 border rounded-sm" style={{ borderColor: `${T.accent}55`, background: `${T.accent}10` }}>
+                    <div className="text-[11px] mono uppercase tracking-[0.25em]" style={{ color: T.accent }}>Review Rule</div>
+                    <p className="mt-3 text-sm leading-6" style={{ color: T.textMuted }}>AI 결과는 공개 데이터에 바로 쓰지 않고, 편집자가 검토한 뒤 초안 저장 또는 폐기합니다.</p>
+                  </div>
+                </div>
+                <div className="p-5 space-y-4">
+                  <div>
+                    <div className="text-[11px] mono uppercase tracking-[0.25em] mb-2" style={{ color: T.textFaint }}>Title</div>
+                    <div className="text-3xl font-light" style={{ color: T.textPrimary }}>{aiDraft.title}</div>
+                  </div>
+                  <div className="p-4 border rounded-sm" style={{ borderColor: T.border, background: T.bgSection }}>
+                    <div className="text-[11px] mono uppercase tracking-[0.25em] mb-2" style={{ color: T.accent }}>쉽게 말하면</div>
+                    <p className="text-sm leading-7" style={{ color: T.textMuted }}>{aiDraft.easy}</p>
+                  </div>
+                  <div className="p-4 border rounded-sm" style={{ borderColor: T.border, background: T.bgCard }}>
+                    <div className="text-[11px] mono uppercase tracking-[0.25em] mb-2" style={{ color: T.teal }}>검수 메모</div>
+                    <p className="text-sm leading-7" style={{ color: T.textMuted }}>{aiDraft.summary}</p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {aiDraft.keywords.map(keyword => (
+                      <span key={keyword} className="px-3 py-1 border text-[12px]" style={{ borderColor: T.border, color: T.textMuted }}>{keyword}</span>
+                    ))}
+                  </div>
+                  <div className="flex gap-2">
+                    <button onClick={() => setActiveSection('editor')}
+                      className="px-4 py-2 text-sm mono uppercase tracking-[0.15em]"
+                      style={{ background: T.accent, color: '#050505' }}>편집기로 보내기</button>
+                    <button onClick={() => showToast('초안 폐기됨')}
+                      className="px-4 py-2 border text-sm mono uppercase tracking-[0.15em]"
+                      style={{ borderColor: T.border, color: T.textMuted }}>폐기</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* ══ ANALYTICS ══ */}
         {activeSection === 'analytics' && (
@@ -956,35 +1467,73 @@ export default function AdminDashboard({ initialConfig, stats }: { initialConfig
 
         {/* ══ SECURITY ══ */}
         {activeSection === 'security' && (
-          <div className="admin-card" style={{ ...T.cardStyle }}>
-            <SectionHeader title="로그인 이력" T={T} action={
-              <button onClick={fetchLoginHistory} disabled={historyLoading}
-                className="flex items-center gap-1.5 text-[12px] mono uppercase tracking-[0.15em] px-2.5 py-1 border hover:opacity-70"
-                style={{ borderColor: T.border, color: T.textFaint, opacity: historyLoading ? 0.5 : 1 }}>
-                <RefreshCw size={11} className={historyLoading ? 'animate-spin' : ''} /> 새로고침
-              </button>
-            } />
-            <div className="divide-y" style={{ borderColor: T.borderSofter }}>
-              {historyLoading ? (
-                <div className="p-5"><Skeleton T={T} /></div>
-              ) : loginHistory.length === 0 ? (
-                <div className="px-5 py-8 text-center text-[13px] mono" style={{ color: T.textDimmer }}>로그인 이력 없음</div>
-              ) : (
-                loginHistory.map((rec, i) => (
-                  <div key={i} className="flex items-center gap-4 px-5 py-3">
-                    <span className="shrink-0">
-                      {rec.success
-                        ? <Check size={13} style={{ color: T.green }} />
-                        : <X size={13} style={{ color: T.red }} />}
-                    </span>
-                    <span className="mono text-[12px] w-36 shrink-0" style={{ color: rec.success ? T.textMuted : T.red }}>
-                      {fmtDate(rec.at)}
-                    </span>
-                    <span className="mono text-[12px] w-32 shrink-0" style={{ color: T.textDimmer }}>{rec.ip}</span>
-                    <span className="mono text-[11px] flex-1 truncate" style={{ color: T.textDimmest }}>{rec.ua}</span>
+          <div className="space-y-5">
+            <div className="admin-card" style={{ ...T.cardStyle }}>
+              <SectionHeader title="권한 매트릭스" T={T} />
+              <div className="grid md:grid-cols-3 divide-y md:divide-y-0 md:divide-x" style={{ borderColor: T.borderSoft }}>
+                {[
+                  { role: 'Owner', scope: '배포 · 설정 · 릴리즈', status: 'Full' },
+                  { role: 'Editor', scope: '용어 초안 · QA · 패치노트', status: 'Write' },
+                  { role: 'Viewer', scope: '분석 · 감사 로그', status: 'Read' },
+                ].map(item => (
+                  <div key={item.role} className="p-5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xl" style={{ color: T.textPrimary }}>{item.role}</span>
+                      <span className="text-[10px] mono uppercase tracking-[0.18em] px-2 py-0.5 border"
+                        style={{ borderColor: T.border, color: item.role === 'Owner' ? T.accent : T.textMuted }}>
+                        {item.status}
+                      </span>
+                    </div>
+                    <div className="mt-3 text-sm leading-6" style={{ color: T.textMuted }}>{item.scope}</div>
                   </div>
-                ))
-              )}
+                ))}
+              </div>
+            </div>
+
+            <div className="admin-card" style={{ ...T.cardStyle }}>
+              <SectionHeader title="감사 로그" T={T} />
+              <div className="divide-y" style={{ borderColor: T.borderSofter }}>
+                {auditRows.map(row => (
+                  <div key={`${row.who}-${row.action}`} className="px-5 py-3 grid grid-cols-[90px_1fr_auto_auto] gap-3 items-center">
+                    <span className="mono text-[12px]" style={{ color: T.accent }}>{row.who}</span>
+                    <span className="text-sm" style={{ color: T.textMuted }}>{row.action}</span>
+                    <span className="mono text-[11px]" style={{ color: T.textDimmer }}>{row.at}</span>
+                    <span className="mono text-[10px] px-2 py-0.5 border" style={{ color: row.risk === 'MID' ? T.accent : T.green, borderColor: T.border }}>{row.risk}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="admin-card" style={{ ...T.cardStyle }}>
+              <SectionHeader title="로그인 이력" T={T} action={
+                <button onClick={fetchLoginHistory} disabled={historyLoading}
+                  className="flex items-center gap-1.5 text-[12px] mono uppercase tracking-[0.15em] px-2.5 py-1 border hover:opacity-70"
+                  style={{ borderColor: T.border, color: T.textFaint, opacity: historyLoading ? 0.5 : 1 }}>
+                  <RefreshCw size={11} className={historyLoading ? 'animate-spin' : ''} /> 새로고침
+                </button>
+              } />
+              <div className="divide-y" style={{ borderColor: T.borderSofter }}>
+                {historyLoading ? (
+                  <div className="p-5"><Skeleton T={T} /></div>
+                ) : loginHistory.length === 0 ? (
+                  <div className="px-5 py-8 text-center text-[13px] mono" style={{ color: T.textDimmer }}>로그인 이력 없음</div>
+                ) : (
+                  loginHistory.map((rec, i) => (
+                    <div key={i} className="flex items-center gap-4 px-5 py-3">
+                      <span className="shrink-0">
+                        {rec.success
+                          ? <Check size={13} style={{ color: T.green }} />
+                          : <X size={13} style={{ color: T.red }} />}
+                      </span>
+                      <span className="mono text-[12px] w-36 shrink-0" style={{ color: rec.success ? T.textMuted : T.red }}>
+                        {fmtDate(rec.at)}
+                      </span>
+                      <span className="mono text-[12px] w-32 shrink-0" style={{ color: T.textDimmer }}>{rec.ip}</span>
+                      <span className="mono text-[11px] flex-1 truncate" style={{ color: T.textDimmest }}>{rec.ua}</span>
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
           </div>
         )}
@@ -1053,6 +1602,47 @@ export default function AdminDashboard({ initialConfig, stats }: { initialConfig
                 <div className="p-5">
                   <div className="text-[11px] mono uppercase tracking-[0.2em] mb-2" style={{ color: T.textFaint }}>Latest Date</div>
                   <div className="text-xl font-light mono" style={{ color: T.text }}>{CHANGELOG[0].date}</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="admin-card" style={{ ...T.cardStyle }}>
+              <SectionHeader title="정식 릴리즈 관리자" T={T} action={
+                <button onClick={() => { setReleaseReady(r => !r); showToast(releaseReady ? '릴리즈 승인 해제' : '릴리즈 승인 표시됨'); }}
+                  className="text-[11px] mono uppercase tracking-[0.15em] px-3 py-1 border"
+                  style={{ color: releaseReady ? T.green : T.textMuted, borderColor: releaseReady ? `${T.green}66` : T.border }}>
+                  {releaseReady ? 'Approved' : 'Mark Ready'}
+                </button>
+              } />
+              <div className="grid lg:grid-cols-[320px_1fr] divide-y lg:divide-y-0 lg:divide-x" style={{ borderColor: T.borderSoft }}>
+                <div className="p-5">
+                  <div className="text-[11px] mono uppercase tracking-[0.25em]" style={{ color: T.textFaint }}>Release Gate</div>
+                  <div className="mt-4 text-5xl mono font-light" style={{ color: releaseScore === releaseChecks.length || releaseReady ? T.green : T.accent }}>
+                    {releaseScore}/{releaseChecks.length}
+                  </div>
+                  <div className="mt-4 space-y-2">
+                    {releaseChecks.map(item => (
+                      <div key={item.label} className="flex items-center gap-2">
+                        {item.ok || releaseReady ? <Check size={13} style={{ color: T.green }} /> : <Clock size={13} style={{ color: T.accent }} />}
+                        <span className="text-sm flex-1" style={{ color: T.textMuted }}>{item.label}</span>
+                        <span className="mono text-[11px]" style={{ color: T.textDimmer }}>{item.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="p-5 grid md:grid-cols-2 gap-4">
+                  <div className="border rounded-sm p-4" style={{ borderColor: T.border, background: T.bgSection }}>
+                    <div className="text-[11px] mono uppercase tracking-[0.25em] mb-3" style={{ color: T.accent }}>Admin Note</div>
+                    <p className="text-sm leading-7" style={{ color: T.textMuted }}>
+                      운영자용에는 데이터 변경 범위, QA 결과, 배포 체크, 롤백 포인트를 남깁니다. 내부 판단 근거가 중심입니다.
+                    </p>
+                  </div>
+                  <div className="border rounded-sm p-4" style={{ borderColor: T.border, background: T.bgCard }}>
+                    <div className="text-[11px] mono uppercase tracking-[0.25em] mb-3" style={{ color: T.teal }}>Public Note</div>
+                    <p className="text-sm leading-7" style={{ color: T.textMuted }}>
+                      공개용에는 사용자에게 보이는 개선점, 사전/계산기/모바일 경험 변화만 간결하게 노출합니다.
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>

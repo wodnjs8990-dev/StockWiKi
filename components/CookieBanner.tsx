@@ -24,7 +24,7 @@ export default function CookieBanner() {
 
   return (
     <div
-      className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-between gap-4 px-5 py-3 border-t"
+      className="cookie-banner fixed bottom-0 left-0 right-0 flex items-center justify-between gap-4 px-5 py-3 border-t"
       style={{
         background: 'rgba(12,12,12,0.97)',
         borderColor: '#2a2a2a',
