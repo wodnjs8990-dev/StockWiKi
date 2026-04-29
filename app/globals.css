@@ -1856,6 +1856,143 @@ button[title="다크 모드"] {
 @keyframes liquidDrift1   { 0% { transform: translate(0,0) scale(1) rotate(0deg) }   100% { transform: translate(7%,5%) scale(1.1) rotate(8deg) } }
 @keyframes liquidDrift2   { 0% { transform: translate(0,0) scale(1) rotate(0deg) }   100% { transform: translate(-6%,-4%) scale(1.08) rotate(-6deg) } }
 @keyframes liquidDrift3   { 0% { transform: translate(0,0) scale(1) }                100% { transform: translate(4%,-6%) scale(1.12) } }
+
+/* V2 restraint pass: keep depth, remove the overdone optical film. */
+.dash-liquid-backplate,
+.liquid-lens-field,
+.glass-caustic-field,
+.dash-reflection-layer,
+.optical-glass,
+.glass-rim,
+.surface-prism-stack,
+.liquid-refraction-map,
+.sw-home-sheen,
+.sw-home-reflection-a,
+.sw-home-reflection-b {
+  display: none !important;
+}
+
+.dash-depth-shell {
+  background:
+    radial-gradient(ellipse at 18% 20%, rgba(74,112,69,.06), transparent 34%),
+    radial-gradient(ellipse at 84% 12%, rgba(200,150,80,.06), transparent 32%),
+    #070707 !important;
+}
+
+.dash-depth-shell::before,
+.dash-left::before,
+.dash-left::after,
+.dash-bento::before,
+.dash-bento::after {
+  display: none !important;
+}
+
+.dash-depth-shell .card,
+.dash-depth-shell .card-sm {
+  background:
+    linear-gradient(145deg, rgba(255,255,255,.035), rgba(255,255,255,.012) 46%, rgba(0,0,0,.24)),
+    rgba(12,13,14,.58) !important;
+  border-color: rgba(255,255,255,.075) !important;
+  backdrop-filter: blur(12px) saturate(1.06) !important;
+  -webkit-backdrop-filter: blur(12px) saturate(1.06) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.07),
+    inset 0 -22px 44px rgba(0,0,0,.22),
+    0 16px 42px rgba(0,0,0,.42) !important;
+}
+
+.card.depth-card {
+  outline: 0 !important;
+  filter: none !important;
+  transform: none !important;
+  transform-style: flat !important;
+}
+
+.card.depth-card::before,
+.card.depth-card::after,
+.index-card::before {
+  opacity: 0 !important;
+}
+
+.card.depth-card:hover,
+.depth-card-mini:hover {
+  transform: translateY(-2px) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.08),
+    inset 0 -22px 44px rgba(0,0,0,.22),
+    0 18px 46px rgba(0,0,0,.5) !important;
+}
+
+.dash-left {
+  background:
+    linear-gradient(100deg, rgba(8,10,12,.76), rgba(3,4,5,.58)) !important;
+  box-shadow:
+    inset -1px 0 0 rgba(255,255,255,.045),
+    18px 0 42px rgba(0,0,0,.22) !important;
+}
+
+.dash-bento {
+  background:
+    linear-gradient(160deg, rgba(12,13,14,.64), rgba(5,5,5,.52) 52%, rgba(12,10,8,.42)) !important;
+  box-shadow: inset 1px 0 0 rgba(255,255,255,.04) !important;
+}
+
+.sw-home-surface {
+  background:
+    radial-gradient(ellipse at 15% 10%, rgba(200,150,80,.065), transparent 36%),
+    radial-gradient(ellipse at 88% 78%, rgba(74,112,69,.04), transparent 40%),
+    linear-gradient(145deg, rgba(255,255,255,.04), rgba(255,255,255,.012) 48%, rgba(0,0,0,.28)),
+    rgba(9,11,12,.68) !important;
+  border-color: rgba(200,150,80,.26) !important;
+  backdrop-filter: blur(12px) saturate(1.04) !important;
+  -webkit-backdrop-filter: blur(12px) saturate(1.04) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.08),
+    inset 0 -28px 52px rgba(0,0,0,.26),
+    0 20px 52px rgba(0,0,0,.52) !important;
+}
+
+.sw-home-surface::before {
+  opacity: 0 !important;
+}
+
+.sw-home-inner-pocket {
+  opacity: .28 !important;
+}
+
+.sw-home-line {
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.025), rgba(0,0,0,.2)),
+    rgba(0,0,0,.1) !important;
+  border-color: rgba(255,255,255,.035) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.home-clock-card,
+.index-card,
+.featured-term-card,
+.intelligence-strip {
+  background:
+    linear-gradient(145deg, rgba(255,255,255,.035), rgba(255,255,255,.012) 48%, rgba(0,0,0,.26)),
+    rgba(12,13,14,.6) !important;
+  border-color: rgba(255,255,255,.075) !important;
+}
+
+.featured-term-card {
+  background:
+    linear-gradient(145deg, rgba(154,122,200,.08), rgba(255,255,255,.012) 48%, rgba(0,0,0,.26)),
+    rgba(13,12,18,.62) !important;
+  border-color: rgba(154,122,200,.14) !important;
+}
+
+.active-surface {
+  border-color: rgba(200,150,80,.24) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.08),
+    inset 0 -24px 48px rgba(0,0,0,.24),
+    0 18px 46px rgba(0,0,0,.5) !important;
+}
 /* Border beam rotation */
 @keyframes beamRotate     { from { --beam-angle: 0deg }   to { --beam-angle: 360deg } }
 @property --beam-angle     { syntax: '<angle>'; inherits: false; initial-value: 0deg; }

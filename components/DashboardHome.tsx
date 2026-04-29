@@ -711,20 +711,6 @@ export default function DashboardHome({
     <div className="dash-split dash-depth-shell" style={{ flex: 1, display: 'flex', overflow: 'hidden', background: '#080808' }}>
       <div className="page-grid-bg" />
       <div className="page-scan-line" />
-      <div className="dash-liquid-backplate" aria-hidden="true">
-        <span className="liquid-sheet liquid-sheet-a" />
-        <span className="liquid-sheet liquid-sheet-b" />
-        <span className="liquid-sheet liquid-sheet-c" />
-      </div>
-      <div className="liquid-lens-field" aria-hidden="true">
-        <span />
-        <span />
-        <span />
-        <span />
-      </div>
-      <div className="glass-caustic-field" aria-hidden="true" />
-      <div className="dash-reflection-layer" aria-hidden="true" />
-
       {/* ════════════ LEFT PANEL ════════════ */}
       <div className="sc dash-left" style={{
         width: 'clamp(300px,36%,440px)', minWidth: 300, flexShrink: 0,
@@ -735,7 +721,6 @@ export default function DashboardHome({
 
           {/* ── Clock ── */}
           <div className="card depth-card home-clock-card" style={{ padding: '18px 20px' }}>
-            <OpticalGlass tone="blue" />
             <div style={{ fontFamily: 'var(--mono)', fontSize: 8, letterSpacing: '.26em', textTransform: 'uppercase', color: 'var(--t3)', marginBottom: 8 }}>
               KOREA STANDARD TIME
             </div>
@@ -773,7 +758,6 @@ export default function DashboardHome({
           <div className="status-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
             {/* 장중 count */}
             <div className="card depth-card edge-green" style={{ padding: '16px 18px', background: 'rgba(14,22,14,.42)', borderColor: 'rgba(74,112,69,.2)' }}>
-              <OpticalGlass tone="green" />
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
                 <span style={{
                   width: 18, height: 18, borderRadius: '50%',
@@ -794,7 +778,6 @@ export default function DashboardHome({
             </div>
             {/* 장외 count */}
             <div className="card depth-card edge-red" style={{ padding: '16px 18px', background: 'rgba(18,12,12,.42)', borderColor: 'rgba(184,64,64,.15)' }}>
-              <OpticalGlass tone="red" />
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
                 <svg viewBox="0 0 16 16" width="16" height="16" fill="none">
                   <path d="M8 2.5 L13.5 12.5 L2.5 12.5 Z" fill="rgba(184,64,64,.12)" stroke="#b84040" strokeWidth="1.4" strokeLinejoin="round" />
@@ -812,21 +795,6 @@ export default function DashboardHome({
 
           {/* ── Liquid Hero Surface ── */}
           <div className={`card sw-home-surface depth-card ${activeFocus === 'surface' || activeFocus === 'glossary' ? 'active-surface' : ''}`} style={{ padding: '20px 22px 18px' }}>
-            <GlassRim />
-            <OpticalGlass tone="gold" />
-            <div className="surface-prism-stack" aria-hidden="true">
-              <span />
-              <span />
-              <span />
-            </div>
-            <div className="liquid-refraction-map">
-              <span />
-              <span />
-              <span />
-            </div>
-            <div className="sw-home-sheen" />
-            <div className="sw-home-reflection-a" />
-            <div className="sw-home-reflection-b" />
             <div className="sw-home-inner-pocket" />
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 }}>
               <div>
@@ -856,12 +824,6 @@ export default function DashboardHome({
             <div style={{ fontFamily: 'var(--mono)', fontSize: 8, color: 'var(--t3)', marginBottom: 12 }}>
               9 families · 108 categories
             </div>
-            <SurfaceTelemetry />
-            <LiquidDataRail
-              onGlossary={() => setActiveTab('glossary')}
-              onCalculator={() => setActiveTab('calculator')}
-              onEvents={() => setActiveTab('events')}
-            />
             <div className="sw-home-line">
               <GlowChart data={kospiData} color="#C89650" h={68} />
             </div>
@@ -927,8 +889,6 @@ export default function DashboardHome({
         ].map(idx => (
           <div key={idx.n} className="card depth-card index-card" style={{ padding: '18px 20px', cursor: 'pointer' }}
             onClick={() => setActiveTab('glossary')}>
-            <GlassRim />
-            <OpticalGlass tone={idx.tone} />
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 14 }}>
               <div>
                 <div style={{ fontFamily: 'var(--mono)', fontSize: 8.5, letterSpacing: '.2em', textTransform: 'uppercase', color: 'var(--t2)', marginBottom: 5 }}>
@@ -961,8 +921,6 @@ export default function DashboardHome({
           gridColumn: '1/3', padding: '22px 24px', cursor: 'pointer',
           background: 'rgba(20,18,30,.44)',
         }} onClick={() => setActiveTab('glossary')}>
-          <GlassRim />
-          <OpticalGlass tone="violet" />
           <div style={{
             position: 'absolute', top: -40, right: -40, width: 200, height: 200, borderRadius: '50%',
             background: 'radial-gradient(ellipse,rgba(154,122,200,.15) 0%,transparent 70%)',
@@ -1007,7 +965,6 @@ export default function DashboardHome({
 
         {/* ── Upcoming Events ── */}
         <div className="card depth-card" style={{ padding: '18px 20px', cursor: 'pointer' }} onClick={() => setActiveTab('events')}>
-          <OpticalGlass tone="green" />
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
             <div style={{ fontFamily: 'var(--mono)', fontSize: 8.5, letterSpacing: '.2em', textTransform: 'uppercase', color: 'var(--t2)' }}>
               다음 이벤트
@@ -1048,7 +1005,6 @@ export default function DashboardHome({
 
         {/* ── Market Schedule ── */}
         <div className="card depth-card" style={{ padding: '18px 20px' }}>
-          <OpticalGlass tone="gold" />
           <div style={{ fontFamily: 'var(--mono)', fontSize: 8.5, letterSpacing: '.2em', textTransform: 'uppercase', color: 'var(--t2)', marginBottom: 14 }}>
             시장 스케줄
           </div>
@@ -1085,11 +1041,8 @@ export default function DashboardHome({
           </div>
         </div>
 
-        <GlossaryIntelligenceStrip totalTerms={totalTerms} onOpen={() => setActiveTab('glossary')} />
-
         {/* ── 9 Families Bento ── */}
         <div className="card depth-card bento-wide" style={{ gridColumn: '1/3', padding: '18px 20px' }}>
-          <OpticalGlass tone="neutral" />
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 14 }}>
             <div style={{ fontSize: 13, fontWeight: 300, color: 'var(--t1)' }}>
               <span style={{ color: 'var(--gold)', fontWeight: 500 }}>9</span>개 패밀리 — 투자의 언어
